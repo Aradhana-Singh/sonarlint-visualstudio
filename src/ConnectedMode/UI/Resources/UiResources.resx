@@ -1,0 +1,526 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AuthenticationDescription" xml:space="preserve">
+    <value>Please fill the authentication details for</value>
+  </data>
+  <data name="CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ChooseConnectionTypeLabel" xml:space="preserve">
+    <value>Choose a connection type</value>
+  </data>
+  <data name="ConnectionDiscoveringText" xml:space="preserve">
+    <value>Explore SonarQube Cloud with our </value>
+  </data>
+  <data name="CredentialsDialogTitle" xml:space="preserve">
+    <value>Edit Authentication Details</value>
+  </data>
+  <data name="InsecureProtocolWarningDescription" xml:space="preserve">
+    <value>The URL you entered is not secure. Use HTTPS connections to protect sensitive information.</value>
+  </data>
+  <data name="EditConnectionToolTip" xml:space="preserve">
+    <value>Edit the authentication details of the connection</value>
+  </data>
+  <data name="InvalidTokenToolTip" xml:space="preserve">
+    <value>The token for this connection is invalid. Edit the authentication details by clicking on the edit button.</value>
+  </data>
+  <data name="ExistingConnectionsLabel" xml:space="preserve">
+    <value>Existing Connections</value>
+  </data>
+  <data name="ManageConnectionsDialogTitle" xml:space="preserve">
+    <value>Manage Connections</value>
+  </data>
+  <data name="NewConnectionButton" xml:space="preserve">
+    <value>New Connection</value>
+  </data>
+  <data name="NextButton" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="EnterSonarQubeUrlLabel" xml:space="preserve">
+    <value>Enter the SonarQube Server URL:</value>
+  </data>
+  <data name="RemoveConnectionToolTip" xml:space="preserve">
+    <value>Remove Connection</value>
+  </data>
+  <data name="ServerSelectionDialogTitle" xml:space="preserve">
+    <value>Create New Connection</value>
+  </data>
+  <data name="SmartNotificationsCheckboxLabel" xml:space="preserve">
+    <value>Smart Notifications</value>
+  </data>
+  <data name="SonarCloudDescription" xml:space="preserve">
+    <value>A Software-as-a-Service (SaaS) tool that easily integrates into cloud DevOps platforms, extending the CI/CD workflow to systematically help you deliver good quality and secure code.</value>
+  </data>
+  <data name="SonarQubeDescription" xml:space="preserve">
+    <value>A self-managed tool that easily integrates into your CI/CD pipelines and DevOps platforms to systematically help you deliver good quality and secure code.</value>
+  </data>
+  <data name="TokenLabel" xml:space="preserve">
+    <value>Token</value>
+  </data>
+  <data name="SelectProjectButton" xml:space="preserve">
+    <value>Select Project</value>
+  </data>
+  <data name="SelectButton" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="SearchForProjectPlaceholder" xml:space="preserve">
+    <value>Search for project...</value>
+  </data>
+  <data name="ProjectSelectionDialogTitle" xml:space="preserve">
+    <value>Select project to bind</value>
+  </data>
+  <data name="ProjectSelectionConnectionLabel" xml:space="preserve">
+    <value>Select one of the projects from the server</value>
+  </data>
+  <data name="SelectOrganizationLabel" xml:space="preserve">
+    <value>Select one of your SonarQube Cloud organizations from the list or manually provide one.</value>
+  </data>
+  <data name="OrganizationSelectionDialogTitle" xml:space="preserve">
+    <value>Select SonarQube Cloud Organization</value>
+  </data>
+  <data name="ChooseAnotherOrganizationButton" xml:space="preserve">
+    <value>Choose Another Organization</value>
+  </data>
+  <data name="ManualOrganizationSelectionDialogTitle" xml:space="preserve">
+    <value>Use Another Organization</value>
+  </data>
+  <data name="ManualOrganizationSelectionLabel" xml:space="preserve">
+    <value>Enter organization key:</value>
+  </data>
+  <data name="BindButton" xml:space="preserve">
+    <value>Bind</value>
+  </data>
+  <data name="ConnectionToBindLabel" xml:space="preserve">
+    <value>Connection to bind</value>
+  </data>
+  <data name="ManageBindingDialogTitle" xml:space="preserve">
+    <value>Manage Project Binding</value>
+  </data>
+  <data name="ManageConnectionsButton" xml:space="preserve">
+    <value>Manage Connections</value>
+  </data>
+  <data name="ManageBindingDialog_IsNotBoundText" xml:space="preserve">
+    <value>is not bound</value>
+  </data>
+  <data name="ProjectToBindLabel" xml:space="preserve">
+    <value>Project to bind</value>
+  </data>
+  <data name="UnbindButton" xml:space="preserve">
+    <value>Unbind</value>
+  </data>
+  <data name="UseSharedConfiguration" xml:space="preserve">
+    <value>Use Shared Configuration</value>
+  </data>
+  <data name="ManageBindingDialog_IsBoundToText" xml:space="preserve">
+    <value>is bound to</value>
+  </data>
+  <data name="BindingInProgressText" xml:space="preserve">
+    <value>Binding in progress...</value>
+  </data>
+  <data name="BindingFailedText" xml:space="preserve">
+    <value>Binding could not be established. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="SelectConnectionToBindDescription" xml:space="preserve">
+    <value>Select a connection to bind...</value>
+  </data>
+  <data name="SelectProjectToBindDescription" xml:space="preserve">
+    <value>Select a project to bind from the chosen connection...</value>
+  </data>
+  <data name="DeleteConnectionDialogTitle" xml:space="preserve">
+    <value>Delete Connection</value>
+  </data>
+  <data name="DeleteConnectionBindingsWarningText" xml:space="preserve">
+    <value>These projects bindings will no longer be in connected mode!</value>
+  </data>
+  <data name="DeleteConnectionBindingListLabel" xml:space="preserve">
+    <value>It is used in the following project bindings:</value>
+  </data>
+  <data name="DeleteConnectionNoProjectsLabel" xml:space="preserve">
+    <value>It has no associated project bindings</value>
+  </data>
+  <data name="DeleteConnectionDescription" xml:space="preserve">
+    <value>Are you sure you want to delete the connection to</value>
+  </data>
+  <data name="DeleteButton" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ExportBindingConfigurationTooltip" xml:space="preserve">
+    <value>Export the binding configuration to share it with your team</value>
+  </data>
+  <data name="ExportingBindingConfigurationProgressText" xml:space="preserve">
+    <value>Binding configuration is being exported...</value>
+  </data>
+  <data name="ShareConfigurationButton" xml:space="preserve">
+    <value>Share Configuration</value>
+  </data>
+  <data name="NoConnectionExistsLabel" xml:space="preserve">
+    <value>No connection exists</value>
+  </data>
+  <data name="NoOrganizationExistsLabel" xml:space="preserve">
+    <value>No organization exists</value>
+  </data>
+  <data name="NoProjectsExistLabel" xml:space="preserve">
+    <value>No project exists</value>
+  </data>
+  <data name="ExistingOrganizationsLabel" xml:space="preserve">
+    <value>Existing Organizations</value>
+  </data>
+  <data name="AuthenticationDetailsLabel" xml:space="preserve">
+    <value>Authentication Details</value>
+  </data>
+  <data name="BindingStatusLabel" xml:space="preserve">
+    <value>Binding Status</value>
+  </data>
+  <data name="LearnMoreAboutText" xml:space="preserve">
+    <value>Learn more about </value>
+  </data>
+  <data name="ExistingProjectsLabel" xml:space="preserve">
+    <value>Existing Projects</value>
+  </data>
+  <data name="ValidatingConnectionProgressText" xml:space="preserve">
+    <value>Validating connection...</value>
+  </data>
+  <data name="ValidatingConnectionFailedText" xml:space="preserve">
+    <value>Validating the connection failed. Please see the Output window for more information.</value>
+  </data>
+  <data name="LoadingOrganizationsFailedText" xml:space="preserve">
+    <value>Loading the organizations from the server failed. Please see the Output window for more information.</value>
+  </data>
+  <data name="LoadingOrganizationsProgressText" xml:space="preserve">
+    <value>Loading organizations...</value>
+  </data>
+  <data name="ValidatingOrganziationSelectionFailedText" xml:space="preserve">
+    <value>The connection is not valid for the chosen organization "{0}". Make sure the entered key matches exactly your organization's key.</value>
+  </data>
+  <data name="LoadingConnectionsFailedText" xml:space="preserve">
+    <value>Could not load existing connections</value>
+  </data>
+  <data name="LoadingConnectionsText" xml:space="preserve">
+    <value>Loading connections...</value>
+  </data>
+  <data name="FetchingBindingStatusFailedText" xml:space="preserve">
+    <value>Binding could not be established. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="FetchingBindingStatusFailedTextProjectNotFound" xml:space="preserve">
+    <value>Binding could not be established because Project Key could not be found. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="FetchingBindingStatusFailedTextConnectionNotFound" xml:space="preserve">
+    <value>Binding could not be established because Server Connection could not be found. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="FetchingBindingStatusFailedTextCredentialsNotFound" xml:space="preserve">
+    <value>Binding could not be established because Server Connection's Credentials could not be found. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="FetchingBindingStatusText" xml:space="preserve">
+    <value>Fetching binding status...</value>
+  </data>
+  <data name="CheckingForSharedBindingFailedText" xml:space="preserve">
+    <value>Checking for shared configuration failed. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="CheckingForSharedBindingText" xml:space="preserve">
+    <value>Checking for shared configuration...</value>
+  </data>
+  <data name="ConnectionAlreadyExistsText" xml:space="preserve">
+    <value>Failed to create new connection, the connection already exists</value>
+  </data>
+  <data name="CreatingConnectionFailedText" xml:space="preserve">
+    <value>Creating a connection failed</value>
+  </data>
+  <data name="CreatingConnectionProgressText" xml:space="preserve">
+    <value>Creating connection...</value>
+  </data>
+  <data name="RemovingConnectionFailedText" xml:space="preserve">
+    <value>Removing the connection failed. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="RemovingConnectionText" xml:space="preserve">
+    <value>Removing connection...</value>
+  </data>
+  <data name="LoadingProjectsFailedText" xml:space="preserve">
+    <value>Loading the projects from the server failed.</value>
+  </data>
+  <data name="LoadingProjectsProgressText" xml:space="preserve">
+    <value>Loading projects...</value>
+  </data>
+  <data name="LoadingProjectsFailedTextForNotFoundServerConnection" xml:space="preserve">
+    <value>Server connection was not found. Projects could not be loaded.</value>
+  </data>
+  <data name="CalculatingConnectionReferencesFailedText" xml:space="preserve">
+    <value>Calculating the connection references failed</value>
+  </data>
+  <data name="CalculatingConnectionReferencesText" xml:space="preserve">
+    <value>Calculating connection references...</value>
+  </data>
+  <data name="SearchingProjectFailedText" xml:space="preserve">
+    <value>Searching for project failed</value>
+  </data>
+  <data name="SearchingProjectInProgressText" xml:space="preserve">
+    <value>Searching for project...</value>
+  </data>
+  <data name="NoProjectsFoundForSearchTermLabel" xml:space="preserve">
+    <value>Your search did not match any project</value>
+  </data>
+  <data name="UpdatingConnectionCredentialsProgressText" xml:space="preserve">
+    <value>Updating credentials...</value>
+  </data>
+  <data name="UpdatingConnectionCredentialsFailedText" xml:space="preserve">
+    <value>Failed to update the connection, please make sure that the credentials are correct.</value>
+  </data>
+  <data name="UpdatingConnectionCredentialsFailedWithReasonTextTemplate" xml:space="preserve">
+    <value>Failed to update the connection: {0}</value>
+  </data>
+  <data name="RebindingProgressText" xml:space="preserve">
+    <value>Refreshing binding...</value>
+  </data>
+  <data name="RebindingFailedText" xml:space="preserve">
+    <value>Failed to refresh binding, please make sure that the credentials are correct.</value>
+  </data>
+  <data name="UnbindingInProgressText" xml:space="preserve">
+    <value>Unbinding in progress...</value>
+  </data>
+  <data name="UnbindingFailedText" xml:space="preserve">
+    <value>Unbinding the project failed.  Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="CloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="DeleteConnection_DeleteBindingFails" xml:space="preserve">
+    <value>Removing the connection failed. The '{0}' project could not be unbound.</value>
+  </data>
+  <data name="ManageBindingDialog_NothingToBindText" xml:space="preserve">
+    <value>The binding status is not available. Please open a solution or a folder.</value>
+  </data>
+  <data name="SelectSonarCloudRegionLabel" xml:space="preserve">
+    <value>Select the SonarQube Cloud instance you would like to connect to:</value>
+  </data>
+  <data name="EuRegionName" xml:space="preserve">
+    <value>EU</value>
+  </data>
+  <data name="UsRegionName" xml:space="preserve">
+    <value>US</value>
+  </data>
+  <data name="UsRegionInviteOnlyLabel" xml:space="preserve">
+    <value>(invite-only)</value>
+  </data>
+  <data name="GenerateTokenButton" xml:space="preserve">
+    <value>Generate Token</value>
+  </data>
+  <data name="GeneratingTokenFailedText" xml:space="preserve">
+    <value>Automatic generation of a token failed. Please see the Output window for more information.</value>
+  </data>
+  <data name="GeneratingTokenProgressText" xml:space="preserve">
+    <value>Generating token...</value>
+  </data>
+  <data name="DoNotTrustServerButton" xml:space="preserve">
+    <value>I Don't Trust This Server</value>
+  </data>
+  <data name="TrustServerButton" xml:space="preserve">
+    <value>Connect to This SonarQube Server</value>
+  </data>
+  <data name="TrustConnectionDescriptionText" xml:space="preserve">
+    <value>Connecting to SonarQube Server will enable issues to be opened directly in your IDE and enable other</value>
+  </data>
+  <data name="TrustServerDialogTitle" xml:space="preserve">
+    <value>Trust This SonarQube Server?</value>
+  </data>
+  <data name="TrustConnectionTokenInfoText" xml:space="preserve">
+    <value>A token will be automatically generated to allow access to your</value>
+  </data>
+  <data name="TrustConnectionWarningText" xml:space="preserve">
+    <value>Always ensure that your server URL matches your SonarQube Server instance. Letting SonarQube for Visual Studio connect to an untrusted SonarQube Server is potentially dangerous.</value>
+  </data>
+  <data name="TrustConnectionServerUrl" xml:space="preserve">
+    <value>Server URL </value>
+  </data>
+  <data name="DoNotTrustOrganizationButton" xml:space="preserve">
+    <value>I Don't Trust This Organization</value>
+  </data>
+  <data name="TrustCloudConnectionDescriptionText" xml:space="preserve">
+    <value>Connecting to SonarQube Cloud will enable issues to be opened directly in your IDE and enable other</value>
+  </data>
+  <data name="TrustOrganizationWarningText" xml:space="preserve">
+    <value>Ensure that the organization matches your SonarQube Cloud organization.</value>
+  </data>
+  <data name="TrustConnectionOrganizationName" xml:space="preserve">
+    <value>Organization Name</value>
+  </data>
+  <data name="TrustOrganizationButton" xml:space="preserve">
+    <value>Connect to This SonarQube Cloud Organization</value>
+  </data>
+  <data name="TrustOrganizationDialogTitle" xml:space="preserve">
+    <value>Trust This SonarQube Cloud Organization?</value>
+  </data>
+  <data name="TrustConnectionAddTokenFailed" xml:space="preserve">
+    <value>Could not add token, so server connection could not be created.</value>
+  </data>
+  <data name="ExportBindingConfigurationMessageBoxTextSuccess" xml:space="preserve">
+    <value>SonarQube for Visual Studio saved the binding configuration to: "{0}"
+Please commit this file to share it with other contributors. See documentation for more info.</value>
+  </data>
+  <data name="ExportBindingConfigurationMessageBoxCaptionSuccess" xml:space="preserve">
+    <value>Successfully Exported Shared Binding</value>
+  </data>
+  <data name="ExportBindingConfigurationWarningText" xml:space="preserve">
+    <value>Failed to save the binding configuration. Please check the SonarQube for Visual Studio logs for more details.</value>
+  </data>
+  <data name="BindingErrorTooltip" xml:space="preserve">
+    <value>An error occured when binding to the project on the server.</value>
+  </data>
+  <data name="ChooseAnotherProjectButton" xml:space="preserve">
+    <value>Having trouble? Manually enter a project key</value>
+  </data>
+  <data name="ManualProjectSelectionDialogTitle" xml:space="preserve">
+    <value>Use Another Project</value>
+  </data>
+  <data name="ManualProjectSelectionLabel" xml:space="preserve">
+    <value>Enter project key:</value>
+  </data>
+  <data name="FetchingProjectInfoProgressText" xml:space="preserve">
+    <value>Fetching project info...</value>
+  </data>
+  <data name="FetchingProjectInfoFailedText" xml:space="preserve">
+    <value>Project was not found.</value>
+  </data>
+  <data name="BindingSucceededText" xml:space="preserve">
+    <value>The current project was successfully bound.</value>
+  </data>
+  <data name="CreatingConnectionSucceededText" xml:space="preserve">
+    <value>The connection '{0}' was successfully created.</value>
+  </data>
+  <data name="GeneratingTokenSucceededText" xml:space="preserve">
+    <value>A token was successfully generated for the connection '{0}'.</value>
+  </data>
+  <data name="RemovingConnectionSucceededText" xml:space="preserve">
+    <value>The connection '{0}' was successfully removed.</value>
+  </data>
+  <data name="UnbindingSucceededText" xml:space="preserve">
+    <value>The current project was successfully unbound.</value>
+  </data>
+  <data name="UpdatingConnectionCredentialsSucceededText" xml:space="preserve">
+    <value>The credentials for the connection '{0}' were successfully updated.</value>
+  </data>
+  <data name="InvalidTokenForSelectedConnectionWarningText" xml:space="preserve">
+    <value>The token for the selected connection is invalid.</value>
+  </data>
+  <data name="SaveCredentialsFailedText" xml:space="preserve">
+    <value>Your token could not be saved. Please try switching the storage method to DPAPI under SonarQube &gt; Options &gt; Credentials storage. If the problem persists, please check the SonarQube logs or visit our community forum for further assistance.</value>
+  </data>
+</root>

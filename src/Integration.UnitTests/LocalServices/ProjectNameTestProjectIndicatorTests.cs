@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,6 +22,7 @@ using EnvDTE;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
 {
@@ -69,7 +70,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             actual.Should().BeNull();
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("", null)]
         [DataRow("test\\", null)]
         [DataRow("\\asd\\.!@#$%sdftest234234@~!sdasd\\", null)]

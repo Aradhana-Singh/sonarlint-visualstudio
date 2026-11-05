@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,83 +18,91 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using FluentAssertions;
 using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Text.Tagging;
 using Moq;
-using SonarLint.VisualStudio.Core.Telemetry;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions.QuickFixes;
 using static SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.Common.TaggerTestHelper;
 
-namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickActions.QuickFixes
+namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickActions.QuickFixes;
+
+[TestClass]
+public class QuickFixActionsSourceProviderTests
 {
-    [TestClass]
-    public class QuickFixActionsSourceProviderTests
+    [TestMethod]
+    public void MefCtor_CheckIsExported()
     {
-        [TestMethod]
-        public void MefCtor_CheckIsExported()
-        {
-            MefTestHelpers.CheckTypeCanBeImported<QuickFixActionsSourceProvider, ISuggestedActionsSourceProvider>(null, new[]
-            {
-                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(Mock.Of<IBufferTagAggregatorFactoryService>()),
-                MefTestHelpers.CreateExport<ILightBulbBroker>(Mock.Of<ILightBulbBroker>()),
-                MefTestHelpers.CreateExport<IQuickFixesTelemetryManager>(Mock.Of<IQuickFixesTelemetryManager>()),
-                MefTestHelpers.CreateExport<ILogger>(Mock.Of<ILogger>())
-            });
-        }
+        MefTestHelpers.CheckTypeCanBeImported<QuickFixActionsSourceProvider, ISuggestedActionsSourceProvider>(
+            MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(),
+            MefTestHelpers.CreateExport<ILightBulbBroker>(),
+            MefTestHelpers.CreateExport<IQuickFixApplicationLogic>(),
+            MefTestHelpers.CreateExport<ILogger>(),
+            MefTestHelpers.CreateExport<IThreadHandling>());
+    }
 
-        [TestMethod]
-        public void CreateSuggestedActionsSource_TextViewIsNull_Null()
-        {
-            var buffer = Mock.Of<ITextBuffer>();
-            var testSubject = CreateTestSubject(buffer);
+    [TestMethod]
+    public void CreateSuggestedActionsSource_TextViewIsNull_Null()
+    {
+        var buffer = Mock.Of<ITextBuffer>();
+        var testSubject = CreateTestSubject(buffer);
 
-            var actionsSource = testSubject.CreateSuggestedActionsSource(null, buffer);
-            actionsSource.Should().BeNull();
-        }
+        var actionsSource = testSubject.CreateSuggestedActionsSource(null, buffer);
+        actionsSource.Should().BeNull();
+    }
 
-        [TestMethod]
-        public void CreateSuggestedActionsSource_TextBufferIsNull_Null()
-        {
-            ITextBuffer buffer = null;
-            var testSubject = CreateTestSubject(buffer);
+    [TestMethod]
+    public void CreateSuggestedActionsSource_TextBufferIsNull_Null()
+    {
+        ITextBuffer buffer = null;
+        var testSubject = CreateTestSubject(buffer);
 
-            var actionsSource = testSubject.CreateSuggestedActionsSource(Mock.Of<ITextView>(), buffer);
-            actionsSource.Should().BeNull();
-        }
+        var actionsSource = testSubject.CreateSuggestedActionsSource(Mock.Of<ITextView>(), buffer);
+        actionsSource.Should().BeNull();
+    }
 
-        [TestMethod]
-        public void CreateSuggestedActionsSource_TextViewIsNotNull_QuickFixActionsSource()
-        {
-            var textView = CreateWpfTextView();
-            var testSubject = CreateTestSubject(textView.TextBuffer);
+    [TestMethod]
+    public void CreateSuggestedActionsSource_TextViewIsNotNull_QuickFixActionsSource()
+    {
+        var textView = CreateWpfTextView();
+        var testSubject = CreateTestSubject(textView.TextBuffer);
 
-            var actionsSource = testSubject.CreateSuggestedActionsSource(textView, textView.TextBuffer);
-            actionsSource.Should().NotBeNull();
-            actionsSource.Should().BeOfType<QuickFixActionsSource>();
-        }
+        var actionsSource = testSubject.CreateSuggestedActionsSource(textView, textView.TextBuffer);
+        actionsSource.Should().NotBeNull();
+        actionsSource.Should().BeOfType<QuickFixActionsSource>();
+    }
 
-        private static QuickFixActionsSourceProvider CreateTestSubject(ITextBuffer buffer)
-        {
-            var bufferTagAggregatorFactoryService = new Mock<IBufferTagAggregatorFactoryService>();
+    [TestMethod]
+    public void CreateSuggestedActionsSource_ProjectionBuffer_Null()
+    {
+        var textView = CreateWpfTextView();
+        IProjectionBuffer buffer = Substitute.For<IProjectionBuffer>();
+        var testSubject = CreateTestSubject(buffer);
 
-            bufferTagAggregatorFactoryService
-                .Setup(x => x.CreateTagAggregator<IIssueLocationTag>(buffer))
-                .Returns(Mock.Of<ITagAggregator<IIssueLocationTag>>());
+        var actionsSource = testSubject.CreateSuggestedActionsSource(textView, buffer);
+        actionsSource.Should().BeNull();
+    }
 
-            var lightBulbBroker = Mock.Of<ILightBulbBroker>();
+    private static QuickFixActionsSourceProvider CreateTestSubject(ITextBuffer buffer)
+    {
+        var bufferTagAggregatorFactoryService = new Mock<IBufferTagAggregatorFactoryService>();
 
-            return new QuickFixActionsSourceProvider(
-                bufferTagAggregatorFactoryService.Object, 
-                lightBulbBroker,
-                Mock.Of<IQuickFixesTelemetryManager>(),
-                Mock.Of<ILogger>());
-        }
+        bufferTagAggregatorFactoryService
+            .Setup(x => x.CreateTagAggregator<IIssueLocationTag>(buffer))
+            .Returns(Mock.Of<ITagAggregator<IIssueLocationTag>>());
+
+        var lightBulbBroker = Mock.Of<ILightBulbBroker>();
+
+        return new QuickFixActionsSourceProvider(
+            bufferTagAggregatorFactoryService.Object,
+            lightBulbBroker,
+            Substitute.For<IQuickFixApplicationLogic>(),
+            Mock.Of<ILogger>(),
+            new NoOpThreadHandler());
     }
 }

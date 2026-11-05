@@ -4,7 +4,6 @@
   <Import Project="..\SonarLint.VsPkgRefs.props" />
 
   <PropertyGroup Label="Specify which external/VS-specific refs are required">
-    <RequiresRuleset>true</RequiresRuleset>
     <RequiresAlmAuthentication>true</RequiresAlmAuthentication>
   </PropertyGroup>
   <Import Project="..\SonarLint.VSSpecificAssemblies.props" />
@@ -29,8 +28,10 @@
 
   <ItemGroup>
     <!-- We use BouncyCastle nuget package for its MD5 implementation, since the Framework MD5 throws an exception on FIPS-enabled machines. -->
-    <PackageReference Include="NuGet.Core" Version="2.12.0" />
-    <PackageReference Include="NuGet.VisualStudio" Version="3.3.0" />
+    <PackageReference Include="NuGet.Core" Version="2.14.0" />
+    <PackageReference Include="NuGet.VisualStudio" Version="17.14.0" />
+    <PackageReference Include="Sentry" Version="6.12.0" />
+    <PackageReference Include="StreamJsonRpc" Version="2.8.28" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,27 +54,20 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+      <EmbeddedResource Include="CSharpVB\SQVS.targets.xml" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Connection\UI\ConnectionInfoDialogView.xaml" />
-    <None Remove="Connection\UI\OrganizationSelectionWindow.xaml" />
     <None Remove="Notifications\NotificationIndicator.xaml" />
     <None Remove="Progress\ProgressControl.xaml" />
-
-    <Page Include="Connection\UI\ConnectionInfoDialogView.xaml" />
-    <Page Include="Connection\UI\OrganizationSelectionWindow.xaml" />
     <Page Include="Notifications\NotificationIndicator.xaml" />
-    <Page Include="Progress\ProgressControl.xaml" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\sonarqube-webclient\SonarQube.Client\SonarQube.Client.csproj" />
-    <ProjectReference Include="..\CloudSecrets\CloudSecrets.csproj" />
+    <ProjectReference Include="..\ConnectedMode\ConnectedMode.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj" />
-    <ProjectReference Include="..\Progress\Progress.csproj" />
-    <ProjectReference Include="..\ProgressVS\ProgressVS.csproj" />
+    <ProjectReference Include="..\SLCore\SLCore.csproj" />
   </ItemGroup>
 
 

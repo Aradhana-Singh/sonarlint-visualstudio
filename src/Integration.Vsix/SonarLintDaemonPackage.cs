@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,15 +18,29 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
+using SonarLint.VisualStudio.ConnectedMode.Migration;
+using SonarLint.VisualStudio.ConnectedMode.Persistence;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Analysis;
+using SonarLint.VisualStudio.Core.CFamily;
+using SonarLint.VisualStudio.Integration.CSharpVB;
+using SonarLint.VisualStudio.Integration.Service;
+using SonarLint.VisualStudio.Integration.Vsix.SonarLintTagger;
+using SonarLint.VisualStudio.Integration.SupportedLanguages;
 using SonarLint.VisualStudio.Integration.Vsix.Analysis;
-using SonarLint.VisualStudio.Integration.Vsix.CFamily;
+using SonarLint.VisualStudio.Integration.Vsix.Events;
+using SonarLint.VisualStudio.Integration.Vsix.Events.Build;
 using SonarLint.VisualStudio.Integration.Vsix.Resources;
+using SonarLint.VisualStudio.RoslynAnalyzerServer;
+using SonarLint.VisualStudio.RoslynAnalyzerServer.Analysis.Configuration;
+using SonarLint.VisualStudio.SLCore;
+using SonarLint.VisualStudio.SLCore.Analysis;
+using ErrorHandler = SonarLint.VisualStudio.Core.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
@@ -50,7 +64,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(PackageGuidString)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.ShellInitialized_string, PackageAutoLoadFlags.BackgroundLoad)]
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [ExcludeFromCodeCoverage]
     public sealed class SonarLintDaemonPackage : AsyncPackage
     {
         public const string PackageGuidString = "6f63ab5a-5ab8-4a0d-9914-151911885966";
@@ -58,7 +72,16 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         public const string CommandSetGuidString = "1F83EA11-3B07-45B3-BF39-307FD4F42194";
 
         private ILogger logger;
-        private IPreCompiledHeadersEventListener cFamilyPreCompiledHeadersEventListener;
+        private ILinkedFileAnalyzer linkedFileAnalyzer;
+        private IActiveCompilationDatabaseTracker activeCompilationDatabaseTracker;
+        private IProjectDocumentsEventsListener projectDocumentsEventsListener;
+        private ISLCoreHandler slCoreHandler;
+        private IDocumentEventsHandler documentEventsHandler;
+        private ISlCoreUserAnalysisPropertiesSynchronizer slCoreUserAnalysisPropertiesSynchronizer;
+        private IAnalysisConfigMonitor analysisConfigMonitor;
+        private IBuildEventNotifier buildEventNotifier;
+        private IRoslynEnvironmentInitializer roslynEnvironment;
+        private IFailedPluginNotification failedPluginNotification;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SonarLintDaemonPackage"/> class.
@@ -73,31 +96,78 @@ namespace SonarLint.VisualStudio.Integration.Vsix
 
         #region Package Members
 
-        protected override System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            JoinableTaskFactory.RunAsync(InitAsync);
-            return System.Threading.Tasks.Task.CompletedTask;
+            await JoinableTaskFactory.RunAsync(InitAsync);
         }
 
-        private async System.Threading.Tasks.Task InitAsync()
+        private async Task InitAsync()
         {
             try
             {
                 logger = await this.GetMefServiceAsync<ILogger>();
-                logger.WriteLine(Resources.Strings.Daemon_Initializing);
+                logger.WriteLine(Strings.Daemon_Initializing);
+                logger.WriteLine(Strings.SQVSVersionLog, VersionHelper.SonarLintVersion);
 
+                var importBeforeFileGenerator = await this.GetMefServiceAsync<IImportBeforeFileGenerator>();
+                await importBeforeFileGenerator.InitializationProcessor.InitializeAsync();
+
+                // This migration should be performed before initializing other services, independent if a solution or a folder is opened.
+                await MigrateBindingsToServerConnectionsIfNeededAsync();
+
+                await MuteIssueCommand.InitializeAsync(this, logger);
                 await DisableRuleCommand.InitializeAsync(this, logger);
-                await CFamilyReproducerCommand.InitializeAsync(this, logger);
 
-                cFamilyPreCompiledHeadersEventListener = await this.GetMefServiceAsync<IPreCompiledHeadersEventListener>();
 
-                LegacyInstallationCleanup.CleanupDaemonFiles(logger);
+                activeCompilationDatabaseTracker = await this.GetMefServiceAsync<IActiveCompilationDatabaseTracker>();
+                await activeCompilationDatabaseTracker.InitializationProcessor.InitializeAsync();
+
+                slCoreUserAnalysisPropertiesSynchronizer = await this.GetMefServiceAsync<ISlCoreUserAnalysisPropertiesSynchronizer>();
+                await slCoreUserAnalysisPropertiesSynchronizer.InitializationProcessor.InitializeAsync();
+
+                analysisConfigMonitor = await this.GetMefServiceAsync<IAnalysisConfigMonitor>();
+                await analysisConfigMonitor.InitializationProcessor.InitializeAsync();
+
+                documentEventsHandler = await this.GetMefServiceAsync<IDocumentEventsHandler>();
+
+                projectDocumentsEventsListener = await this.GetMefServiceAsync<IProjectDocumentsEventsListener>();
+                projectDocumentsEventsListener.Initialize();
+
+                await InitializeRoslynInfrastructureAsync();
+
+                buildEventNotifier = await this.GetMefServiceAsync<IBuildEventNotifier>();
+                await buildEventNotifier.InitializationProcessor.InitializeAsync();
+
+                failedPluginNotification = await this.GetMefServiceAsync<IFailedPluginNotification>();
+
+                slCoreHandler = await this.GetMefServiceAsync<ISLCoreHandler>();
+                slCoreHandler.EnableSloop();
             }
             catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
-                logger?.WriteLine(Resources.Strings.ERROR_InitializingDaemon, ex);
+                logger?.WriteLine(Strings.ERROR_InitializingDaemon, ex);
             }
-            logger?.WriteLine(Resources.Strings.Daemon_InitializationComplete);
+            logger?.WriteLine(Strings.Daemon_InitializationComplete);
+        }
+
+        private async Task InitializeRoslynInfrastructureAsync()
+        {
+            linkedFileAnalyzer = await this.GetMefServiceAsync<ILinkedFileAnalyzer>();
+            roslynEnvironment = await this.GetMefServiceAsync<IRoslynEnvironmentInitializer>();
+            if (roslynEnvironment != null)
+            {
+                await roslynEnvironment.InitializationProcessor.InitializeAsync();
+            }
+            else
+            {
+                logger.WriteLine(Strings.RoslynInitializationFailed);
+            }
+        }
+
+        private async Task MigrateBindingsToServerConnectionsIfNeededAsync()
+        {
+            var bindingToConnectionMigration = await this.GetMefServiceAsync<IBindingToConnectionMigration>();
+            await bindingToConnectionMigration.MigrateAllBindingsToServerConnectionsIfNeededAsync();
         }
 
         protected override void Dispose(bool disposing)
@@ -106,8 +176,33 @@ namespace SonarLint.VisualStudio.Integration.Vsix
 
             if (disposing)
             {
-                cFamilyPreCompiledHeadersEventListener?.Dispose();
-                cFamilyPreCompiledHeadersEventListener = null;
+                linkedFileAnalyzer?.Dispose();
+                linkedFileAnalyzer = null;
+
+                analysisConfigMonitor?.Dispose();
+                analysisConfigMonitor = null;
+
+                slCoreUserAnalysisPropertiesSynchronizer?.Dispose();
+                slCoreUserAnalysisPropertiesSynchronizer = null;
+                activeCompilationDatabaseTracker?.Dispose();
+                activeCompilationDatabaseTracker = null;
+
+                documentEventsHandler?.Dispose();
+                documentEventsHandler = null;
+
+                projectDocumentsEventsListener?.Dispose();
+                projectDocumentsEventsListener = null;
+                slCoreHandler?.Dispose();
+                slCoreHandler = null;
+
+                roslynEnvironment?.Dispose();
+                roslynEnvironment = null;
+
+                buildEventNotifier?.Dispose();
+                buildEventNotifier = null;
+
+                failedPluginNotification?.Dispose();
+                failedPluginNotification = null;
             }
         }
 

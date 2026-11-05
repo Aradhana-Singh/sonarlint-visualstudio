@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -17,9 +17,6 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace SonarLint.VisualStudio.Core.UnitTests
 {
@@ -45,9 +42,34 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         public void TryParse_Valid_ReturnExpecteed(string errorCode, string expectedRepo, string expectedRule)
         {
             SonarCompositeRuleId.TryParse(errorCode, out var result).Should().BeTrue();
-            result.ErrorListErrorCode.Should().Be(errorCode);
+            result.Id.Should().Be(errorCode);
             result.RepoKey.Should().Be(expectedRepo);
             result.RuleKey.Should().Be(expectedRule);
+        }
+
+        [TestMethod]
+        public void Ctor_NullRepoKey_Throws()
+        {
+            Action act = () => new SonarCompositeRuleId(null, "S123");
+            act.Should().Throw<ArgumentNullException>()
+                .And.ParamName.Should().Be("repoKey");
+        }
+
+        [TestMethod]
+        public void Ctor_NullRuleKey_Throws()
+        {
+            Action act = () => new SonarCompositeRuleId("csharpsquid", null);
+            act.Should().Throw<ArgumentNullException>()
+                .And.ParamName.Should().Be("ruleKey");
+        }
+
+        [TestMethod]
+        public void Ctor_ValidArgs_PropertiesSetCorrectly()
+        {
+            var actual = new SonarCompositeRuleId("my repo", "my rule");
+            actual.RepoKey.Should().Be("my repo");
+            actual.RuleKey.Should().Be("my rule");
+            actual.Id.Should().Be("my repo:my rule");
         }
 
         [TestMethod]
@@ -57,6 +79,37 @@ namespace SonarLint.VisualStudio.Core.UnitTests
 
             SonarCompositeRuleId.TryParse(input, out var output);
             output.ToString().Should().Be(input);
+        }
+
+        [TestMethod]
+        [DataRow("repo1", "rule1", "repo1:rule1")]
+        [DataRow("csharpsquid", "S1234", "csharpsquid:S1234")]
+        [DataRow("javascript", "S5678", "javascript:S5678")]
+        [DataRow("my repo", "my rule", "my repo:my rule")]
+        public void GetFullErrorCode_ConcatenatesWithColon(string repoKey, string ruleKey, string expected)
+        {
+            var result = SonarCompositeRuleId.GetRuleId(repoKey, ruleKey);
+
+            result.Should().Be(expected);
+        }
+
+        public static object[][] ReposAndLanguages => LanguageProvider.Instance.AllKnownLanguages.Select(x => new object[] { x.RepoKey, x }).ToArray();
+
+        [TestMethod]
+        [DynamicData(nameof(ReposAndLanguages))]
+        public void Language_MatchesBasedOnRepoKey(string repoKey, Language language)
+        {
+            var testSubject = new SonarCompositeRuleId(repoKey, "S1234");
+
+            testSubject.Language.Should().Be(language);
+        }
+
+        [TestMethod]
+        public void Language_UnknownRepo_ReturnsUnknownLanguage()
+        {
+            var testSubject = new SonarCompositeRuleId("not a sonar language", "S1234");
+
+            testSubject.Language.Should().BeSameAs(Language.Unknown);
         }
     }
 }

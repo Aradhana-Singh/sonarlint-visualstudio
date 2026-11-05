@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -46,7 +46,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
         #region Construction
 
         // View taggers are associated with an ITextView, buffer taggers with an ITextBuffer.
-        // This base class has two constructors, one that accepts a view, the other a buffer.        
+        // This base class has two constructors, one that accepts a view, the other a buffer.
         // The subclass should call the appropriate constructor, depending on whether it is
         // a view or buffer tagger.
 
@@ -111,6 +111,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
 
             // Note: we're currently reporting the whole snapshot as having changed. We could be more specific
             // if our buffer raised a more specific notification.
+            // See #3692 for more information.
             NotifyTagsChanged();
         }
 

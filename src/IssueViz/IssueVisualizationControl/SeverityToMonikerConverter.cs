@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,40 +24,27 @@ using System.Windows.Data;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Shell.Interop;
-using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.IssueVisualization.Helpers;
+using SonarLint.VisualStudio.IssueVisualization.Models;
 
 namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl
 {
-    [ValueConversion(typeof(AnalysisIssueSeverity), typeof(ImageMoniker))]
+    [ValueConversion(typeof(IAnalysisIssueVisualization), typeof(ImageMoniker))]
     public class SeverityToMonikerConverter : IValueConverter
     {
-        private readonly IAnalysisSeverityToVsSeverityConverter analysisSeverityToVsSeverityConverter;
-
-        public SeverityToMonikerConverter()
-            : this(new AnalysisSeverityToVsSeverityConverter())
-        {
-        }
-
-        internal SeverityToMonikerConverter(IAnalysisSeverityToVsSeverityConverter analysisSeverityToVsSeverityConverter)
-        {
-            this.analysisSeverityToVsSeverityConverter = analysisSeverityToVsSeverityConverter;
-        }
-
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var severity = (AnalysisIssueSeverity)value;
-            var vsSeverity = analysisSeverityToVsSeverityConverter.Convert(severity);
-
-            switch (vsSeverity)
+            if (value is IAnalysisIssueVisualization issueViz)
             {
-                case __VSERRORCATEGORY.EC_ERROR:
-                    return KnownMonikers.StatusError;
-                case __VSERRORCATEGORY.EC_WARNING:
-                    return KnownMonikers.StatusWarning;
-                default:
-                    return KnownMonikers.StatusInformation;
+                switch (issueViz.VsSeverity)
+                {
+                    case __VSERRORCATEGORY.EC_ERROR:
+                        return KnownMonikers.StatusError;
+                    case __VSERRORCATEGORY.EC_WARNING:
+                        return KnownMonikers.StatusWarning;
+                }
             }
+
+            return KnownMonikers.StatusInformation;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

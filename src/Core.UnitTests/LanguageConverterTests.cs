@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,11 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SonarLint.VisualStudio.Integration.UnitTests;
-
 namespace SonarLint.VisualStudio.Core.UnitTests
 {
     [TestClass]
@@ -35,7 +30,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         [TestInitialize]
         public void TestInitialize()
         {
-            this.testSubject = new LanguageConverter();
+            testSubject = new LanguageConverter();
         }
 
         #endregion Test boilerplate
@@ -46,7 +41,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         public void LanguageConverter_CanConvertFrom_StringType_IsTrue()
         {
             // Act
-            var canConvertFrom = this.testSubject.CanConvertFrom(typeof(string));
+            var canConvertFrom = testSubject.CanConvertFrom(typeof(string));
 
             // Assert
             canConvertFrom.Should().BeTrue("Expected to be able to convert from string");
@@ -61,7 +56,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             foreach (Type type in types)
             {
                 // Act
-                var canConvertFrom = this.testSubject.CanConvertFrom(type);
+                var canConvertFrom = testSubject.CanConvertFrom(type);
 
                 // Assert
                 canConvertFrom.Should().BeFalse($"Expected NOT to be able to convert from {type.Name}");
@@ -71,16 +66,16 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         [TestMethod]
         public void LanguageConverter_ConvertFrom_AllKnownLanguages_AreRecognized()
         {
-            CheckConvertFromRecognizesLanguage(Language.VBNET.Id, Language.VBNET);
-            CheckConvertFromRecognizesLanguage(Language.C.Id, Language.C);
-            CheckConvertFromRecognizesLanguage(Language.Cpp.Id, Language.Cpp);
-            CheckConvertFromRecognizesLanguage(Language.CSharp.Id, Language.CSharp);
+            foreach (var language in LanguageProvider.Instance.AllKnownLanguages)
+            {
+                CheckConvertFromRecognizesLanguage(language.Id, language);
+            }
         }
 
         private void CheckConvertFromRecognizesLanguage(string id, Language expectedLanguage)
         {
             // Act
-            object result = this.testSubject.ConvertFrom(id);
+            object result = testSubject.ConvertFrom(id);
 
             // Assert
             result.Should().BeAssignableTo<Language>();
@@ -91,7 +86,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         public void LanguageConverter_ConvertFrom_UnknownLanguageId_ReturnsUnknownLanguage()
         {
             // Act
-            object result = this.testSubject.ConvertFrom("WhoAmI?");
+            object result = testSubject.ConvertFrom("WhoAmI?");
 
             // Assert
             result.Should().BeAssignableTo<Language>();
@@ -103,10 +98,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         {
             // Act
             object result;
-            using (new AssertIgnoreScope()) // null input
-            {
-                result = this.testSubject.ConvertFrom(null);
-            }
+            result = testSubject.ConvertFrom(null);
 
             // Assert
             result.Should().BeAssignableTo<Language>();
@@ -117,7 +109,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         public void LanguageConverter_CanConvertTo_StringType_IsTrue()
         {
             // Act
-            var canConvertTo = this.testSubject.CanConvertTo(typeof(string));
+            var canConvertTo = testSubject.CanConvertTo(typeof(string));
 
             // Assert
             canConvertTo.Should().BeTrue("Expected to be able to convert to string");
@@ -132,7 +124,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             foreach (Type type in types)
             {
                 // Act
-                var canConvertTo = this.testSubject.CanConvertTo(type);
+                var canConvertTo = testSubject.CanConvertTo(type);
 
                 // Assert
                 canConvertTo.Should().BeFalse($"Expected NOT to be able to convert to {type.Name}");
@@ -143,7 +135,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         public void LanguageConverter_ConvertTo_Language_ReturnsLanguageId()
         {
             // Act
-            object result = this.testSubject.ConvertTo(Language.VBNET, typeof(string));
+            object result = testSubject.ConvertTo(Language.VBNET, typeof(string));
 
             // Assert
             result.Should().BeAssignableTo<string>();
@@ -155,10 +147,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         {
             // Act
             object result;
-            using (new AssertIgnoreScope()) // null input
-            {
-                result = this.testSubject.ConvertTo(null, typeof(string));
-            }
+            result = testSubject.ConvertTo(null, typeof(string));
 
             // Assert
             result.Should().BeNull();

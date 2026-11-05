@@ -1,0 +1,83 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.ComponentModel.Composition;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Notifications;
+using SonarLint.VisualStudio.SLCore.Configuration;
+
+namespace SonarLint.VisualStudio.SLCore.Notification;
+
+public interface ISloopRestartFailedNotificationService
+{
+    void Show(Action restartAction);
+}
+
+[Export(typeof(ISloopRestartFailedNotificationService))]
+[PartCreationPolicy(CreationPolicy.Shared)]
+[method: ImportingConstructor]
+public class SloopRestartFailedNotificationService(
+    INotificationService notificationService,
+    IOutputWindowService outputWindowService,
+    ISLCoreLocator locator)
+    : ISloopRestartFailedNotificationService
+{
+    private const string NotificationId = "sonarlint.sloop.restart.failed";
+
+    public void Show(Action restartAction)
+    {
+        List<NotificationAction> actions = [];
+
+        AddRestartAction(restartAction, actions);
+        AddUseAutoDetectedIfNeeded(restartAction, actions);
+        AddShowLogsAction(actions);
+
+        var message = locator.IsCustomJreSet()
+            ? SLCoreStrings.SloopRestartFailedNotificationService_GoldBarMessageCustomJre
+            : SLCoreStrings.SloopRestartFailedNotificationService_GoldBarMessage;
+
+        var notification = new VisualStudio.Core.Notifications.Notification(
+            id: NotificationId,
+            message: message,
+            actions: actions,
+            showOncePerSession: false,
+            closeOnSolutionClose: false
+        );
+
+        notificationService.ShowNotification(notification);
+    }
+
+    private void AddShowLogsAction(List<NotificationAction> actions) => actions.Add(new NotificationAction(SLCoreStrings.Infobar_ShowLogs, _ => outputWindowService.Show(), false));
+
+    private void AddUseAutoDetectedIfNeeded(Action restartAction, List<NotificationAction> actions)
+    {
+        if (!locator.IsCustomJreSet() && locator.IsGlobalJreAvailable())
+        {
+            actions.Add(new NotificationAction(SLCoreStrings.SloopRestartFailedNotificationService_UseAutoDetected, _ =>
+            {
+                locator.SetCustomJreToGlobal();
+                restartAction();
+            }, true));
+        }
+    }
+
+    private static void AddRestartAction(Action restartAction, List<NotificationAction> actions) =>
+        actions.Add(new NotificationAction(SLCoreStrings.SloopRestartFailedNotificationService_Restart, _ => restartAction(), true));
+}

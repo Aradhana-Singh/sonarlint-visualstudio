@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@
 using System;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Core.UnitTests
 {
@@ -29,11 +29,31 @@ namespace SonarLint.VisualStudio.Core.UnitTests
     public class EnvironmentVariableProviderTests
     {
         [TestMethod]
+        public void MefCtor_CheckIsExported() => MefTestHelpers.CheckTypeCanBeImported<EnvironmentVariableProvider, IEnvironmentVariableProvider>();
+
+        [TestMethod]
+        public void MefCtor_CheckIsSingleton() => MefTestHelpers.CheckIsSingletonMefComponent<EnvironmentVariableProvider>();
+
+        [TestMethod]
+        public void GetAll_ReturnsExpectedValues()
+        {
+            var testSubject = EnvironmentVariableProvider.Instance;
+            using var environmentVariableScope = new EnvironmentVariableScope();
+            environmentVariableScope.SetVariable("VAR1", "VAL1");
+            environmentVariableScope.SetVariable("VAR2", "VAL2");
+
+            var variables = testSubject.GetAll();
+
+            variables.Should().HaveCountGreaterThan(2);
+            variables.Should().Contain([("VAR1", "VAL1"), ("VAR2", "VAL2")]);
+        }
+
+        [TestMethod]
         [DataRow(null)]
         [DataRow("")]
         public void TryGet_NoVariableName_ArgumentNullException(string variableName)
         {
-            var testSubject = new EnvironmentVariableProvider();
+            var testSubject = EnvironmentVariableProvider.Instance;
 
             Action act = () => testSubject.TryGet(variableName);
 
@@ -43,7 +63,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
         [TestMethod]
         public void TryGet_VariableDoesNotExist_Null()
         {
-            var testSubject = new EnvironmentVariableProvider();
+            var testSubject = EnvironmentVariableProvider.Instance;
 
             var result = testSubject.TryGet(Guid.NewGuid().ToString());
 
@@ -56,7 +76,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             using var scope = new EnvironmentVariableScope();
             scope.SetVariable("test", "");
 
-            var testSubject = new EnvironmentVariableProvider();
+            var testSubject = EnvironmentVariableProvider.Instance;
 
             var result = testSubject.TryGet("test");
 
@@ -69,7 +89,7 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             using var scope = new EnvironmentVariableScope();
             scope.SetVariable("test", " ");
 
-            var testSubject = new EnvironmentVariableProvider();
+            var testSubject = EnvironmentVariableProvider.Instance;
 
             var result = testSubject.TryGet("test");
 
@@ -82,11 +102,23 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             using var scope = new EnvironmentVariableScope();
             scope.SetVariable("test name", "some value");
 
-            var testSubject = new EnvironmentVariableProvider();
+            var testSubject = EnvironmentVariableProvider.Instance;
 
             var result = testSubject.TryGet("TEST NAME"); // should be case insensitive
 
             result.Should().Be("some value");
+        }
+
+        [TestMethod]
+        [DataRow(Environment.SpecialFolder.ApplicationData)]
+        [DataRow(Environment.SpecialFolder.LocalApplicationData)]
+        public void GetFolderPath_ReturnsValue(Environment.SpecialFolder folder)
+        {
+            var testSubject = EnvironmentVariableProvider.Instance;
+
+            var actual = testSubject.GetFolderPath(folder);
+
+            actual.Should().Be(Environment.GetFolderPath(folder));
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-namespace SonarLint.VisualStudio.Core.Suppression
+namespace SonarLint.VisualStudio.Core.Suppressions
 {
     /// <summary>
     /// Describes a single issue with the properties required for
@@ -26,10 +26,16 @@ namespace SonarLint.VisualStudio.Core.Suppression
     /// </summary>
     public interface IFilterableIssue
     {
+        /// <summary>
+        /// The id of the issue that comes from SlCore
+        /// </summary>
+        Guid IssueId { get; }
+        string IssueServerKey { get; }
+        [Obsolete("Use SonarRuleId instead")]
         string RuleId { get; }
+        SonarCompositeRuleId SonarRuleId { get; }
         string FilePath { get; }
         string LineHash { get; }
-        string ProjectGuid { get; }
         int? StartLine { get; }
     }
 }

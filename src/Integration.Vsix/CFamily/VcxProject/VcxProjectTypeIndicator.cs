@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -63,7 +63,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             };
         }
 
-        private bool IsAnalyzableVcx(VCProject vcProject)
+        private static bool IsAnalyzableVcx(VCProject vcProject)
         {
             var vcConfig = vcProject.ActiveConfiguration;
             var tools = vcConfig.Tools as IVCCollection;

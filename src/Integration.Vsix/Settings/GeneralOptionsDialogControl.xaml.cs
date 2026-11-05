@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,32 +18,27 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Controls;
-using System.Windows.Input;
+using System.Windows.Navigation;
+using SonarLint.VisualStudio.Integration.Vsix.Settings;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
     /// <summary>
     /// Interaction logic for GeneralOptionsDialogControl.xaml
     /// </summary>
-    public partial class GeneralOptionsDialogControl : UserControl
+    [ExcludeFromCodeCoverage]
+    internal partial class GeneralOptionsDialogControl : UserControl
     {
-        public GeneralOptionsDialogControl(ICommand openSettingsFileCommand, ICommand showWikiCommand)
+        public GeneralOptionsDialogControlViewModel ViewModel { get; }
+
+        public GeneralOptionsDialogControl(GeneralOptionsDialogControlViewModel viewModel)
         {
-            if (openSettingsFileCommand == null)
-            {
-                throw new ArgumentNullException(nameof(openSettingsFileCommand));
-            }
-            if (showWikiCommand == null)
-            {
-                throw new ArgumentNullException(nameof(showWikiCommand));
-            }
-
+            ViewModel = viewModel;
             InitializeComponent();
-
-            this.OpenSettingsButton.Command = openSettingsFileCommand;
-            this.ShowWikiHyperLink.Command = showWikiCommand;
         }
+
+        internal void ViewInBrowser(object sender, RequestNavigateEventArgs args) => ViewModel.ViewInBrowser(args.Uri.AbsoluteUri);
     }
 }

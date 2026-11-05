@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,7 +26,7 @@ using FluentAssertions;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     public class ConfigurableVsInfoBarUIElement : IVsInfoBarUIElement
     {
@@ -116,7 +116,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
 
         public void SimulateClickEvent(IVsInfoBarActionItem item = null)
         {
-            this.sinks.Values.ToList().ForEach(v => v.OnActionItemClicked(this, item));
+            this.sinks.Values.ToList().ForEach(v => v.OnActionItemClicked(this, item ?? new ConfigurableVsInfoBarActionItem()));
         }
 
         public void SimulateClosedEvent()
@@ -131,5 +131,20 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         #endregion Test helpers
+    }
+
+    public class ConfigurableVsInfoBarActionItem : IVsInfoBarActionItem
+    {
+        public string Text { get; set; }
+
+        public object ActionContext { get; set; }
+
+        public bool IsButton { get; set; }
+
+        public bool Bold { get; set; }
+
+        public bool Italic { get; set; }
+
+        public bool Underline { get; set; }
     }
 }

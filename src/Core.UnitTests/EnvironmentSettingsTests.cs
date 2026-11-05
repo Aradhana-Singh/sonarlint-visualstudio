@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Core.UnitTests
 {
@@ -88,24 +88,6 @@ namespace SonarLint.VisualStudio.Core.UnitTests
             {
                 scope.SetVariable(EnvironmentSettings.PchGenerationTimeoutEnvVar, envVarValue);
                 new EnvironmentSettings().PCHGenerationTimeoutInMs(PchGenerationDefaultValue).Should().Be(expected);
-            }
-        }
-
-        [TestMethod]
-        [DataRow(null, false)]
-        [DataRow("true", true)]
-        [DataRow("TRUE", true)]
-        [DataRow("false", false)]
-        [DataRow("FALSE", false)]
-        [DataRow("1", false)]
-        [DataRow("0", false)]
-        [DataRow("not a boolean", false)]
-        public void LogDebugMessages_CorrectlyMapped(string envVarValue, bool expected)
-        {
-            using (var scope = new EnvironmentVariableScope())
-            {
-                scope.SetVariable(EnvironmentSettings.LogDebugMessagesEnvVar, envVarValue);
-                new EnvironmentSettings().ShouldLogDebugMessages().Should().Be(expected);
             }
         }
     }

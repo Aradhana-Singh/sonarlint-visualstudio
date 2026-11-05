@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,11 +22,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
-using SonarLint.VisualStudio.Integration;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.IssueVisualization.Models;
+
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
 {
@@ -97,7 +98,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
         }
 
         /// <summary>
-        /// Calculate spans for locations that don't have a span, or have a span in a different text buffer. 
+        /// Calculate spans for locations that don't have a span, or have a span in a different text buffer.
         /// </summary>
         /// <remarks>
         /// All spans for issues in the this file should have been calculated when the file was analysed (whether primary or secondary).
@@ -151,11 +152,11 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
             {
                 try
                 {
-                    if (!old.Tag.Location.Span.IsNavigable()) 
+                    if (!old.Tag.Location.Span.IsNavigable())
                     {
-                        continue; 
+                        continue;
                     }
-                    
+
                     var newSpan = old.Span.TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive);
                     var hasSpanBeenEdited = newSpan.Length != old.Span.Length;
 
@@ -164,7 +165,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
                         // If the user has typed inside the tagged region we'll stop showing a Tag for that span
                         old.Tag.Location.InvalidateSpan();
                     }
-                    else 
+                    else
                     {
                         old.Tag.Location.Span = newSpan;
                         translatedTagSpans.Add(new TagSpan<IIssueLocationTag>(newSpan, old.Tag));
@@ -204,7 +205,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
                 var newTextSnapshot = e.After;
 
                 TranslateTagSpans(newTextSnapshot);
-                locationService.Refresh(new[] { GetCurrentFilePath() });
+                locationService.RefreshOnBufferChanged(GetCurrentFilePath());
 
                 var affectedSpan = CalculateSpanOfChanges(e.Changes, newTextSnapshot);
                 NotifyTagsChanged(affectedSpan);
@@ -241,7 +242,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
         {
             var startSpans = changeCollection.Select(x => x.NewSpan).ToArray();
             var endSpans = TagSpans.Select(x => x.Span.Span);
-            
+
             return CalculateAffectedSpan(newTextSnapshot, startSpans, endSpans);
         }
 

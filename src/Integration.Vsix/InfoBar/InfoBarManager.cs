@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,9 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Globalization;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Shell;
@@ -37,11 +35,13 @@ namespace SonarLint.VisualStudio.Integration.Vsix.InfoBar
     internal class InfoBarManager : IInfoBarManager
     {
         private readonly IServiceProvider serviceProvider;
+        private readonly IThreadHandling threadHandling;
 
         [ImportingConstructor]
-        public InfoBarManager([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
+        public InfoBarManager([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider, IThreadHandling threadHandling)
         {
             this.serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            this.threadHandling = threadHandling ?? throw new ArgumentNullException(nameof(threadHandling));
         }
 
         #region IInfoBarManager
@@ -57,7 +57,22 @@ namespace SonarLint.VisualStudio.Integration.Vsix.InfoBar
                 throw new ArgumentNullException(nameof(buttonText));
             }
 
-            return AttachInfoBarImpl(toolWindowGuid, message, buttonText, imageMoniker);
+            return AttachInfoBarToolWindowImpl(toolWindowGuid, message, imageMoniker, ButtonStyle.Button, buttonText);
+        }
+
+        public IInfoBar AttachInfoBarWithButtons(Guid toolWindowGuid, string message, IEnumerable<string> buttonTexts, SonarLintImageMoniker imageMoniker)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            if (buttonTexts == null)
+            {
+                throw new ArgumentNullException(nameof(buttonTexts));
+            }
+
+            return AttachInfoBarToolWindowImpl(toolWindowGuid, message, imageMoniker, ButtonStyle.Hyperlink, buttonTexts.ToArray());
         }
 
         public IInfoBar AttachInfoBar(Guid toolWindowGuid, string message, SonarLintImageMoniker imageMoniker)
@@ -67,49 +82,83 @@ namespace SonarLint.VisualStudio.Integration.Vsix.InfoBar
                 throw new ArgumentNullException(nameof(message));
             }
 
-            return AttachInfoBarImpl(toolWindowGuid, message, null, imageMoniker);
+            return AttachInfoBarToolWindowImpl(toolWindowGuid, message, imageMoniker);
         }
 
-        public void DetachInfoBar(IInfoBar currentInfoBar)
+        public IInfoBar AttachInfoBarToMainWindow(string message, SonarLintImageMoniker imageMoniker, params string[] buttonTexts)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            if (buttonTexts == null)
+            {
+                throw new ArgumentNullException(nameof(buttonTexts));
+            }
+
+            threadHandling.ThrowIfNotOnUIThread();
+
+            // Note: this will return null if the VS main window hasn't been initialized
+            // e.g. on startup when the startup dialog is visible
+            if (!TryGetMainWindowInfoBarHost(out var host))
+            {
+                return null;
+            }
+
+            return AttachInfoBarImpl(host, message, imageMoniker, ButtonStyle.Hyperlink, buttonTexts);
+        }
+
+        public void CloseInfoBar(IInfoBar currentInfoBar)
         {
             if (currentInfoBar == null)
             {
                 throw new ArgumentNullException(nameof(currentInfoBar));
             }
 
-            if (!(currentInfoBar is PrivateInfoBarWrapper wrapper))
+            if (currentInfoBar is not PrivateInfoBarWrapper)
             {
                 throw new ArgumentException(Strings.InvalidInfoBarInstance, nameof(currentInfoBar));
             }
 
             currentInfoBar.Close();
-
-            ThreadHelper.ThrowIfNotOnUIThread();
-            IVsInfoBarHost host;
-            if (TryGetInfoBarHost(wrapper.Frame, out host))
-            {
-                host.RemoveInfoBar(wrapper.InfoBarUIElement);
-            }
         }
         #endregion
 
-        #region Static helpers
+        #region Helpers
 
-        private IInfoBar AttachInfoBarImpl(Guid toolWindowGuid, string message, string buttonText, SonarLintImageMoniker imageMoniker)
+        private IInfoBar AttachInfoBarToolWindowImpl(Guid toolWindowGuid, string message, SonarLintImageMoniker imageMoniker, ButtonStyle buttonStyle = ButtonStyle.Button, params string[] buttonTexts)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            threadHandling.ThrowIfNotOnUIThread();
 
             IVsUIShell shell = serviceProvider.GetService<SVsUIShell, IVsUIShell>();
             IVsWindowFrame frame = GetToolWindowFrame(shell, toolWindowGuid);
-
-            InfoBarModel model = CreateModel(message, buttonText, imageMoniker);
-
-            IVsInfoBarUIFactory infoBarUIFactory = serviceProvider.GetService<SVsInfoBarUIFactory, IVsInfoBarUIFactory>();
-            IVsInfoBarUIElement uiElement;
-            if (TryCreateInfoBarUI(infoBarUIFactory, model, out uiElement)
-                && TryAddInfoBarToFrame(frame, uiElement))
+            if (!TryGetInfoBarHostFromFrame(frame, out var host))
             {
-                return new PrivateInfoBarWrapper(frame, uiElement);
+                return null;
+            }
+
+            var result = AttachInfoBarImpl(host, message, imageMoniker, buttonStyle, buttonTexts);
+            if(result != null)
+            {
+                frame.ShowNoActivate();
+            }
+
+            return result;
+        }
+
+        private IInfoBar AttachInfoBarImpl(IVsInfoBarHost host, string message, SonarLintImageMoniker imageMoniker, ButtonStyle buttonStyle = ButtonStyle.Button, params string[] buttonTexts)
+        {
+            threadHandling.ThrowIfNotOnUIThread();
+
+            InfoBarModel model = CreateModel(message, buttonTexts, buttonStyle, imageMoniker);
+            IVsInfoBarUIFactory infoBarUIFactory = serviceProvider.GetService(typeof(SVsInfoBarUIFactory)) as IVsInfoBarUIFactory;
+            IVsInfoBarUIElement uiElement;
+
+            if (TryCreateInfoBarUI(infoBarUIFactory, model, out uiElement))
+            {
+                host.AddInfoBar(uiElement);
+                return new PrivateInfoBarWrapper(host, uiElement, threadHandling);
             }
 
             return null;
@@ -144,29 +193,22 @@ namespace SonarLint.VisualStudio.Integration.Vsix.InfoBar
             return uiElement != null;
         }
 
-        private static InfoBarModel CreateModel(string message, string buttonText, SonarLintImageMoniker imageMoniker)
+        private static InfoBarModel CreateModel(string message, IEnumerable<string> buttonTexts, ButtonStyle buttonStyle, SonarLintImageMoniker imageMoniker)
         {
-            var vsImageMoniker = new ImageMoniker {Guid = imageMoniker.Guid, Id = imageMoniker.Id};
+            var vsImageMoniker = new ImageMoniker { Guid = imageMoniker.Guid, Id = imageMoniker.Id };
+
+            var actionItems = buttonTexts.Select(x =>
+                buttonStyle == ButtonStyle.Button
+                    ? (IVsInfoBarActionItem) new InfoBarButton(x)
+                    : new InfoBarHyperlink(x));
 
             return new InfoBarModel(message,
-                actionItems: buttonText != null ? new[] { new InfoBarButton(buttonText) } : new IVsInfoBarActionItem[0],
+                actionItems: actionItems,
                 image: vsImageMoniker,
                 isCloseButtonVisible: true);
         }
 
-        private static bool TryAddInfoBarToFrame(IVsWindowFrame frame, IVsUIElement uiElement)
-        {
-            IVsInfoBarHost infoBarHost;
-            if (TryGetInfoBarHost(frame, out infoBarHost))
-            {
-                infoBarHost.AddInfoBar(uiElement);
-                return true;
-            }
-
-            return false;
-        }
-
-        private static bool TryGetInfoBarHost(IVsWindowFrame frame, out IVsInfoBarHost infoBarHost)
+        private static bool TryGetInfoBarHostFromFrame(IVsWindowFrame frame, out IVsInfoBarHost infoBarHost)
         {
             object infoBarHostObj;
 
@@ -179,52 +221,83 @@ namespace SonarLint.VisualStudio.Integration.Vsix.InfoBar
             infoBarHost = infoBarHostObj as IVsInfoBarHost;
             return infoBarHost != null;
         }
+
+        private bool TryGetMainWindowInfoBarHost(out IVsInfoBarHost infoBarHost)
+        {
+            var shell = serviceProvider.GetService(typeof(SVsShell)) as IVsShell;
+            Debug.Assert(shell != null);
+
+            shell.GetProperty((int)__VSSPROPID7.VSSPROPID_MainWindowInfoBarHost, out object value);
+
+            infoBarHost = value as IVsInfoBarHost;
+            return infoBarHost != null;
+        }
+
         #endregion
+
+        private enum ButtonStyle
+        {
+            Hyperlink,
+            Button
+        }
 
         private class PrivateInfoBarWrapper : IInfoBar, IVsInfoBarUIEvents
         {
+            private readonly IThreadHandling threadHandling;
             private uint? cookie;
             private bool isClosed;
 
-            public PrivateInfoBarWrapper(IVsWindowFrame frame, IVsInfoBarUIElement uiElement)
+            public PrivateInfoBarWrapper(IVsInfoBarHost host, IVsInfoBarUIElement uiElement, IThreadHandling threadHandling)
             {
-                Debug.Assert(frame != null);
+                Debug.Assert(host != null);
                 Debug.Assert(uiElement != null);
+                this.threadHandling = threadHandling;
 
+                this.Host = host;
                 this.InfoBarUIElement = uiElement;
-                this.Frame = frame;
-
-                this.Frame.ShowNoActivate();
 
                 this.Advise();
             }
 
-            internal IVsInfoBarUIElement InfoBarUIElement { get; }
+            private IVsInfoBarUIElement InfoBarUIElement { get; }
 
-            internal IVsWindowFrame Frame { get; }
+            private IVsInfoBarHost Host { get; }
 
             #region IInfoBarEvents
-            public event EventHandler ButtonClick;
+            public event EventHandler<InfoBarButtonClickedEventArgs> ButtonClick;
             public event EventHandler Closed;
 
-            public void Close()
+            private void CloseUIElement()
             {
                 if (this.isClosed)
                 {
                     return;
                 }
 
-                ThreadHelper.ThrowIfNotOnUIThread();
+                threadHandling.ThrowIfNotOnUIThread();
+                // This will fire the Closed event
                 this.InfoBarUIElement.Close();
 
                 Debug.Assert(!this.cookie.HasValue, "Expected to be unadvised");
             }
+
+            public void Close()
+            {
+                CloseUIElement();
+
+                threadHandling.ThrowIfNotOnUIThread();
+                if (Host != null )
+                {
+                    Host.RemoveInfoBar(InfoBarUIElement);
+                }
+            }
+
             #endregion
 
             #region IVsInfoBarUIEvents
             void IVsInfoBarUIEvents.OnActionItemClicked(IVsInfoBarUIElement infoBarUIElement, IVsInfoBarActionItem actionItem)
             {
-                this.ButtonClick?.Invoke(this, EventArgs.Empty);
+                this.ButtonClick?.Invoke(this, new InfoBarButtonClickedEventArgs(actionItem.Text));
             }
 
             void IVsInfoBarUIEvents.OnClosed(IVsInfoBarUIElement infoBarUIElement)

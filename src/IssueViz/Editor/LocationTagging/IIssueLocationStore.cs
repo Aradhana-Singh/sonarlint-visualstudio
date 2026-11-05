@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -37,14 +37,35 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
         IEnumerable<IAnalysisIssueLocationVisualization> GetLocations(string filePath);
 
         /// <summary>
-        /// Used by callers to notify the service that the data for issues in the specified
-        /// files has been updated
+        /// Returns all the primary issues
         /// </summary>
-        /// <remarks>Allows the service to take any necessary action to update the UI.
-        /// This is a batch notification. We don't want to notify for each individual location change as that would be
-        /// too noisy.
+        IEnumerable<IAnalysisIssueVisualization> GetIssues();
+
+        /// <summary>
+        /// Notifies the service that one or more issues in the specified files have changed
+        /// independently of the content of the document changing
+        /// </summary>
+        /// <remarks>
+        /// The set of issues can be changed without the content changing if e.g.
+        /// - a new analysis has been performed
+        /// - issues have been suppressed/unsuppressed
+        /// <seealso cref="RefreshOnBufferChanged(string)"/>
         /// </remarks>
         void Refresh(IEnumerable<string> affectedFilePaths);
+
+        /// <summary>
+        /// Notifies the service that an underlying file has been updated
+        /// </summary>
+        /// <remarks>
+        /// Changing the contents of a file can affect the issues in the file:
+        /// - if content has been deleted then some issues may no longer exist.
+        /// - if content has been added or removed then the location of issues may have changed.
+        /// This method allows the service to update necessary action to update the UI.
+        /// The assumption is that Editor-related components (e.g. taggers) do not need
+        /// to be updated as they will already be aware of the change.
+        /// <seealso cref="Refresh(IEnumerable{string})"/>
+        /// </remarks>
+        void RefreshOnBufferChanged(string affectedFilePath);
 
         /// <summary>
         /// Returns true/false if the given <see cref="issueVisualization"/> exists in the store

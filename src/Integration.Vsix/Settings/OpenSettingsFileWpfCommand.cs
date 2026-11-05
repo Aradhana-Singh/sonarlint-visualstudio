@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,26 +18,30 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.Windows.Forms;
 using System.Windows.Input;
-using Microsoft.VisualStudio.Shell;
 using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.UserRuleSettings;
 using SonarLint.VisualStudio.Integration.Vsix.Resources;
+using SonarLint.VisualStudio.Integration.Vsix.Settings;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
     internal class OpenSettingsFileWpfCommand : ICommand
     {
         private readonly IServiceProvider serviceProvider;
-        private readonly IUserSettingsProvider userSettingsProvider;
+        private readonly IGlobalSettingsStorage globalSettingsStorage;
         private readonly ILogger logger;
         private readonly IWin32Window win32Window;
 
-        public OpenSettingsFileWpfCommand(IServiceProvider serviceProvider, IUserSettingsProvider userSettingsProvider, IWin32Window win32Window, ILogger logger)
+        public OpenSettingsFileWpfCommand(
+            IServiceProvider serviceProvider,
+            IGlobalSettingsStorage globalSettingsStorage,
+            IWin32Window win32Window,
+            ILogger logger)
         {
             this.serviceProvider = serviceProvider;
-            this.userSettingsProvider = userSettingsProvider;
+            this.globalSettingsStorage = globalSettingsStorage;
             this.logger = logger;
             this.win32Window = win32Window;
         }
@@ -52,22 +56,17 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         {
             try
             {
-                userSettingsProvider.EnsureFileExists();
-                OpenDocumentInVs(userSettingsProvider.SettingsFilePath);
+                OpenDocumentInVs(globalSettingsStorage.SettingsFilePath);
             }
             catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
-                logger.WriteLine(Strings.ToolsOptions_ErrorOpeningSettingsFile, userSettingsProvider.SettingsFilePath, ex.Message);
+                logger.WriteLine(Strings.ToolsOptions_ErrorOpeningSettingsFile, globalSettingsStorage.SettingsFilePath, ex.Message);
             }
         }
 
         protected virtual /* for testing */ void OpenDocumentInVs(string filePath)
         {
-            // TryOpenDocument calls several other VS services. From a testing point of view, it's simpler to
-            // create a subclass and override this method.
-            var viewType = Guid.Empty;
-            VsShellUtilities.TryOpenDocument(serviceProvider, filePath, viewType, out var _, out var _, out var _);
-
+            DocumentOpener.OpenDocumentInVs(serviceProvider, filePath);
             new NativeInterop().CloseRootWindow(win32Window);
         }
 

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@
 using System;
 using EnvDTE;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     public class WindowMock : Window
     {
@@ -108,7 +108,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             }
         }
 
-#if VS2022
         IntPtr Window.HWnd
         {
             get
@@ -116,15 +115,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
                 throw new NotImplementedException();
             }
         }
-#else
-        int Window.HWnd
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
-#endif
 
         bool Window.IsFloating
         {
@@ -294,17 +284,10 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             this.Active = true;
         }
 
-#if VS2022
         void Window.Attach(IntPtr lWindowHandle)
         {
             throw new NotImplementedException();
         }
-#else
-        void Window.Attach(int lWindowHandle)
-        {
-            throw new NotImplementedException();
-        }
-#endif
 
         void Window.Close(vsSaveChanges SaveChanges)
         {

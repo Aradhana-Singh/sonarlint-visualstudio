@@ -1,0 +1,43 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+namespace SonarLint.VisualStudio.SLCore.Protocol
+{
+    /// <summary>
+    /// Represents an option class where only one of the properties <see cref="Left"/> or <see cref="Right"/> is not null
+    /// </summary>
+    public class Either<TLeft, TRight>
+        where TLeft : class
+        where TRight : class
+    {
+        private Either() { }
+
+        public TLeft? Left { get; private init; }
+        public TRight? Right { get; private init; }
+
+        public static Either<TLeft, TRight> CreateLeft(TLeft left) => new() { Left = left ?? throw new ArgumentNullException(nameof(left)) };
+
+        public static Either<TLeft, TRight> CreateRight(TRight right) => new() { Right = right ?? throw new ArgumentNullException(nameof(right)) };
+
+        public static implicit operator Either<TLeft, TRight>(TLeft left) => CreateLeft(left);
+
+        public static implicit operator Either<TLeft, TRight>(TRight right) => CreateRight(right);
+    }
+}

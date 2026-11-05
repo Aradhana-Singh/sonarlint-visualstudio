@@ -14,23 +14,27 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   
-  <ItemGroup Label="Test framework">
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
-
-    <PackageReference Include="Moq" Version="4.14.5" />
-    <PackageReference Include="FluentAssertions" Version="5.9.0" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\TestInfrastructure\TestInfrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="CFamily\TestResources\**\*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <EmbeddedResource Include="SystemAbstractions\TestData.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="app.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>app.config</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="app.config">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>app.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
 

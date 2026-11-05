@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,10 +21,10 @@
 using System;
 using System.IO;
 using System.IO.Abstractions;
-using Microsoft.VisualStudio;
 using Newtonsoft.Json.Linq;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.Helpers;
+using SonarLint.VisualStudio.Core;
+
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.CFamily.CMake
 {
@@ -106,7 +106,7 @@ namespace SonarLint.VisualStudio.CFamily.CMake
 
         private void LogDebug(string message)
         {
-            logger.LogDebug("[CMake:ActiveConfigProvider] " + message);
+            logger.LogVerbose("[CMake:ActiveConfigProvider] " + message);
         }
     }
 }

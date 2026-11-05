@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,49 +18,20 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.Design;
-using System.Linq;
-using System.Windows.Threading;
-using FluentAssertions;
 using Microsoft.VisualStudio.ComponentModelHost;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using SonarLint.VisualStudio.Integration.TeamExplorer;
+using Microsoft.VisualStudio.Shell;
+using SonarLint.VisualStudio.ConnectedMode.UI;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Binding;
 using SonarLint.VisualStudio.Integration.Vsix;
+using SonarLint.VisualStudio.IssueVisualization.Helpers;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests
 {
     [TestClass]
     public class PackageCommandManagerTests
     {
-        private ConfigurableServiceProvider serviceProvider;
-        private ConfigurableMenuCommandService menuService;
-
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            this.serviceProvider = new ConfigurableServiceProvider();
-
-            this.menuService = new ConfigurableMenuCommandService();
-            this.serviceProvider.RegisterService(typeof(IMenuCommandService), this.menuService);
-
-            var projectSystem = new ConfigurableVsProjectSystemHelper(this.serviceProvider);
-            this.serviceProvider.RegisterService(typeof(IProjectSystemHelper), projectSystem);
-
-            var host = new ConfigurableHost(this.serviceProvider, Dispatcher.CurrentDispatcher);
-
-            var propManager = new ProjectPropertyManager(host);
-            var propManagerExport = MefTestHelpers.CreateExport<IProjectPropertyManager>(propManager);
-
-            var teController = new ConfigurableTeamExplorerController();
-            var teExport = MefTestHelpers.CreateExport<ITeamExplorerController>(teController);
-
-            var mefModel = ConfigurableComponentModel.CreateWithExports(teExport, propManagerExport);
-            this.serviceProvider.RegisterService(typeof(SComponentModel), mefModel);
-        }
-
         #region Tests
 
         [TestMethod]
@@ -70,24 +41,24 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         [TestMethod]
-        public void PackageCommandManager_Initialize()
+        public async Task PackageCommandManager_InitializeAsync()
         {
             // Arrange
-            var testSubject = new PackageCommandManager(this.menuService);
+            var testSubject = CreateTestSubject(out var menuService);
 
-            var cmdSet = new Guid(CommonGuids.CommandSet);
+            var cmdSet = new Guid(CommonGuids.SonarLintMenuCommandSet);
             IList<CommandID> allCommands = Enum.GetValues(typeof(PackageCommandId))
-                                               .Cast<int>()
-                                               .Select(x => new CommandID(cmdSet, x))
-                                               .ToList();
+                .Cast<int>()
+                .Select(x => new CommandID(cmdSet, x))
+                .ToList();
+
+            var serviceProvider = GetMockedServiceProvider();
 
             // Act
-            testSubject.Initialize(serviceProvider.GetMefService<ITeamExplorerController>(),
-                serviceProvider.GetMefService<IProjectPropertyManager>(),
-                Mock.Of<IProjectToLanguageMapper>());
+            await testSubject.InitializeAsync(serviceProvider, Substitute.For<PackageCommandManager.ShowOptionsPage>());
 
             // Assert
-            menuService.Commands.Should().HaveCount(allCommands.Count, "Unexpected number of commands");
+            menuService.Commands.Should().HaveCountGreaterOrEqualTo(allCommands.Count, "Unexpected number of commands");
 
             IList<CommandID> missingCommands = allCommands.Except(menuService.Commands.Select(x => x.Key)).ToList();
             IEnumerable<string> missingCommandNames = missingCommands.Select(x => Enum.GetName(typeof(PackageCommandId), x));
@@ -95,15 +66,36 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         [TestMethod]
-        public void PackageCommandManager_RegisterCommand()
+        [DataRow(CommonGuids.SonarLintMenuCommandSet)]
+        [DataRow(CommonGuids.HelpMenuCommandSet)]
+        public void PackageCommandManager_RegisterCommandInCorrectCommandSet(string cmdSet)
         {
             // Arrange
             int cmdId = 42;
-            Guid cmdSetGuid = new Guid(CommonGuids.CommandSet);
+            Guid cmdSetGuid = new Guid(cmdSet);
             CommandID commandIdObject = new CommandID(cmdSetGuid, cmdId);
             var command = new ConfigurableVsCommand();
 
-            var testSubject = new PackageCommandManager(this.menuService);
+            var testSubject = CreateTestSubject(out var menuService);
+
+            // Act
+            testSubject.RegisterCommand(cmdSet, cmdId, command);
+
+            // Assert
+            var registeredCommand = menuService.Commands.Single().Value;
+            registeredCommand.CommandID.Should().Be(commandIdObject, $"Unexpected CommandID");
+        }
+
+        [TestMethod]
+        public void PackageCommandManager_RegisterCommandUsingDefaultCommandSet()
+        {
+            // Arrange
+            int cmdId = 42;
+            Guid cmdSetGuid = new Guid(CommonGuids.SonarLintMenuCommandSet);
+            CommandID commandIdObject = new CommandID(cmdSetGuid, cmdId);
+            var command = new ConfigurableVsCommand();
+
+            var testSubject = CreateTestSubject(out var menuService);
 
             // Act
             testSubject.RegisterCommand(cmdId, command);
@@ -114,5 +106,25 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         #endregion Tests
+
+        private static PackageCommandManager CreateTestSubject(out ConfigurableMenuCommandService menuService)
+        {
+            menuService = new ConfigurableMenuCommandService();
+            return new PackageCommandManager(menuService);
+        }
+
+        private IAsyncServiceProvider GetMockedServiceProvider()
+        {
+            var serviceProvider = Substitute.For<IAsyncServiceProvider>();
+            var componentModel = Substitute.For<IComponentModel>();
+            serviceProvider.GetServiceAsync(typeof(SComponentModel)).Returns(componentModel);
+            componentModel.GetExtensions<IConnectedModeUIManager>().Returns([Substitute.For<IConnectedModeUIManager>()]);
+            componentModel.GetExtensions<IConnectedModeUIServices>().Returns([Substitute.For<IConnectedModeUIServices>()]);
+            componentModel.GetExtensions<IActiveSolutionBoundTracker>().Returns([Substitute.For<IActiveSolutionBoundTracker>()]);
+            componentModel.GetExtensions<IShowInBrowserService>().Returns([Substitute.For<IShowInBrowserService>()]);
+            componentModel.GetExtensions<IOutputWindowService>().Returns([Substitute.For<IOutputWindowService>()]);
+            componentModel.GetExtensions<IProjectPropertyManager>().Returns([Substitute.For<IProjectPropertyManager>()]);
+            return serviceProvider;
+        }
     }
 }

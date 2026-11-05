@@ -1,6 +1,6 @@
-﻿/*
+/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,276 +18,474 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Linq;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+using SonarLint.VisualStudio.ConnectedMode;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Binding;
+using SonarLint.VisualStudio.Core.SmartNotification;
 using SonarLint.VisualStudio.Core.SystemAbstractions;
-using SonarLint.VisualStudio.Infrastructure.VS;
-using SonarLint.VisualStudio.Integration.Telemetry;
-using SonarQube.Client.Models;
+using SonarLint.VisualStudio.Integration.Notifications;
+using SonarLint.VisualStudio.TestInfrastructure;
 
-namespace SonarLint.VisualStudio.Integration.Notifications.UnitTests
+namespace SonarLint.VisualStudio.Integration.UnitTests.Notifications;
+
+[TestClass]
+public class NotificationIndicatorViewModelTests
 {
-    [TestClass]
-    public class NotificationIndicatorViewModelTests
+    private static readonly SmartNotification TestNotification =
+        new("foo", "http://foo.com", ["SCOPE_ID"], "foo", "connectionId", new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.FromHours(2)));
+    private ISmartNotificationService smartNotificationService;
+    private IActiveSolutionBoundTracker activeSolutionBoundTracker;
+    private IBrowserService browserService;
+    private IServerConnectionsRepositoryAdapter serverConnectionsRepositoryAdapter;
+    private NotificationIndicatorViewModel testSubject;
+    private IThreadHandling threadHandling;
+    private ITimer timer;
+
+    [TestInitialize]
+    public void TestInitialize()
     {
-        private static SonarQubeNotification[] testEvents =
-            new []
-            {
-                new SonarQubeNotification("foo", "foo", new Uri("http://foo.com"),
-                    new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.FromHours(2)))
-            };
+        timer = Substitute.For<ITimer>();
+        smartNotificationService = Substitute.For<ISmartNotificationService>();
+        browserService = Substitute.For<IBrowserService>();
+        activeSolutionBoundTracker = Substitute.For<IActiveSolutionBoundTracker>();
+        serverConnectionsRepositoryAdapter = Substitute.For<IServerConnectionsRepositoryAdapter>();
+        threadHandling = new NoOpThreadHandler();
+        testSubject = new NotificationIndicatorViewModel(smartNotificationService, browserService, activeSolutionBoundTracker, serverConnectionsRepositoryAdapter, threadHandling, timer);
+    }
 
-        [TestMethod]
-        public void Text_Raises_PropertyChanged()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+    [TestMethod]
+    public void Ctor_SubscribesToEvents()
+    {
+        smartNotificationService.ReceivedWithAnyArgs(1).NotificationReceived += Arg.Any<EventHandler<NotificationReceivedEventArgs>>();
+        activeSolutionBoundTracker.ReceivedWithAnyArgs(1).SolutionBindingChanged += Arg.Any<EventHandler<ActiveSolutionBindingEventArgs>>();
+    }
 
-            model.ToolTipText = "test";
+    [TestMethod]
+    public void Text_Raises_PropertyChanged()
+    {
+        var monitor = testSubject.Monitor();
 
-            model.ToolTipText.Should().Be("test");
-            monitor.Should().RaisePropertyChangeFor(x => x.ToolTipText);
-        }
+        testSubject.ToolTipText = "test";
 
-        [TestMethod]
-        public void HasUnreadEvents_Raises_PropertyChanged()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+        testSubject.ToolTipText.Should().Be("test");
+        monitor.Should().RaisePropertyChangeFor(x => x.ToolTipText);
+    }
 
-            model.HasUnreadEvents = true;
+    [TestMethod]
+    public void HasUnreadEvents_Raises_PropertyChanged()
+    {
+        var monitor = testSubject.Monitor();
 
-            model.HasUnreadEvents.Should().BeTrue();
-            monitor.Should().RaisePropertyChangeFor(x => x.HasUnreadEvents);
-        }
+        testSubject.HasUnreadEvents = true;
 
-        [TestMethod]
-        public void IsIconVisible_Raises_PropertyChanged()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+        testSubject.HasUnreadEvents.Should().BeTrue();
+        monitor.Should().RaisePropertyChangeFor(x => x.HasUnreadEvents);
+    }
 
-            model.IsIconVisible = true;
+    [TestMethod]
+    public void IsIconVisible_Raises_PropertyChanged()
+    {
+        var monitor = testSubject.Monitor();
 
-            model.IsIconVisible.Should().BeTrue();
-            monitor.Should().RaisePropertyChangeFor(x => x.IsIconVisible);
-        }
+        testSubject.IsIconVisible = true;
 
-        [TestMethod]
-        public void AreNotificationsEnabled_Raises_PropertyChanged()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+        testSubject.IsIconVisible.Should().BeTrue();
+        monitor.Should().RaisePropertyChangeFor(x => x.IsIconVisible);
+    }
 
-            model.AreNotificationsEnabled = true;
+    [TestMethod]
+    public void AreNotificationsEnabled_Raises_PropertyChanged()
+    {
+        var monitor = testSubject.Monitor();
 
-            model.AreNotificationsEnabled.Should().BeTrue();
-            monitor.Should().RaisePropertyChangeFor(x => x.AreNotificationsEnabled);
-        }
+        testSubject.AreNotificationsEnabled = true;
 
-        [TestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
-        public void AreNotificationsEnabled_UpdatesTelemetry(bool areEnabled)
-        {
-            var telemetryManager = new Mock<IServerNotificationsTelemetryManager>();
-            var model = CreateTestSubject(telemetryManager: telemetryManager.Object);
+        testSubject.AreNotificationsEnabled.Should().BeTrue();
+        monitor.Should().RaisePropertyChangeFor(x => x.AreNotificationsEnabled);
+    }
 
-            model.AreNotificationsEnabled = areEnabled;
+    [TestMethod]
+    public void IsToolTipVisible_Raises_PropertyChanged()
+    {
+        var monitor = testSubject.Monitor();
 
-            telemetryManager.Verify(x=> x.NotificationsToggled(areEnabled));
-            telemetryManager.VerifyNoOtherCalls();
+        testSubject.IsToolTipVisible = true;
 
-            model.AreNotificationsEnabled = !areEnabled;
+        testSubject.IsToolTipVisible.Should().BeTrue();
+        monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
+    }
 
-            telemetryManager.Verify(x => x.NotificationsToggled(!areEnabled));
-            telemetryManager.VerifyNoOtherCalls();
-        }
+    [TestMethod]
+    public void IsToolTipVisible_False_Stops_Timer()
+    {
+        testSubject.IsToolTipVisible = true;
 
-        [TestMethod]
-        public void IsToolTipVisible_Raises_PropertyChanged()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+        testSubject.IsToolTipVisible = false;
 
-            model.IsToolTipVisible = true;
+        timer.Received(1).Stop();
+    }
 
-            model.IsToolTipVisible.Should().BeTrue();
-            monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
-        }
+    [TestMethod]
+    public void HasUnreadEvents_WithNo_Events_UpdatesTooltipText()
+    {
+        var monitor = testSubject.Monitor();
 
-        [TestMethod]
-        public void IsToolTipVisible_False_Stops_Timer()
-        {
-            // Arrange
-            var timerMock = new Mock<ITimer>();
+        testSubject.IsIconVisible = true;
+        testSubject.AreNotificationsEnabled = true;
+        testSubject.IsToolTipVisible = true;
+        monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
 
-            var model = CreateTestSubject(timerMock.Object);
-            model.IsToolTipVisible = true;
+        testSubject.ToolTipText.Should().Be("You have no unread events.");
+    }
 
-            // Act
-            model.IsToolTipVisible = false;
+    [TestMethod]
+    public void HasUnreadEvents_WithEvents_UpdatesTooltipText()
+    {
+        var monitor = testSubject.Monitor();
 
-            timerMock.Verify(x => x.Stop(), Times.Once);
-        }
+        testSubject.IsIconVisible = true;
+        testSubject.AreNotificationsEnabled = true;
+        testSubject.IsToolTipVisible = true;
+        testSubject.AddNotification(TestNotification);
 
-        [TestMethod]
-        public void HasUnreadEvents_WithNo_Events_UpdatesTooltipText()
-        {
-            var model = CreateTestSubject();
-            var monitor = model.Monitor();
+        monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
 
-            model.IsIconVisible = true;
-            model.AreNotificationsEnabled = true;
-            model.IsToolTipVisible = true;
-            monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
+        testSubject.ToolTipText.Should().Be("You have 1 unread event.");
+    }
 
-            model.ToolTipText.Should().Be("You have no unread events.");
-        }
+    [TestMethod]
+    public void AddNotification_SetsHasUnreadEvents()
+    {
+        SetupModelWithNotification(false, false, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeFalse();
 
-        [TestMethod]
-        public void HasUnreadEvents_WithEvents_UpdatesTooltipText()
-        {
-            var timerMock = new Mock<ITimer>();
-            var model = CreateTestSubject(timerMock.Object);
-            var monitor = model.Monitor();
+        SetupModelWithNotification(false, true, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeFalse();
 
-            model.IsIconVisible = true;
-            model.AreNotificationsEnabled = true;
-            model.IsToolTipVisible = true;
-            model.SetNotificationEvents(testEvents);
+        SetupModelWithNotification(true, false, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeFalse();
 
-            monitor.Should().RaisePropertyChangeFor(x => x.IsToolTipVisible);
+        SetupModelWithNotification(true, true, null);
+        testSubject.HasUnreadEvents.Should().BeFalse();
 
-            model.ToolTipText.Should().Be("You have 1 unread event.");
-        }
+        SetupModelWithNotification(true, true, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeTrue();
+    }
 
-        [TestMethod]
-        public void SetNotificationEvents_SetEvents_SetsHasUnreadEvents()
-        {
-            var model = SetupModelWithNotifications(false, false, testEvents);
-            model.HasUnreadEvents.Should().BeFalse();
+    [TestMethod]
+    public void AddNotification_RunOnUIThread()
+    {
+        var mockThreadHandling = Substitute.For<IThreadHandling>();
+        var notificationViewModel
+            = new NotificationIndicatorViewModel(smartNotificationService, browserService, activeSolutionBoundTracker, serverConnectionsRepositoryAdapter, mockThreadHandling, timer);
+        notificationViewModel.IsIconVisible = true;
+        RaiseBindingChangedWithSmartNotificationsEnabled(notificationViewModel, true);
 
-            model = SetupModelWithNotifications(false, true, testEvents);
-            model.HasUnreadEvents.Should().BeFalse();
+        var notification = CreateNotification("category1");
 
-            model = SetupModelWithNotifications(true, false, testEvents);
-            model.HasUnreadEvents.Should().BeFalse();
+        Action capturedAction = null;
+        mockThreadHandling.WhenForAnyArgs(x => x.RunOnUIThread(Arg.Any<Action>())).Do(callInfo => capturedAction = callInfo.Arg<Action>());
+        notificationViewModel.AddNotification(notification);
+        notificationViewModel.NotificationEvents.Should().HaveCount(0);
 
-            model = SetupModelWithNotifications(true, true, new SonarQubeNotification[0]);
-            model.HasUnreadEvents.Should().BeFalse();
+        capturedAction.Invoke();
+        notificationViewModel.NotificationEvents.Should().HaveCount(1);
 
-            model = SetupModelWithNotifications(true, true, null);
-            model.HasUnreadEvents.Should().BeFalse();
+        // 1 invocation from ClearNotification and 1 from AddNotification
+        mockThreadHandling.Received(2).RunOnUIThread(Arg.Any<Action>());
+    }
 
-            model = SetupModelWithNotifications(true, true, testEvents);
-            model.HasUnreadEvents.Should().BeTrue();
-        }
+    [TestMethod]
+    public void NavigateToNotification_NotificationNavigated()
+    {
+        var notification = CreateNotification("test", "http://localhost:2000");
 
-        [TestMethod]
-        public void SetNotificationEvents_SetEvents_UpdatesTelemetry()
-        {
-            var telemetryManager = new Mock<IServerNotificationsTelemetryManager>();
-            var model = CreateTestSubject(telemetryManager: telemetryManager.Object);
-            model.AreNotificationsEnabled = true;
-            model.IsIconVisible = true;
+        testSubject.NavigateToNotification.Execute(notification);
 
-            var events = new[]
-            {
-                CreateNotification("category1"),
-                CreateNotification("category2"),
-                CreateNotification("category1"),
-                CreateNotification("category3"),
-            };
+        browserService.Received(1).Navigate("http://localhost:2000");
+    }
 
-            model.SetNotificationEvents(events);
+    [TestMethod]
+    public void NavigateToNotification_TooltipClosed()
+    {
+        testSubject.IsToolTipVisible = true;
 
-            telemetryManager.Verify(x=> x.NotificationReceived("category1"), Times.Exactly(2));
-            telemetryManager.Verify(x=> x.NotificationReceived("category2"), Times.Once());
-            telemetryManager.Verify(x=> x.NotificationReceived("category3"), Times.Once());
+        var notification = CreateNotification("test");
+        testSubject.NavigateToNotification.Execute(notification);
 
-            telemetryManager.Reset();
-            model.SetNotificationEvents(Enumerable.Empty<SonarQubeNotification>());
+        testSubject.IsToolTipVisible.Should().BeFalse();
+    }
 
-            telemetryManager.Verify(x => x.NotificationReceived(It.IsAny<string>()), Times.Never);
-        }
+    [TestMethod]
+    public void ClearUnreadEventsCommand_Sets_HasUnreadEvents_False()
+    {
+        SetupModelWithNotification(true, true, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeTrue();
 
-        [TestMethod]
-        public void NavigateToNotification_NotificationNavigated()
-        {
-            var vsBrowserService = new Mock<IVsBrowserService>();
-            var testSubject = CreateTestSubject(vsBrowserService: vsBrowserService.Object);
+        testSubject.ClearUnreadEventsCommand.Execute(null);
 
-            var notification = CreateNotification("test", "http://localhost:2000");
-            testSubject.NavigateToNotification.Execute(notification);
+        testSubject.HasUnreadEvents.Should().BeFalse();
+    }
 
-            vsBrowserService.Verify(x=> x.Navigate("http://localhost:2000/"), Times.Once());
-        }
+    [TestMethod]
+    public void ClearNotificationsCommand_ClearsCollectionAndResetsState()
+    {
+        SetupModelWithNotification(true, true, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeTrue();
+        testSubject.IsToolTipVisible.Should().BeTrue();
+        testSubject.NotificationEvents.Should().HaveCount(1);
 
-        [TestMethod]
-        public void NavigateToNotification_TelemetrySent()
-        {
-            var telemetryManager = new Mock<IServerNotificationsTelemetryManager>();
-            var testSubject = CreateTestSubject(telemetryManager: telemetryManager.Object);
+        testSubject.ClearNotificationsCommand.Execute(null);
 
-            var notification = CreateNotification("test");
-            testSubject.NavigateToNotification.Execute(notification);
+        testSubject.NotificationEvents.Should().BeEmpty();
+        testSubject.HasUnreadEvents.Should().BeFalse();
+        testSubject.IsToolTipVisible.Should().BeFalse();
+    }
 
-            telemetryManager.Verify(x => x.NotificationClicked("test"), Times.Once());
-        }
+    [TestMethod]
+    public void ClearNotifications_ClearsCollectionAndResetsState()
+    {
+        SetupModelWithNotification(true, true, TestNotification);
+        testSubject.HasUnreadEvents.Should().BeTrue();
+        testSubject.IsToolTipVisible.Should().BeTrue();
+        testSubject.NotificationEvents.Should().HaveCount(1);
 
-        [TestMethod]
-        public void NavigateToNotification_TooltipClosed()
-        {
-            var testSubject = CreateTestSubject();
+        testSubject.ClearNotifications();
 
-            testSubject.IsToolTipVisible = true;
+        testSubject.NotificationEvents.Should().BeEmpty();
+        testSubject.HasUnreadEvents.Should().BeFalse();
+        testSubject.IsToolTipVisible.Should().BeFalse();
+    }
 
-            var notification = CreateNotification("test");
-            testSubject.NavigateToNotification.Execute(notification);
+    [TestMethod]
+    public void Dispose_UnsubscribesFromEvents()
+    {
+        testSubject.Dispose();
 
-            testSubject.IsToolTipVisible.Should().BeFalse();
-        }
+        smartNotificationService.ReceivedWithAnyArgs(1).NotificationReceived -= Arg.Any<EventHandler<NotificationReceivedEventArgs>>();
+        activeSolutionBoundTracker.ReceivedWithAnyArgs(1).SolutionBindingChanged -= Arg.Any<EventHandler<ActiveSolutionBindingEventArgs>>();
+    }
 
-        private SonarQubeNotification CreateNotification(string category, string url = "http://localhost") => new SonarQubeNotification(category, "test", new Uri(url), DateTimeOffset.Now);
+    [TestMethod]
+    public void NotificationReceived_SetsNotificationEvents()
+    {
+        testSubject.AreNotificationsEnabled = true;
+        testSubject.IsIconVisible = true;
+        var smartNotification = new SmartNotification("Test message", "http://localhost:9000/project", ["scope1"], "QUALITY_GATE", "connectionId", DateTimeOffset.Now);
 
-        [TestMethod]
-        public void ClearUnreadEventsCommand_Sets_HasUnreadEvents_False()
-        {
-            // Arrange
-           var model = SetupModelWithNotifications(true, true, testEvents);
-            model.HasUnreadEvents.Should().BeTrue();
+        smartNotificationService.NotificationReceived += Raise.EventWith(new NotificationReceivedEventArgs(smartNotification));
 
-            // Act
-            model.ClearUnreadEventsCommand.Execute(null);
+        testSubject.NotificationEvents.Should().HaveCount(1);
+        testSubject.NotificationEvents[0].Category.Should().Be("QUALITY_GATE");
+        testSubject.NotificationEvents[0].Text.Should().Be("Test message");
+        testSubject.NotificationEvents[0].Link.Should().Be("http://localhost:9000/project");
+        testSubject.HasUnreadEvents.Should().BeTrue();
+    }
 
-            // Assert
-            model.HasUnreadEvents.Should().BeFalse();
-        }
+    [TestMethod]
+    public void NotificationReceived_MultipleNotifications_AccumulatesNotifications()
+    {
+        testSubject.AreNotificationsEnabled = true;
+        testSubject.IsIconVisible = true;
+        var notification1 = new SmartNotification("First message", "http://localhost:9000/project1", ["scope1"], "QUALITY_GATE", "connectionId", DateTimeOffset.Now);
+        var notification2 = new SmartNotification("Second message", "http://localhost:9000/project2", ["scope2"], "NEW_ISSUES", "connectionId", DateTimeOffset.Now);
 
-        private NotificationIndicatorViewModel SetupModelWithNotifications(bool areEnabled, bool areVisible, SonarQubeNotification[] events)
-        {
-            var model = CreateTestSubject();
-            model.AreNotificationsEnabled = areEnabled;
-            model.IsIconVisible = areVisible;
-            
-            model.SetNotificationEvents(events);
+        smartNotificationService.NotificationReceived += Raise.EventWith(new NotificationReceivedEventArgs(notification1));
+        smartNotificationService.NotificationReceived += Raise.EventWith(new NotificationReceivedEventArgs(notification2));
 
-            return model;
-        }
+        testSubject.NotificationEvents.Should().HaveCount(2);
+        testSubject.NotificationEvents[0].Text.Should().Be("First message");
+        testSubject.NotificationEvents[1].Text.Should().Be("Second message");
+    }
 
-        private NotificationIndicatorViewModel CreateTestSubject(ITimer timer = null, 
-            IServerNotificationsTelemetryManager telemetryManager = null,
-            IVsBrowserService vsBrowserService = null)
-        {
-            timer ??= Mock.Of<ITimer>();
-            telemetryManager ??= Mock.Of<IServerNotificationsTelemetryManager>();
-            vsBrowserService ??= Mock.Of<IVsBrowserService>();
+    [TestMethod]
+    [DataRow(SonarLintMode.Connected)]
+    [DataRow(SonarLintMode.LegacyConnected)]
+    public void SolutionBindingChanged_BindingToCloud_IsCloudIsTrue(SonarLintMode sonarLintMode)
+    {
+        var cloudBindingConfiguration = CreateBindingConfiguration(new ServerConnection.SonarCloud("my org"), sonarLintMode);
 
-            return new NotificationIndicatorViewModel(telemetryManager, vsBrowserService, a => a(), timer);
-        }
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(cloudBindingConfiguration));
+
+        testSubject.IsCloud.Should().BeTrue();
+    }
+
+    [TestMethod]
+    [DataRow(SonarLintMode.Connected)]
+    [DataRow(SonarLintMode.LegacyConnected)]
+    public void SolutionBindingChanged_BindingToServer_IsCloudIsFalse(SonarLintMode sonarLintMode)
+    {
+        var cloudBindingConfiguration = CreateBindingConfiguration(new ServerConnection.SonarQube(new Uri("C:\\")), sonarLintMode);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(cloudBindingConfiguration));
+
+        testSubject.IsCloud.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_Standalone_IsCloudIsFalse()
+    {
+        var cloudBindingConfiguration = new BindingConfiguration(null, SonarLintMode.Standalone, string.Empty);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(cloudBindingConfiguration));
+
+        testSubject.IsCloud.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(SonarLintMode.Connected)]
+    [DataRow(SonarLintMode.LegacyConnected)]
+    public void SolutionBindingChanged_BoundToServer_IsIconVisibleIsTrue(SonarLintMode sonarLintMode)
+    {
+        var bindingConfiguration = CreateBindingConfiguration(new ServerConnection.SonarQube(new Uri("http://localhost")), sonarLintMode);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.IsIconVisible.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_Standalone_IsIconVisibleIsFalse()
+    {
+        var standaloneConfiguration = new BindingConfiguration(null, SonarLintMode.Standalone, string.Empty);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(standaloneConfiguration));
+
+        testSubject.IsIconVisible.Should().BeFalse();
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void SolutionBindingChanged_BoundToServer_AreNotificationsEnabledReflectsSettings(bool isSmartNotificationsEnabled)
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(isSmartNotificationsEnabled));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.AreNotificationsEnabled.Should().Be(isSmartNotificationsEnabled);
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_Standalone_AreNotificationsEnabledIsFalse()
+    {
+        var standaloneConfiguration = new BindingConfiguration(null, SonarLintMode.Standalone, string.Empty);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(standaloneConfiguration));
+
+        testSubject.AreNotificationsEnabled.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void AreNotificationsEnabled_WhenToggled_UpdatesSettings()
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(false));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.AreNotificationsEnabled = true;
+
+        serverConnectionsRepositoryAdapter.Received(1).TryUpdateSettingsById(serverConnection.Id, Arg.Is<ServerConnectionSettings>(s => s.IsSmartNotificationsEnabled == true));
+    }
+
+    [TestMethod]
+    public void AreNotificationsEnabled_WhenToggledOff_UpdatesSettings()
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(true));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.AreNotificationsEnabled = false;
+
+        serverConnectionsRepositoryAdapter.Received(1).TryUpdateSettingsById(serverConnection.Id, Arg.Is<ServerConnectionSettings>(s => s.IsSmartNotificationsEnabled == false));
+    }
+
+    [TestMethod]
+    public void AreNotificationsEnabled_WhenSetToSameValue_DoesNotUpdateSettings()
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(true));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.AreNotificationsEnabled = true;
+
+        serverConnectionsRepositoryAdapter.DidNotReceive().TryUpdateSettingsById(Arg.Any<string>(), Arg.Any<ServerConnectionSettings>());
+    }
+
+    [TestMethod]
+    public void AreNotificationsEnabled_WhenNoConnectionId_DoesNotUpdateSettings()
+    {
+        var standaloneConfiguration = new BindingConfiguration(null, SonarLintMode.Standalone, string.Empty);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(standaloneConfiguration));
+
+        testSubject.AreNotificationsEnabled = true;
+
+        serverConnectionsRepositoryAdapter.DidNotReceive().TryUpdateSettingsById(Arg.Any<string>(), Arg.Any<ServerConnectionSettings>());
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_DoesNotUpdateSettings()
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(true));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        serverConnectionsRepositoryAdapter.DidNotReceive().TryUpdateSettingsById(Arg.Any<string>(), Arg.Any<ServerConnectionSettings>());
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_DifferentConnectionId_ClearsNotifications()
+    {
+        var serverConnection1 = new ServerConnection.SonarQube(new Uri("http://localhost:9000"), new ServerConnectionSettings(true));
+        var bindingConfiguration1 = CreateBindingConfiguration(serverConnection1, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration1));
+        testSubject.IsIconVisible = true;
+        testSubject.AddNotification(TestNotification);
+        testSubject.NotificationEvents.Should().HaveCount(1);
+
+        var serverConnection2 = new ServerConnection.SonarQube(new Uri("http://localhost:9001"), new ServerConnectionSettings(true));
+        var bindingConfiguration2 = CreateBindingConfiguration(serverConnection2, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration2));
+
+        testSubject.NotificationEvents.Should().BeEmpty();
+        testSubject.HasUnreadEvents.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void SolutionBindingChanged_SameConnectionId_DoesNotClearNotifications()
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost:9000"), new ServerConnectionSettings(true));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+        testSubject.IsIconVisible = true;
+        testSubject.AddNotification(TestNotification);
+        testSubject.NotificationEvents.Should().HaveCount(1);
+
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
+
+        testSubject.NotificationEvents.Should().HaveCount(1);
+        testSubject.HasUnreadEvents.Should().BeTrue();
+    }
+
+    private static BindingConfiguration CreateBindingConfiguration(ServerConnection serverConnection, SonarLintMode mode) =>
+        new(new BoundServerProject("my solution", "my project", serverConnection), mode, string.Empty);
+
+    private static SmartNotification CreateNotification(string category, string url = "http://localhost") => new("test", url, [], category, "connectionId", DateTimeOffset.Now);
+
+    private void SetupModelWithNotification(bool areEnabled, bool areVisible, SmartNotification notification)
+    {
+        RaiseBindingChangedWithSmartNotificationsEnabled(testSubject, areEnabled);
+        testSubject.IsIconVisible = areVisible;
+
+        testSubject.AddNotification(notification);
+    }
+
+    private void RaiseBindingChangedWithSmartNotificationsEnabled(NotificationIndicatorViewModel viewModel, bool isEnabled)
+    {
+        var serverConnection = new ServerConnection.SonarQube(new Uri("http://localhost"), new ServerConnectionSettings(isEnabled));
+        var bindingConfiguration = CreateBindingConfiguration(serverConnection, SonarLintMode.Connected);
+        activeSolutionBoundTracker.SolutionBindingChanged += Raise.EventWith(new ActiveSolutionBindingEventArgs(bindingConfiguration));
     }
 }

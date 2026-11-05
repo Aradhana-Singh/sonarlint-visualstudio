@@ -1,0 +1,116 @@
+name: Full release
+
+on:
+  workflow_dispatch:
+    inputs:
+      short-description:
+        description: 'A short description for the release ticket'
+        required: true
+        type: string
+      branch:
+        description: 'The branch from which to release.'
+        required: false
+        default: 'master'
+        type: string
+      new-version:
+        description: 'New Jira version to create after the release (e.g. 8.4). Leave empty to auto-increment the last segment.'
+        required: false
+        type: string
+      dry-run:
+        description: 'Test mode: use Jira sandbox and create a draft GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    name: Release
+    uses: SonarSource/release-github-actions/.github/workflows/ide-automated-release.yml@706e44289960d7768dc6f953bc1c0df003e812cb # 1.5.9
+    permissions:
+      statuses: read
+      id-token: write
+      contents: write
+      actions: write
+      pull-requests: write
+    with:
+      jira-project-key: "SLVS"
+      project-name: "SonarLint for Visual Studio"
+      short-description: ${{ inputs.short-description }}
+      branch: ${{ inputs.branch }}
+      slack-channel: "C093TDJ6JF5" #squad-ide-visualstudio-bots
+      is-test-run: ${{ inputs.dry-run }}
+      new-version: ${{ inputs.new-version }}
+
+  bump-version:
+    name: Create a PR to bump version
+    runs-on: warp-custom-sonarlint-visualstudio
+    needs:
+      - release
+    if: ${{ inputs.branch == 'master' && inputs.dry-run == false }}
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+
+      - name: Fetch vault secrets
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader username | ARTIFACTORY_USER;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+
+      - name: Compute next main version
+        id: next-version
+        shell: powershell
+        env:
+          NEW_VERSION: ${{ needs.release.outputs.new-version }}
+        run: |
+          $parts = $env:NEW_VERSION -split '\.'
+          if ($parts.Count -ne 2 -and $parts.Count -ne 3) {
+            throw "Unsupported new version format: '$($env:NEW_VERSION)'"
+          }
+
+          # For bugfix releases, Jira's next version stays on the maintenance line,
+          # but master should move to the next minor line.
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          if ($parts.Count -eq 3 -and [int]$parts[2] -gt 0) {
+            $minor++
+          }
+
+          $fullVersion = "$major.$minor.0"
+          "full-version=$fullVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Bump version
+        shell: powershell
+        run: .\set-version.ps1 '${{ steps.next-version.outputs.full-version }}'
+
+      - name: Rebuild solution
+        shell: bash
+        env:
+          ARTIFACTORY_USER: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        run: |
+          msbuild.exe build/DownloadDependencies -p:VsVersion=17.0 -p:VsTargetVersion=2022
+          dotnet restore "SonarQube.VisualStudio.sln" --locked-mode
+          msbuild.exe "SonarQube.VisualStudio.sln" -p:VsVersion=17.0 -p:VsTargetVersion=2022 -p:SignArtifacts=false -p:DeployExtension=false -p:AsmRefUpdateBaseline=true -p:Configuration=Release
+
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          commit-message: Bump version to ${{ steps.next-version.outputs.full-version }}
+          title: Bump version to ${{ steps.next-version.outputs.full-version }}
+          branch: bot/bump-project-version
+          branch-suffix: timestamp
+          delete-branch: true
+          base: master
+          draft: true
+          reviewers: ${{ github.actor }}
+          body: |
+            Bump the version to `${{ steps.next-version.outputs.full-version }}`.
+
+            Created by the release automation after publishing `${{ needs.release.outputs.released-version }}`.

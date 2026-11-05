@@ -1,0 +1,104 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using SonarLint.VisualStudio.ConnectedMode.Promote;
+using SonarLint.VisualStudio.Integration;
+using SonarLint.VisualStudio.SLCore.Common.Models;
+using SonarLint.VisualStudio.SLCore.Core;
+using SonarLint.VisualStudio.SLCore.Listener.Promote;
+
+namespace SonarLint.VisualStudio.SLCore.Listeners.UnitTests.Implementation;
+
+[TestClass]
+public class PromoteListenerTests
+{
+    private IPromoteNotification promoteNotification;
+    private IShowMessageNotification showMessageNotification;
+    private IShowServerSoonUnsupportedNotification showServerSoonUnsupportedNotification;
+    private PromoteListener testSubject;
+
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        promoteNotification = Substitute.For<IPromoteNotification>();
+        showMessageNotification = Substitute.For<IShowMessageNotification>();
+        showServerSoonUnsupportedNotification = Substitute.For<IShowServerSoonUnsupportedNotification>();
+        testSubject = new PromoteListener(promoteNotification, showMessageNotification, showServerSoonUnsupportedNotification);
+    }
+
+    [TestMethod]
+    public void MefCtor_CheckExports() =>
+        MefTestHelpers.CheckTypeCanBeImported<PromoteListener, ISLCoreListener>(
+            MefTestHelpers.CreateExport<IPromoteNotification>(),
+            MefTestHelpers.CreateExport<IShowMessageNotification>(),
+            MefTestHelpers.CreateExport<IShowServerSoonUnsupportedNotification>());
+
+    [TestMethod]
+    public void MefCtor_CheckIsSingleton() => MefTestHelpers.CheckIsSingletonMefComponent<PromoteListener>();
+
+    [TestMethod]
+    public void PromoteExtraEnabledLanguagesInConnectedMode_DisplaysGoldBar()
+    {
+        var parameters = new PromoteExtraEnabledLanguagesInConnectedModeParams("CONFIGURATION_SCOPE_ID", [Language.TSQL]);
+
+        testSubject.PromoteExtraEnabledLanguagesInConnectedMode(parameters);
+
+        promoteNotification.Received().PromoteConnectedMode(
+            Arg.Is("CONFIGURATION_SCOPE_ID"),
+            Arg.Is<List<VisualStudio.Core.Language>>(x => x.Count == 1 && x[0] == VisualStudio.Core.Language.TSql));
+    }
+
+    [TestMethod]
+    [DataRow(MessageType.INFO, "Test message", 2, "key1")]
+    [DataRow(MessageType.ERROR, "Error message", 3, "action2")]
+    [DataRow(MessageType.WARNING, "Warning message", 1, null)]
+    public async Task ShowMessageRequestAsync_WithMultipleActions_PassesAllActionsToNotification(MessageType messageType, string message, int actionCount, string returnedKey)
+    {
+        var actions = CreateActions(actionCount);
+        var parameters = new ShowMessageRequestParams(messageType, message, actions);
+        showMessageNotification.ShowAsync(Arg.Any<string>(), Arg.Any<List<MessageActionItem>>()).Returns(Task.FromResult(returnedKey));
+
+        var result = await testSubject.ShowMessageRequestAsync(parameters);
+
+        await showMessageNotification.Received().ShowAsync(message, actions);
+        result.selectedKey.Should().Be(returnedKey);
+        result.closedByUser.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void ShowSoonUnsupportedMessage_PassesTextAndDoNotShowAgainIdToNotification()
+    {
+        var parameters = new ShowSoonUnsupportedMessageParams("DO_NOT_SHOW_AGAIN_ID", "CONFIGURATION_SCOPE_ID", "Server will soon be unsupported");
+
+        testSubject.ShowSoonUnsupportedMessage(parameters);
+
+        showServerSoonUnsupportedNotification.Received().ShowSoonUnsupportedMessage("Server will soon be unsupported", "DO_NOT_SHOW_AGAIN_ID");
+    }
+
+    private static List<MessageActionItem> CreateActions(int count)
+    {
+        var actions = new List<MessageActionItem>();
+        for (int i = 0; i < count; i++)
+        {
+            actions.Add(new MessageActionItem($"action{i + 1}", $"Action {i + 1}", i == 0));
+        }
+        return actions;
+    }
+}

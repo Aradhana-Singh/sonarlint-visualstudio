@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,18 +18,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
-using SonarLint.VisualStudio.Integration;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.IssueVisualization.Security.Commands;
-using SonarLint.VisualStudio.IssueVisualization.Security.Hotspots.HotspotsList;
-using SonarLint.VisualStudio.IssueVisualization.Security.Taint;
-using SonarLint.VisualStudio.IssueVisualization.Security.Taint.TaintList;
+using SonarLint.VisualStudio.IssueVisualization.Security.ReportView;
 using Task = System.Threading.Tasks.Task;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Security
@@ -47,10 +43,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid("D7D54E08-45E1-49A6-AA53-AF1CFAA6EBDC")]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(HotspotsToolWindow), MultiInstances = false, Transient = true, Style = VsDockStyle.Tabbed, Window = VsWindowKindErrorList, Width = 700, Height = 250)]
-    [ProvideToolWindow(typeof(TaintToolWindow), MultiInstances = false, Transient = false, // Note: Transient must false when using ProvideToolWindowVisibility
+    [ProvideToolWindow(typeof(ReportViewToolWindow), MultiInstances = false, Transient = false, // Note: Transient must false when using ProvideToolWindowVisibility
         Style = VsDockStyle.Tabbed, Window = VsWindowKindErrorList, Width = 700, Height = 250)]
-    [ProvideToolWindowVisibility(typeof(TaintToolWindow), TaintIssuesExistUIContext.GuidString)]
+    [ProvideToolWindowVisibility(typeof(ReportViewToolWindow), ReportViewIssuesExistUIContext.GuidString)]
     public sealed class IssueVizSecurityPackage : AsyncPackage
     {
         /// <summary>
@@ -67,29 +62,22 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security
             logger.WriteLine(Resources.StartedPackageInitialization);
 
             // We're not storing references to the command handler instances.
-            // We relying on the fact that the command handler instance registers a
+            // We are relying on the fact that the command handler instance registers a
             // callback with the menu service to stop it from being garbage collected.
             await ShowToolWindowCommand.CreateAsync(this,
-                new CommandID(Constants.CommandSetGuid, Constants.HotspotsToolWindowCommandId),
-                HotspotsToolWindow.ToolWindowId);
+                new CommandID(Constants.CommandSetGuid, Constants.ReportViewToolWindowCommandId),
+                ReportViewToolWindow.ToolWindowId);
 
-            await ShowToolWindowCommand.CreateAsync(this,
-                new CommandID(Constants.CommandSetGuid, Constants.TaintToolWindowCommandId),
-                TaintToolWindow.ToolWindowId);
+            await ToolWindowNavigator.CreateAsync(this);
 
             logger.WriteLine(Resources.FinishedPackageInitialization);
         }
 
         protected override WindowPane InstantiateToolWindow(Type toolWindowType)
         {
-            if (toolWindowType == typeof(HotspotsToolWindow))
+            if (toolWindowType == typeof(ReportViewToolWindow))
             {
-                return new HotspotsToolWindow(this);
-            }
-
-            if (toolWindowType == typeof(TaintToolWindow))
-            {
-                return new TaintToolWindow(this);
+                return new ReportViewToolWindow(this);
             }
 
             return base.InstantiateToolWindow(toolWindowType);

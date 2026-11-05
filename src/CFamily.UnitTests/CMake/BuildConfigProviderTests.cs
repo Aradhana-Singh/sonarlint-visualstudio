@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,14 +22,12 @@ using System;
 using System.IO;
 using System.IO.Abstractions;
 using FluentAssertions;
-using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.CFamily.CMake;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.TestInfrastructure;
 
-namespace SonarLint.VisualStudio.CFamily.UnitTests.CMake
+namespace SonarLint.VisualStudio.CFamily.CMake.UnitTests
 {
     [TestClass]
     public class BuildConfigProviderTests

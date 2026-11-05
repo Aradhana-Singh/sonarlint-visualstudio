@@ -1,0 +1,112 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.ComponentModel.Composition;
+using SonarLint.VisualStudio.ConnectedMode.Persistence;
+using SonarLint.VisualStudio.ConnectedMode.UI.Credentials;
+using SonarLint.VisualStudio.Core.Binding;
+using IConnectionCredentials = SonarLint.VisualStudio.Core.Binding.IConnectionCredentials;
+
+namespace SonarLint.VisualStudio.ConnectedMode;
+
+public interface IServerConnectionsRepositoryAdapter
+{
+    bool TryGetAllConnections(out List<Connection> connections);
+
+    bool TryGetAllConnectionsInfo(out List<ConnectionInfo> connectionInfos);
+
+    bool TryRemoveConnection(ConnectionInfo connectionInfo);
+
+    bool TryAddConnection(Connection connection, ICredentialsModel credentialsModel);
+
+    bool TryUpdateCredentials(Connection connection, ICredentialsModel credentialsModel);
+
+    bool TryGet(string serverConnectionId, out ServerConnection serverConnection);
+
+    bool TryGet(ConnectionInfo connection, out ServerConnection serverConnection);
+
+    void AddConnectionWithInvalidToken(Connection connection);
+
+    bool HasInvalidToken(Connection connection);
+
+    bool TryUpdateSettingsById(string connectionId, ServerConnectionSettings settings);
+}
+
+[Export(typeof(IServerConnectionsRepositoryAdapter))]
+[method: ImportingConstructor]
+internal class ServerConnectionsRepositoryAdapter(IServerConnectionsRepository serverConnectionsRepository, IServerConnectionWithInvalidTokenRepository serverConnectionWithInvalidToken)
+    : IServerConnectionsRepositoryAdapter
+{
+    public bool TryGetAllConnections(out List<Connection> connections)
+    {
+        var succeeded = serverConnectionsRepository.TryGetAll(out var serverConnections);
+        connections = serverConnections?.Select(x => x.ToConnection()).ToList();
+        return succeeded;
+    }
+
+    public bool TryGetAllConnectionsInfo(out List<ConnectionInfo> connectionInfos)
+    {
+        var succeeded = TryGetAllConnections(out var connections);
+        connectionInfos = connections?.Select(conn => conn.Info).ToList();
+        return succeeded;
+    }
+
+    public bool TryAddConnection(Connection connection, ICredentialsModel credentialsModel)
+    {
+        var serverConnection = connection.ToServerConnection();
+        serverConnection.Credentials = MapCredentials(credentialsModel);
+        return serverConnectionsRepository.TryAdd(serverConnection);
+    }
+
+    public bool TryUpdateCredentials(Connection connection, ICredentialsModel credentialsModel)
+    {
+        var serverConnection = connection.ToServerConnection();
+        serverConnection.Credentials = MapCredentials(credentialsModel);
+        return serverConnectionsRepository.TryUpdateCredentialsById(serverConnection.Id, serverConnection.Credentials);
+    }
+
+    public bool TryGet(ConnectionInfo connection, out ServerConnection serverConnection) => TryGet(connection.GetServerIdFromConnectionInfo(), out serverConnection);
+
+    public bool TryGet(string serverConnectionId, out ServerConnection serverConnection) => serverConnectionsRepository.TryGet(serverConnectionId, out serverConnection);
+
+    public void AddConnectionWithInvalidToken(Connection connection) => serverConnectionWithInvalidToken.AddConnectionIdWithInvalidToken(connection.ToServerConnection().Id);
+
+    public bool HasInvalidToken(Connection connection) => serverConnectionWithInvalidToken.HasInvalidToken(connection.ToServerConnection().Id);
+
+    public bool TryRemoveConnection(ConnectionInfo connectionInfo)
+    {
+        var connectionId = connectionInfo.GetServerIdFromConnectionInfo();
+        return serverConnectionsRepository.TryDelete(connectionId);
+    }
+
+    public bool TryUpdateSettingsById(string connectionId, ServerConnectionSettings settings) =>
+        serverConnectionsRepository.TryUpdateSettingsById(connectionId, settings);
+
+    private static IConnectionCredentials MapCredentials(ICredentialsModel credentialsModel)
+    {
+        switch (credentialsModel)
+        {
+            case TokenCredentialsModel tokenCredentialsModel:
+                return new TokenAuthCredentials(tokenCredentialsModel.Token);
+            default:
+                return null;
+        }
+    }
+}

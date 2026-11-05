@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -30,7 +30,7 @@ using System.Reflection;
  * domain, and we try to locate the assembly in the main app domain.
  */
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     /// <summary>
     /// Helper class that provides the plumbing to run a test in a separate app domain
@@ -97,7 +97,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             CheckIsNotInTestDomain();
 
             // Try to locate the assembly in the main app domain i.e. using the configuration,
-            // resolution paths, binding redirects etc set by the test runner, 
+            // resolution paths, binding redirects etc set by the test runner,
 
             // 1. Check if the exact version of the assembly is already loaded in this app domain
             Assembly asm = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName == assemblyName);

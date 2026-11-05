@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -43,5 +43,11 @@ namespace SonarLint.VisualStudio.Core
         /// </para>
         /// </remarks>
         void EnsureToolWindowExists(Guid toolWindowId);
+
+        /// <summary>
+        /// Returns a tool window of type V, or null if one could not be found.
+        /// </summary
+        /// <typeparam name="T">The type of tool window. Should be a subclass of <see cref="Microsoft.VisualStudio.Shell.ToolWindowPane"/></typeparam>
+        V GetToolWindow<T, V>() where T : class;
     }
 }

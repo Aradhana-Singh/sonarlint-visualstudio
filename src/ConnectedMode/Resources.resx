@@ -1,0 +1,351 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BranchMapper_CalculatingServerBranch_Finished" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Finished calculating closest Sonar server branch. Result: {0}</value>
+  </data>
+  <data name="BranchMapper_CalculatingServerBranch_Started" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Calculating closest Sonar server branch...</value>
+  </data>
+  <data name="BranchMapper_CheckingSonarBranches" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping]     Checking Sonar server branches...</value>
+  </data>
+  <data name="BranchMapper_Match_SameSonarBranchName" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping]     Match found: same Sonar branch name: {0}</value>
+  </data>
+  <data name="BranchMapper_NoHead" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping]     No head branch detected </value>
+  </data>
+  <data name="BranchMapper_NoMatchingBranchFound" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping]     No match found - using Sonar server "main" branch</value>
+  </data>
+  <data name="BranchMapper_UpdatingClosestMatch" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping]     Updating closest match: branch = {0}, distance = {1}</value>
+  </data>
+  <data name="BranchProvider_CouldNotDetectGitRepo" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Could not detect a git repo for the current solution</value>
+  </data>
+  <data name="BranchProvider_FailedToCalculateMatchingBranch" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Failed to calculate closest local git branch, defaulting to Sonar main branch.</value>
+  </data>
+  <data name="BranchProvider_MatchingServerBranchName" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Matching Sonar server branch: {0}</value>
+  </data>
+  <data name="BranchProvider_NotInConnectedMode" xml:space="preserve">
+    <value>[ConnectedMode/BranchMapping] Solution is not bound</value>
+  </data>
+  <data name="GitMonitor_EventError" xml:space="preserve">
+    <value>[ConnectedMode] Error handling repo change notification: {0}</value>
+  </data>
+  <data name="GitMonitor_GitBranchChanged" xml:space="preserve">
+    <value>[ConnectedMode/GitMonitor] Git head branch changed</value>
+    <comment>i.e. changed to a different branch</comment>
+  </data>
+  <data name="GitMonitor_MonitoringRepoStarted" xml:space="preserve">
+    <value>[ConnectedMode/GitMonitor] Monitoring git repo. Root path: {0}</value>
+  </data>
+  <data name="GitMonitor_MonitoringRepoStopped" xml:space="preserve">
+    <value>[ConnectedMode/GitMonitor] Stopped monitoring repo</value>
+  </data>
+  <data name="GitMonitor_NoRepo" xml:space="preserve">
+    <value>[ConnectedMode/GitMonitor] No repo detected - nothing to monitor</value>
+  </data>
+  <data name="NullBranchName" xml:space="preserve">
+    <value>{null}</value>
+  </data>
+  <data name="Package_Initialized" xml:space="preserve">
+    <value>[ConnectedMode] Package initialized</value>
+  </data>
+  <data name="Package_Initializing" xml:space="preserve">
+    <value>[ConnectedMode] Initializing package...</value>
+  </data>
+  <data name="StatefulBranchProvider_BindingUpdated" xml:space="preserve">
+    <value>Git HEAD changed, updating SLCore</value>
+  </data>
+  <data name="ActionRunner_CancellingCurrentOperation" xml:space="preserve">
+    <value>[ActionRunner] Cancelling current operation...</value>
+  </data>
+  <data name="Suppressions_FetchError_Short" xml:space="preserve">
+    <value>Fetch operation failed: {0}</value>
+    <comment>0 = short error message</comment>
+  </data>
+  <data name="Suppressions_FetchOperationCancelled" xml:space="preserve">
+    <value>Fetch operation cancelled</value>
+  </data>
+  <data name="Suppressions_Fetch_Issues" xml:space="preserve">
+    <value>Fetching C# &amp; VB.NET suppressions... All issues suppressed: {0}</value>
+  </data>
+  <data name="Suppression_FetchError_Verbose" xml:space="preserve">
+    <value>Error fetching data: {0}</value>
+    <comment>0 = detailed error message</comment>
+  </data>
+  <data name="Suppression_UpdateError_Verbose" xml:space="preserve">
+    <value>[Suppressions] Error updating data: {0}</value>
+    <comment>0 = detailed error message</comment>
+  </data>
+  <data name="RoslynSuppressionsLogContext" xml:space="preserve">
+    <value>Roslyn Suppressions</value>
+  </data>
+  <data name="Suppression_Fetch_Issues_Finished" xml:space="preserve">
+    <value>Finished fetching suppressions. All issues suppressed: {0}</value>
+  </data>
+  <data name="Suppression_IssueChangedEventFinished" xml:space="preserve">
+    <value>[Suppressions] IssueChangedEvent finished</value>
+  </data>
+  <data name="Suppression_IssueChangedEvent" xml:space="preserve">
+    <value>[Suppressions] Handling IssueChangedEvent, isResolved: {0}, issue keys for current branch: {1}</value>
+  </data>
+  <data name="Hotspots_Fetch_AllHotspots" xml:space="preserve">
+    <value>[Hotspots] Fetching all hotspots...</value>
+  </data>
+  <data name="Hotspots_FetchOperationCancelled" xml:space="preserve">
+    <value>[Hotspots] Fetch operation cancelled</value>
+  </data>
+  <data name="Hotpots_FetchError_Short" xml:space="preserve">
+    <value>[Hotpots] Fetch operation failed: {0}</value>
+    <comment>0 = short error message</comment>
+  </data>
+  <data name="Hotspots_FetchError_Verbose" xml:space="preserve">
+    <value>[Hotspots] Error fetching data: {0}</value>
+    <comment>0 = detailed error message</comment>
+  </data>
+  <data name="Hotspots_Fetch_AllHotspots_Finished" xml:space="preserve">
+    <value>[Hotspots] Finished fetching all hotspots</value>
+  </data>
+  <data name="TimedUpdateTriggered" xml:space="preserve">
+    <value>[ConnectedMode/TimedUpdate] Triggering refresh of server settings...</value>
+  </data>
+  <data name="SharedBindingConfigProvider_LogContext" xml:space="preserve">
+    <value>Shared Binding</value>
+  </data>
+  <data name="SharedBindingConfigProvider_GitRootNotFound" xml:space="preserve">
+    <value>Git root not found, can't calculate location for .sonarlint shared folder</value>
+  </data>
+  <data name="SharedBindingConfigProvider_SharedFolderNotFound" xml:space="preserve">
+    <value>The .sonarlint shared folder was not found</value>
+  </data>
+  <data name="SharedBindingConfigProvider_NoSaveLocationFound" xml:space="preserve">
+    <value>The file could not be saved because none of the possible save locations was found</value>
+  </data>
+  <data name="SharedBindingConfigProvider_SharedFileNotFound" xml:space="preserve">
+    <value>The shared binding configuration file was not found and will not be used. Probed path: {0}</value>
+  </data>
+  <data name="SharedBindingConfigProvider_SharedFileNotFound_ProbePathDefaultValue" xml:space="preserve">
+    <value>not found</value>
+  </data>
+  <data name="MuteIssue_IssueNotFound" xml:space="preserve">
+    <value>Could not find a matching issue on the server.</value>
+  </data>
+  <data name="MuteIssue_NotInConnectedMode" xml:space="preserve">
+    <value>Issue muting is only supported in connected mode</value>
+  </data>
+  <data name="MuteIssue_NotPermitted" xml:space="preserve">
+    <value>Issue muting was not permitted [issueKey: {0}]: {1}</value>
+  </data>
+  <data name="MuteIssue_AddCommentFailed" xml:space="preserve">
+    <value>An error occurred while adding the comment on muted issue [issueKey: {0}]: {1}</value>
+  </data>
+  <data name="MuteIssue_AnErrorOccurred" xml:space="preserve">
+    <value>An error occurred while muting issue [issueKey: {0}]: {1}</value>
+  </data>
+  <data name="ValidateCredentials_Fails" xml:space="preserve">
+    <value>Validating credentials failed</value>
+  </data>
+  <data name="ListUserOrganizations_Fails" xml:space="preserve">
+    <value>Listing user organizations failed</value>
+  </data>
+  <data name="GetServerProjectByKey_Fails" xml:space="preserve">
+    <value>Failed to get project name by key</value>
+  </data>
+  <data name="GetServerProjectByKey_ProjectNotFound" xml:space="preserve">
+    <value>Server did not return a project name for the specified project key {0}</value>
+  </data>
+  <data name="GetAllProjects_Fails" xml:space="preserve">
+    <value>Getting all projects failed</value>
+  </data>
+  <data name="Binding_Fails" xml:space="preserve">
+    <value>Binding failed due to: {0}</value>
+  </data>
+  <data name="Binding_ConnectionNotFound" xml:space="preserve">
+    <value>Connection to server could not be found</value>
+  </data>
+  <data name="SharedBinding_ConfigurationNotAvailable" xml:space="preserve">
+    <value>Shared Binding configuration not available</value>
+  </data>
+  <data name="UnexpectedConnectionType" xml:space="preserve">
+    <value>Unexpected server connection type</value>
+  </data>
+  <data name="Binding_CredentiasNotFound" xml:space="preserve">
+    <value>The credentials for the connection {0} could not be found</value>
+  </data>
+  <data name="Binding_ProjectKeyNotFound" xml:space="preserve">
+    <value>The project key could not be found</value>
+  </data>
+  <data name="FuzzySearchProjects_Fails" xml:space="preserve">
+    <value>The search for projects for the connectionId {0} with the search term "{1}" failed: {2}</value>
+  </data>
+  <data name="DotnetAnalyzerIndicatorTemplate" xml:space="preserve">
+    <value>[ConnectedMode/DotnetAnalyzerIndicator] {0}</value>
+  </data>
+  <data name="PromoteLearnMore" xml:space="preserve">
+    <value>Learn more</value>
+  </data>
+  <data name="PromoteConnectedModeLanguagesMessage" xml:space="preserve">
+    <value>Consider connecting to SonarQube to enable analysis on the following languages: {0}</value>
+  </data>
+  <data name="PromoteBind" xml:space="preserve">
+    <value>Bind</value>
+  </data>
+  <data name="PromoteSonarQubeCloud" xml:space="preserve">
+    <value>Try SonarQube Cloud for free</value>
+  </data>
+  <data name="GenerateToken_Fails" xml:space="preserve">
+    <value>Generating a token for the url {0} failed due to: {1}</value>
+  </data>
+  <data name="ConnectedModeLogContext" xml:space="preserve">
+    <value>Connected Mode</value>
+  </data>
+  <data name="ConnectedModeBindingLogContext" xml:space="preserve">
+    <value>Binding</value>
+  </data>
+  <data name="BindingType_Manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="BindingType_Shared" xml:space="preserve">
+    <value>Shared</value>
+  </data>
+  <data name="BindingType_AssistedShared" xml:space="preserve">
+    <value>Assisted from Shared</value>
+  </data>
+  <data name="BindingType_Assisted" xml:space="preserve">
+    <value>Assisted</value>
+  </data>
+  <data name="MuteIssue_HaveMuted" xml:space="preserve">
+    <value>Issue {0} resolved</value>
+  </data>
+  <data name="MuteIssue_StatusChangeFailure" xml:space="preserve">
+    <value>Issue Status Change Failure</value>
+  </data>
+  <data name="ReopenIssue_Success" xml:space="preserve">
+    <value>Issue {0} reopened</value>
+  </data>
+  <data name="MuteIssue_FailedError" xml:space="preserve">
+    <value>An error occurred while changing status of the issue. Check logs for more information.</value>
+  </data>
+</root>

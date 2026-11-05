@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,11 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 
 namespace SonarLint.VisualStudio.Core.ETW
 {
     [EventSource(Name = "SonarSource-SonarLint-VS-Integration")]
+    [ExcludeFromCodeCoverage] // boilerplate. The ETW provider will log errors if the manifest is invalid
     public sealed class CodeMarkers : EventSource
     {
         public static readonly CodeMarkers Instance = new CodeMarkers();
@@ -35,6 +37,8 @@ namespace SonarLint.VisualStudio.Core.ETW
             public const EventKeywords Analysis = (EventKeywords)4;
             public const EventKeywords CFamily = (EventKeywords)8;
             public const EventKeywords RoslynSuppression = (EventKeywords)16;
+            public const EventKeywords WebClient = (EventKeywords)32;
+            public const EventKeywords Threading = (EventKeywords)64;
         }
 
         #region Binding: 1000-1999
@@ -42,18 +46,14 @@ namespace SonarLint.VisualStudio.Core.ETW
         private const int ErrorListControllerProcessStartId = 1000;
         private const int ErrorListControllerProcessStopId = 1001;
 
-        private const int UnboundProjectsFinderStartId = 1002;
-        private const int UnboundProjectsFinderStopId = 1003;
-        private const int UnboundProjectsFinderBeforeIsBindingRequired = 1004;
-
-        private const int CheckProjectBindingStartId = 1005;
-        private const int CheckProjectBindingStopId = 1006;
-
-        private const int CSharpVBIsBindingRequiredStartId = 1007;
-        private const int CSharpVBIsBindingRequiredStopId = 1008;
-
         private const int GetProjectRuleSetsDeclarationsStartId = 1009;
         private const int GetProjectRuleSetsDeclarationsStopId = 1010;
+
+        private const int GetMatchingBranchStartId = 1011;
+        private const int GetMatchingBranchStopId = 1012;
+
+        private const int GetDistanceStartId = 1013;
+        private const int GetDistanceStopId = 1014;
 
         [Event(ErrorListControllerProcessStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
         public void ErrorListControllerProcessStart() => Write(ErrorListControllerProcessStartId);
@@ -61,32 +61,23 @@ namespace SonarLint.VisualStudio.Core.ETW
         [Event(ErrorListControllerProcessStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
         public void ErrorListControllerProcessStop() => Write(ErrorListControllerProcessStopId);
 
-        [Event(UnboundProjectsFinderStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void UnboundProjectFinderStart() => Write(UnboundProjectsFinderStartId);
-
-        [Event(UnboundProjectsFinderStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void UnboundProjectFinderStop() => Write(UnboundProjectsFinderStopId);
-
-        [Event(UnboundProjectsFinderBeforeIsBindingRequired, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void UnboundProjectFinderBeforeIsBindingRequired() => Write(UnboundProjectsFinderBeforeIsBindingRequired);
-
-        [Event(CheckProjectBindingStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void CheckProjectBindingStart(string projectName) => Write(CheckProjectBindingStartId, projectName);
-
-        [Event(CheckProjectBindingStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void CheckProjectBindingStop() => Write(CheckProjectBindingStopId);
-
-        [Event(CSharpVBIsBindingRequiredStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void CSharpVBProjectIsBindingRequiredStart(string projectName) => Write(CSharpVBIsBindingRequiredStartId, projectName);
-
-        [Event(CSharpVBIsBindingRequiredStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
-        public void CSharpVBIsBindingRequiredStop() => Write(CSharpVBIsBindingRequiredStopId);
-
         [Event(GetProjectRuleSetsDeclarationsStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
         public void GetProjectRuleSetsDeclarationsStart(string projectName) => Write(GetProjectRuleSetsDeclarationsStartId, projectName);
 
         [Event(GetProjectRuleSetsDeclarationsStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
         public void GetProjectRuleSetsDeclarationsStop() => Write(GetProjectRuleSetsDeclarationsStopId);
+
+        [Event(GetMatchingBranchStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
+        public void GetMatchingBranchStart(string projectKey) => Write(GetMatchingBranchStartId, projectKey);
+
+        [Event(GetMatchingBranchStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
+        public void GetMatchingBranchStop() => Write(GetMatchingBranchStopId);
+
+        [Event(GetDistanceStartId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
+        public void GetDistanceStart(string branchName) => Write(GetDistanceStartId, branchName);
+
+        [Event(GetDistanceStopId, Level = EventLevel.Informational, Keywords = Keywords.Binding)]
+        public void GetDistanceStop() => Write(GetDistanceStopId);
 
         #endregion
 
@@ -123,7 +114,7 @@ namespace SonarLint.VisualStudio.Core.ETW
 
         private const int ReportSuppressionsStartId = 3000;
         private const int ReportSuppressionsStopId = 3001;
-      
+
         private const int FileStorageGetStartId = 3002;
         private const int FileStorageGetStopId = 3003;
 
@@ -139,7 +130,7 @@ namespace SonarLint.VisualStudio.Core.ETW
 
         [Event(ReportSuppressionsStartId, Level = EventLevel.Informational, Keywords = Keywords.RoslynSuppression)]
         public void ReportSuppressionsStart() => Write(ReportSuppressionsStartId);
-        
+
         [Event(ReportSuppressionsStopId, Level = EventLevel.Informational, Keywords = Keywords.RoslynSuppression)]
         public void ReportSuppressionsStop(string mode, int suppressionCount) => Write(ReportSuppressionsStopId, mode, suppressionCount);
 
@@ -166,6 +157,44 @@ namespace SonarLint.VisualStudio.Core.ETW
 
         [Event(FileSynchronizerUpdateStopId, Level = EventLevel.Informational, Keywords = Keywords.RoslynSuppression)]
         public void FileSynchronizerUpdateStop() => Write(FileSynchronizerUpdateStopId);
+
+        #endregion
+
+        #region Web call: 4000-4999
+
+        private const int WebClientCallStartId = 4000;
+        private const int WebClinetCallStopId = 4001;
+
+        [Event(WebClientCallStartId, Level = EventLevel.Informational, Keywords = Keywords.WebClient)]
+        public void WebClientCallStart(string requestName) => Write(WebClientCallStartId, requestName);
+
+        [Event(WebClinetCallStopId, Level = EventLevel.Informational, Keywords = Keywords.WebClient)]
+        public void WebClientCallStop(string requestName) => Write(WebClinetCallStopId, requestName);
+
+        #endregion
+
+        #region Threading: 5000-5999
+
+        private const int Threading_RunOnBackgroundThread_StartId = 5000;
+        private const int Threading_RunOnBackgroundThread_StopId = 5001;
+        private const int Threading_RunOnBackgroundThread_SwitchingToBackgroundId = 5002;
+        private const int Threading_RunOnBackgroundThread_ExecutingCallId = 5003;
+        private const int Threading_RunOnBackgroundThread_SwitchingToUIId = 5004;
+
+        [Event(Threading_RunOnBackgroundThread_StartId, Level = EventLevel.Informational, Keywords = Keywords.Threading)]
+        public void Threading_RunOnBackgroundThread_Start() => Write(Threading_RunOnBackgroundThread_StartId);
+
+        [Event(Threading_RunOnBackgroundThread_StopId, Level = EventLevel.Informational, Keywords = Keywords.Threading)]
+        public void Threading_RunOnBackgroundThread_Stop() => Write(Threading_RunOnBackgroundThread_StopId);
+
+        [Event(Threading_RunOnBackgroundThread_SwitchingToBackgroundId, Level = EventLevel.Informational, Keywords = Keywords.Threading)]
+        public void Threading_RunOnBackgroundThread_SwitchingToBackground() => Write(Threading_RunOnBackgroundThread_SwitchingToBackgroundId);
+
+        [Event(Threading_RunOnBackgroundThread_ExecutingCallId, Level = EventLevel.Informational, Keywords = Keywords.Threading)]
+        public void Threading_RunOnBackgroundThread_ExecutingCall() => Write(Threading_RunOnBackgroundThread_ExecutingCallId);
+
+        [Event(Threading_RunOnBackgroundThread_SwitchingToUIId, Level = EventLevel.Informational, Keywords = Keywords.Threading)]
+        public void Threading_RunOnBackgroundThread_SwitchingToUI() => Write(Threading_RunOnBackgroundThread_SwitchingToUIId);
 
         #endregion
 

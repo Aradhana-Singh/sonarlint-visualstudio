@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -29,6 +29,7 @@ using Moq;
 using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.Integration.Vsix;
 using SonarLint.VisualStudio.IssueVisualization.Models;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests
 {
@@ -144,7 +145,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             var issue1 = CreateIssue();
             var issue2 = CreateIssue();
             var snapshot1 = new IssuesSnapshot(ValidProjectName, ValidProjectGuid, ValidFilePath, new[] { issue1, issue2 });
-            
+
             issue1.InvalidateSpan();
             var snapshot2 = snapshot1.GetUpdatedSnapshot(); // create new snapshot without non-navigable issues
 
@@ -182,7 +183,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
                 issue1.InvalidateSpan();
             }
 
-            // change of behavior following #2351 -- we will rely on a new snapshot being created when issues are non-navigable, 
+            // change of behavior following #2351 -- we will rely on a new snapshot being created when issues are non-navigable,
             // so indexOf should just focus on finding the issue in the new snapshot
             snapshot.IndexOf(0, snapshot)
                 .Should().Be(0);
@@ -201,7 +202,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         public void IndexOf_IfIndexOutOfRange_ReturnsNotFound(int inputIndex, int expected)
         {
             var original = new IssuesSnapshot(ValidProjectName, ValidProjectGuid, ValidFilePath,
-                new[] { CreateIssue(), CreateIssue(), CreateIssue() } );
+                new[] { CreateIssue(), CreateIssue(), CreateIssue() });
             var modified = original.CreateUpdatedSnapshot("unimportant change");
 
             // Should not be able to map to an out-of-range index
@@ -291,7 +292,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             testSubject.AnalysisRunId.Should().Be(originalRunId);
             testSubject.Issues.Should().BeEquivalentTo(ValidIssueList);
         }
-        
+
         private static Guid GetProjectGuid(ITableEntriesSnapshot snapshot) =>
             GetValue<Guid>(snapshot, StandardTableKeyNames.ProjectGuid);
 
@@ -313,10 +314,10 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         private static IAnalysisIssueVisualization CreateIssue(string ruleKey = "rule key")
         {
             var analysisIssue = new DummyAnalysisIssue
-            { 
+            {
                 PrimaryLocation = new DummyAnalysisIssueLocation { TextRange = new DummyTextRange()},
-                RuleKey = ruleKey 
-            };           
+                RuleKey = ruleKey
+            };
 
             return CreateIssueViz("filePath", CreateNonEmptySpan(), analysisIssue);
         }

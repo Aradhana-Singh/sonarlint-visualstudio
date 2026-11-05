@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\SonarLint.Test.props" />
+  <PropertyGroup>
+
+    <IsPackable>false</IsPackable>
+
+    <RootNamespace>SonarLint.VisualStudio.Education.UnitTests</RootNamespace>
+
+    <AssemblyName>SonarLint.VisualStudio.Education.UnitTests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="5.9.0" />
+    <PackageReference Include="Moq" Version="4.21.0" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  
+  <ItemGroup Label="Framework references">
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Presentation" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Education\Education.csproj" />
+    <!-- Referencing Rules project so tests can access the embedded rule descriptions 
+         resources (to check they can all be transformed to XAML) -->
+    <ProjectReference Include="..\TestInfrastructure\TestInfrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

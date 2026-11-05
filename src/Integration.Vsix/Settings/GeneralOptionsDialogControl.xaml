@@ -3,50 +3,165 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             d:DesignHeight="300"
+             xmlns:res="clr-namespace:SonarLint.VisualStudio.Integration.Vsix.Resources"
+             xmlns:links="clr-namespace:SonarLint.VisualStudio.Core;assembly=SonarLint.VisualStudio.Core"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:vsimagecatalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             x:ClassModifier="internal"
+             d:DesignHeight="350"
              d:DesignWidth="450"
-             mc:Ignorable="d">
+             mc:Ignorable="d" Name="GeneralOptionsUserControl">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style TargetType="TextBlock">
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="TextTrimming" Value="None" />
+                <Setter Property="LineStackingStrategy" Value="MaxHeight" />
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
 
-    <Grid Margin="0,0,0,5">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer>
+        <Grid Margin="0,0,0,5" DataContext="{Binding ElementName=GeneralOptionsUserControl, Path=ViewModel}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
 
-        <Button Grid.Column="0" Grid.Row="0" Content="Edit rules settings"
-                x:Name="OpenSettingsButton"
-                Height="24"
-                Margin="5" Padding="5,2.5" />
-        <TextBlock Grid.Column="1" Grid.Row="0"
-                   VerticalAlignment="Center"
-                   Margin="5"
-                   TextWrapping="Wrap" ><Run Text="Open the per-user settings file"/><Run Text=" in which C/C++/JavaScript/TypeScript rules can be activated/deactivated."/></TextBlock>
-        <StackPanel Grid.Column="1" Grid.Row="1">
-            <TextBlock
-                   VerticalAlignment="Center"
-                   Margin="5,0,0,5" TextWrapping="Wrap" Text="The file will be created if it does not exist." />
-            <TextBlock
-                   VerticalAlignment="Center"
-                   Margin="5,8,0,5" TextWrapping="Wrap">
-                Note: per-user settings are ignored for C/C++ for solutions using connected mode.
-                See the <Hyperlink x:Name="ShowWikiHyperLink">wiki</Hyperlink>
-                for more information.
-            </TextBlock>
-        </StackPanel>
+            <GroupBox Grid.Row="0" Margin="5,0,0,5" Header="{x:Static res:Strings.AnalysisBehaviorHeader}">
+                <StackPanel Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox
+                            Content="{x:Static res:Strings.FocusOnNewCodeCheckbox}"
+                            IsChecked="{Binding Path=IsFocusOnNewCodeEnabled}" />
+                        <imaging:CrispImage Moniker="{x:Static vsimagecatalog:KnownMonikers.StatusHelpOutline}"
+                                            Margin="5, 0">
+                            <imaging:CrispImage.ToolTip>
+                                <TextBlock Text="{x:Static res:Strings.FocusOnNewCodeTooltipGeneric}" />
+                            </imaging:CrispImage.ToolTip>
+                        </imaging:CrispImage>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <CheckBox Content="{x:Static res:Strings.ShowBuildErrorNotificationCheckbox}"
+                                  IsChecked="{Binding Path=IsShowBuildErrorNotificationEnabled}" />
+                        <imaging:CrispImage Moniker="{x:Static vsimagecatalog:KnownMonikers.StatusHelpOutline}"
+                                            Margin="5, 0">
+                            <imaging:CrispImage.ToolTip>
+                                <TextBlock Text="{x:Static res:Strings.ShowBuildErrorNotificationTooltip}" />
+                            </imaging:CrispImage.ToolTip>
+                        </imaging:CrispImage>
+                    </StackPanel>
+                    <StackPanel Margin="0,5,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{x:Static res:Strings.PragmaAnalysisSeverityLabel}" />
+                            <imaging:CrispImage Moniker="{x:Static vsimagecatalog:KnownMonikers.StatusHelpOutline}"
+                                                Margin="5, 0">
+                                <imaging:CrispImage.ToolTip>
+                                    <TextBlock Text="{x:Static res:Strings.PragmaAnalysisSeverityTooltip}" />
+                                </imaging:CrispImage.ToolTip>
+                            </imaging:CrispImage>
+                        </StackPanel>
+                        <ComboBox HorizontalContentAlignment="Stretch" Margin="0,5,0,0" Padding="5,2.5"
+                                  ItemsSource="{Binding Path=PragmaRuleSeverities}"
+                                  SelectedItem="{Binding Path=PragmaRuleSeverity}" />
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
 
-        <StackPanel x:Name="VerbosityPanel" Grid.Row="2" Grid.ColumnSpan="2">
+            <GroupBox Grid.Row="1" Header="Standalone mode">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Grid.Row="0" Content="Edit Settings"
+                            Height="24"
+                            Margin="5" Padding="5,2.5"
+                            Command="{Binding Path=OpenSettingsFileCommand}" />
+                    <TextBlock Grid.Column="1" Grid.Row="0"
+                               VerticalAlignment="Center"
+                               Margin="5">
+                        <Run Text="{x:Static res:Strings.OpenPerUserText}" />
+                        <Hyperlink NavigateUri="{x:Static links:DocumentationLinks.SettingsJsonFileUri}"
+                                   RequestNavigate="ViewInBrowser">
+                            settings file
+                        </Hyperlink>
+                        <Run Text="{x:Static res:Strings.SettingsFileDescriptionText}" />
+                    </TextBlock>
+                    <StackPanel Grid.Column="1" Grid.Row="1">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Margin="5,0,0,5" Text="{x:Static res:Strings.SettingsFileWillBeCreatedText}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Margin="5,8,0,5">
+                            <Run Text="{x:Static res:Strings.SettingsFileIgnoredText}" />
+                            <Run Text="See the" />
+                            <Hyperlink NavigateUri="{x:Static links:DocumentationLinks.DisablingARuleUri}"
+                                       RequestNavigate="ViewInBrowser">
+                                documentation
+                            </Hyperlink>
+                            <Run Text="for more information." />
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
 
-            <TextBlock Text="SonarLint output verbosity for the analysis of additional languages:"
-                       Margin="5" TextWrapping="Wrap" />
+            <StackPanel x:Name="VerbosityPanel" Grid.Row="2" Margin="5">
+                <TextBlock Text="Logging level:" />
 
-            <ComboBox x:Name="DaemonVerbosity" SelectedIndex="2" HorizontalContentAlignment="Stretch" Margin="5" Padding="5,2.5"/>
-        </StackPanel>
+                <ComboBox SelectedIndex="2" HorizontalContentAlignment="Stretch" Margin="0,5,0,0" Padding="5,2.5"
+                          ItemsSource="{Binding Path=DaemonLogLevels}"
+                          SelectedItem="{Binding Path=SelectedDaemonLogLevel}" />
+            </StackPanel>
 
-    </Grid>
+            <StackPanel x:Name="CredentialStorePanel" Grid.Row="3" Grid.ColumnSpan="2" Margin="5">
+                <TextBlock Text="{x:Static res:Strings.CredentialStorageLabel}" />
+                <ComboBox SelectedIndex="0" HorizontalContentAlignment="Stretch" Margin="0,5,0,0" Padding="5,2.5"
+                          ItemsSource="{Binding Path=CredentialStoreTypes}" SelectedItem="{Binding Path=CredentialStoreType}" />
+                <TextBlock Text="{x:Static res:Strings.CredentialStorageDpapiHelpText}" />
+            </StackPanel>
+            
+            <GroupBox Grid.Row="4" Margin="5" Padding="0,5"
+                      Header="{x:Static res:Strings.JreLocationLabel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="{x:Static res:Strings.JreLocationDescriptionText}" />
+                    <TextBox Grid.Row="1" Margin="0,5"
+                             Text="{Binding Path=JreLocation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Grid.Row="2" Text="{x:Static res:Strings.RestartIdeToApplyOptionLabel}" />
+                </Grid>
+            </GroupBox>
+
+            <GroupBox Grid.Row="5" Margin="5,0,0,5" Header="{x:Static res:Strings.ExperimentalGroupHeader}">
+                <StackPanel Margin="5">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Content="{x:Static res:Strings.UseAbsoluteFilePathsCheckbox}"
+                                  IsChecked="{Binding Path=UseAbsoluteFilePaths}" />
+                        <imaging:CrispImage Moniker="{x:Static vsimagecatalog:KnownMonikers.StatusHelpOutline}"
+                                            Margin="5, 0">
+                            <imaging:CrispImage.ToolTip>
+                                <TextBlock Text="{x:Static res:Strings.UseAbsoluteFilePathsTooltip}" />
+                            </imaging:CrispImage.ToolTip>
+                        </imaging:CrispImage>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+        </Grid>
+    </ScrollViewer>
 </UserControl>

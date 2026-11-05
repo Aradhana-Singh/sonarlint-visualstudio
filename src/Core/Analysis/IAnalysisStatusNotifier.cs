@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,16 +18,26 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-
 namespace SonarLint.VisualStudio.Core.Analysis
 {
     public interface IAnalysisStatusNotifier
     {
-        void AnalysisStarted(string filePath);
-        void AnalysisFinished(string filePath, int issueCount, TimeSpan analysisTime);
-        void AnalysisCancelled(string filePath);
-        void AnalysisFailed(string filePath, Exception ex);
-        void AnalysisFailed(string filePath, string failureMessage);
+        void AnalysisStarted();
+
+        void AnalysisProgressed(
+            Guid? analysisId,
+            int issueCount,
+            string findingType,
+            bool isIntermediate);
+
+        void AnalysisFinished(Guid? analysisId, TimeSpan analysisTime);
+
+        void AnalysisCancelled(Guid? analysisId);
+
+        void AnalysisFailed(Guid? analysisId, Exception ex);
+
+        void AnalysisFailed(Guid? analysisId, string failureMessage);
+
+        void AnalysisNotReady(Guid? analysisId, string reason);
     }
 }

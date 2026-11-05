@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,122 +18,127 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using SonarLint.VisualStudio.Core;
-using SonarLint.VisualStudio.Core.Telemetry;
-using SonarLint.VisualStudio.Infrastructure.VS;
-using SonarLint.VisualStudio.Integration;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 
-namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions.QuickFixes
+namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions.QuickFixes;
+
+internal sealed class QuickFixActionsSource : ISuggestedActionsSource
 {
-    internal sealed class QuickFixActionsSource : ISuggestedActionsSource
+    private readonly ILightBulbBroker lightBulbBroker;
+    private readonly ITextBuffer textBuffer;
+    private readonly ITextView textView;
+    private readonly ILogger logger;
+    private readonly IThreadHandling threadHandling;
+    private readonly ITagAggregator<IIssueLocationTag> issueLocationsTagAggregator;
+    private readonly IQuickFixApplicationLogic quickFixApplicationLogic;
+
+    public QuickFixActionsSource(
+        ILightBulbBroker lightBulbBroker,
+        IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService,
+        ITextView textView,
+        ITextBuffer textBuffer,
+        IQuickFixApplicationLogic quickFixApplicationLogic,
+        ILogger logger,
+        IThreadHandling threadHandling)
     {
-        private readonly ILightBulbBroker lightBulbBroker;
-        private readonly ITextView textView;
-        private readonly ILogger logger;
-        private readonly IThreadHandling threadHandling;
-        private readonly ITagAggregator<IIssueLocationTag> issueLocationsTagAggregator;
-        private readonly IQuickFixesTelemetryManager quickFixesTelemetryManager;
+        this.lightBulbBroker = lightBulbBroker;
+        this.textBuffer = textBuffer;
+        this.textView = textView;
+        this.quickFixApplicationLogic = quickFixApplicationLogic;
+        this.logger = logger;
+        this.threadHandling = threadHandling;
 
-        public QuickFixActionsSource(ILightBulbBroker lightBulbBroker,
-            IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService,
-            ITextView textView,
-            IQuickFixesTelemetryManager quickFixesTelemetryManager,
-            ILogger logger)
-            : this(lightBulbBroker, bufferTagAggregatorFactoryService, textView, quickFixesTelemetryManager, logger, new ThreadHandling())
+        issueLocationsTagAggregator = bufferTagAggregatorFactoryService.CreateTagAggregator<IIssueLocationTag>(textBuffer);
+        issueLocationsTagAggregator.TagsChanged += TagAggregator_TagsChanged;
+    }
+
+    public event EventHandler<EventArgs> SuggestedActionsChanged;
+
+    public IEnumerable<SuggestedActionSet> GetSuggestedActions(
+        ISuggestedActionCategorySet requestedActionCategories,
+        SnapshotSpan range,
+        CancellationToken cancellationToken)
+    {
+        var allActions = new List<ISuggestedAction>();
+
+        try
         {
-        }
-
-        internal QuickFixActionsSource(ILightBulbBroker lightBulbBroker,
-            IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService,
-            ITextView textView,
-            IQuickFixesTelemetryManager quickFixesTelemetryManager,
-            ILogger logger,
-            IThreadHandling threadHandling)
-        {
-            this.lightBulbBroker = lightBulbBroker;
-            this.textView = textView;
-            this.quickFixesTelemetryManager = quickFixesTelemetryManager;
-            this.logger = logger;
-            this.threadHandling = threadHandling;
-
-            issueLocationsTagAggregator = bufferTagAggregatorFactoryService.CreateTagAggregator<IIssueLocationTag>(textView.TextBuffer);
-            issueLocationsTagAggregator.TagsChanged += TagAggregator_TagsChanged;
-        }
-
-        public event EventHandler<EventArgs> SuggestedActionsChanged;
-
-        public IEnumerable<SuggestedActionSet> GetSuggestedActions(
-            ISuggestedActionCategorySet requestedActionCategories, 
-            SnapshotSpan range,
-            CancellationToken cancellationToken)
-        {
-            var allActions = new List<ISuggestedAction>();
-
             if (IsOnIssueWithApplicableQuickFixes(range, out var issuesWithFixes))
             {
                 foreach (var issueViz in issuesWithFixes)
                 {
-                    var applicableFixes = issueViz.QuickFixes.Where(x => x.CanBeApplied(textView.TextSnapshot));
+                    var applicableFixes = issueViz.QuickFixes.Where(x => x.CanBeApplied(textBuffer.CurrentSnapshot));
 
-                    allActions.AddRange(applicableFixes.Select(fix => new QuickFixSuggestedAction(fix, textView.TextBuffer, issueViz, quickFixesTelemetryManager, logger)));
+                    allActions.AddRange(applicableFixes.Select(fix => new QuickFixSuggestedAction(fix, textBuffer, issueViz, quickFixApplicationLogic, threadHandling, lightBulbBroker, textView)));
                 }
             }
-
-            return allActions.Any()
-                ? new[] { new SuggestedActionSet(allActions) }
-                : Enumerable.Empty<SuggestedActionSet>();
+        }
+        catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
+        {
+            logger.WriteLine(string.Format(Resources.ERR_QuickFixes_Exception, ex));
         }
 
-        public async Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
+        return allActions.Any()
+            ? new[] { new SuggestedActionSet(allActions) }
+            : Enumerable.Empty<SuggestedActionSet>();
+    }
+
+    public async Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range, CancellationToken cancellationToken)
+    {
+        var hasActions = false;
+        try
         {
-            var hasActions = false;
-
-            await threadHandling.RunOnUIThread(() => hasActions = IsOnIssueWithApplicableQuickFixes(range, out _));
-
-            return hasActions;
+            await threadHandling.RunOnUIThreadAsync(() => hasActions = IsOnIssueWithApplicableQuickFixes(range, out _));
         }
-
-        private bool IsOnIssueWithApplicableQuickFixes(SnapshotSpan range, out IEnumerable<IAnalysisIssueVisualization> issuesWithFixes)
+        catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
         {
-            var tagSpans = issueLocationsTagAggregator.GetTags(range);
-
-            issuesWithFixes = tagSpans
-                .Select(x => x.Tag.Location)
-                .OfType<IAnalysisIssueVisualization>()
-                .Where(x =>
-                    x.QuickFixes.Any(fix => fix.CanBeApplied(textView.TextSnapshot)));
-
-            return issuesWithFixes.Any();
+            logger.WriteLine(string.Format(Resources.ERR_QuickFixes_Exception, ex));
         }
+        return hasActions;
+    }
 
-        public bool TryGetTelemetryId(out Guid telemetryId)
+    private bool IsOnIssueWithApplicableQuickFixes(SnapshotSpan range, out IEnumerable<IAnalysisIssueVisualization> issuesWithFixes)
+    {
+        var tagSpans = issueLocationsTagAggregator.GetTags(range);
+
+        issuesWithFixes = tagSpans
+            .Select(x => x.Tag.Location)
+            .OfType<IAnalysisIssueVisualization>()
+            .Where(x =>
+                x.QuickFixes.Any(fix => fix.CanBeApplied(textBuffer.CurrentSnapshot)));
+
+        return issuesWithFixes.Any();
+    }
+
+    public bool TryGetTelemetryId(out Guid telemetryId)
+    {
+        telemetryId = Guid.Empty;
+        return false;
+    }
+
+    public void Dispose()
+    {
+        issueLocationsTagAggregator.TagsChanged -= TagAggregator_TagsChanged;
+        issueLocationsTagAggregator.Dispose();
+    }
+
+    private void TagAggregator_TagsChanged(object sender, TagsChangedEventArgs e) => HandleTagsChanged();
+
+    internal /* for testing */ void HandleTagsChanged()
+    {
+        try
         {
-            telemetryId = Guid.Empty;
-            return false;
-        }
-
-        public void Dispose()
-        {
-            issueLocationsTagAggregator.TagsChanged -= TagAggregator_TagsChanged;
-            issueLocationsTagAggregator.Dispose();
-        }
-
-        private async void TagAggregator_TagsChanged(object sender, TagsChangedEventArgs e)
-        {
-            await threadHandling.RunOnUIThread(() => lightBulbBroker.DismissSession(textView));
-
             SuggestedActionsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
+        {
+            logger.LogVerbose($"[QuickFixActionsSource] Exception handling TagsChanged event: {ex}");
         }
     }
 }

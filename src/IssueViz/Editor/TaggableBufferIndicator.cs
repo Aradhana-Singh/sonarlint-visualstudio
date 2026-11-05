@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,11 @@
  */
 
 using System.ComponentModel.Composition;
+using System.IO;
+using System.IO.Abstractions;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Projection;
+using SonarLint.VisualStudio.Core.Helpers;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Editor
 {
@@ -31,8 +35,27 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
     [Export(typeof(ITaggableBufferIndicator))]
     internal class TaggableBufferIndicator : ITaggableBufferIndicator
     {
+        private readonly IFileSystem fileSystem;
+
+        [ImportingConstructor]
+        public TaggableBufferIndicator()
+            : this(new FileSystem())
+        {
+        }
+
+        internal TaggableBufferIndicator(IFileSystem fileSystem)
+        {
+            this.fileSystem = fileSystem;
+        }
+
         public bool IsTaggable(ITextBuffer buffer)
         {
+            // projection buffers are ignored because they contain partial contents of a file and that can't be used for mapping IAnalysisIssueVisualization Locations
+            if (buffer is IProjectionBuffer)
+            {
+                return false;
+            }
+
             var filePath = buffer.GetFilePath();
 
             if (string.IsNullOrEmpty(filePath))
@@ -40,14 +63,16 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
                 return false;
             }
 
-            var isOutputBuffer = buffer.ContentType.IsOfType("Output");
+            var exists = fileSystem.File.Exists(filePath);
 
-            if (isOutputBuffer)
+            if (!exists)
             {
                 return false;
             }
 
-            return true;
+            var isUnderTemp = PathHelper.IsPathRootedUnderRoot(filePath, Path.GetTempPath());
+
+            return !isUnderTemp;
         }
     }
 }

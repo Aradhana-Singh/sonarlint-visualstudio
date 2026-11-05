@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -75,7 +75,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
             var testSubject = CreateTestSubject(locationNavigator.Object);
             testSubject.Execute(locationViz);
 
-            locationNavigator.Verify(x => x.TryNavigate(locationViz), Times.Once);
+            locationNavigator.Verify(x => x.TryNavigatePartial(locationViz), Times.Once);
             locationNavigator.VerifyNoOtherCalls();
         }
 

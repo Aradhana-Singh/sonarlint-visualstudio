@@ -1,0 +1,71 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.SLCore.Common.Helpers;
+using SlCoreLanguage = SonarLint.VisualStudio.SLCore.Common.Models.Language;
+using CoreLanguage = SonarLint.VisualStudio.Core.Language;
+
+namespace SonarLint.VisualStudio.SLCore.UnitTests.Common.Helpers;
+
+[TestClass]
+public class LanguageExtensionsTests
+{
+    [TestMethod]
+    [DynamicData(nameof(CoreToSlCore))]
+    public void ConvertToCoreLanguage_KnownLanguage_ConvertsAsExpected(CoreLanguage coreLanguage, SlCoreLanguage slCoreLanguage) =>
+        slCoreLanguage.ConvertToCoreLanguage().Should().BeSameAs(coreLanguage);
+
+    [TestMethod]
+    public void ConvertToCoreLanguage_UnknownLanguage_ReturnsUnknown()
+    {
+        SlCoreLanguage.ABAP.ConvertToCoreLanguage().Should().BeSameAs(CoreLanguage.Unknown);
+        SlCoreLanguage.JAVA.ConvertToCoreLanguage().Should().BeSameAs(CoreLanguage.Unknown);
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(CoreToSlCore))]
+    public void ConvertToSlCoreLanguage_KnownLanguage_ConvertsAsExpected(CoreLanguage coreLanguage, SlCoreLanguage slCoreLanguage) =>
+        coreLanguage.ConvertToSlCoreLanguage().Should().Be(slCoreLanguage);
+
+    [TestMethod]
+    public void ConvertToSlCoreLanguage_UnknownLanguage_Throws()
+    {
+        var act = () => CoreLanguage.Unknown.ConvertToSlCoreLanguage();
+
+        act.Should().Throw<ArgumentOutOfRangeException>().And.ParamName.Should().Be("language");
+    }
+
+    [TestMethod]
+    public void AllKnownLanguages_ConvertToSlCoreLanguage()
+    {
+        var act = () => LanguageProvider.Instance.AllKnownLanguages.Select(x => x.ConvertToSlCoreLanguage());
+
+        act.Should().NotThrow<ArgumentOutOfRangeException>();
+    }
+
+    public static IEnumerable<object[]> CoreToSlCore =>
+    [
+        [CoreLanguage.CSharp, SlCoreLanguage.CS], [CoreLanguage.VBNET, SlCoreLanguage.VBNET], [CoreLanguage.C, SlCoreLanguage.C], [CoreLanguage.Cpp, SlCoreLanguage.CPP],
+        [CoreLanguage.Css, SlCoreLanguage.CSS], [CoreLanguage.Html, SlCoreLanguage.HTML], [CoreLanguage.Js, SlCoreLanguage.JS], [CoreLanguage.Secrets, SlCoreLanguage.SECRETS],
+        [CoreLanguage.Shell, SlCoreLanguage.SHELL], [CoreLanguage.Ts, SlCoreLanguage.TS], [CoreLanguage.TSql, SlCoreLanguage.TSQL], [CoreLanguage.Text, SlCoreLanguage.TEXT],
+        [CoreLanguage.AzurePipelines, SlCoreLanguage.AZUREPIPELINES]
+    ];
+}

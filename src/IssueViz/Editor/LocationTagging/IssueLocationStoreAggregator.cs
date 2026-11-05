@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -36,6 +36,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
     {
         private readonly IEnumerable<IIssueLocationStore> locationStores;
 
+        internal /* for testing */ IReadOnlyList<IIssueLocationStore> LocationStores => (IReadOnlyList<IIssueLocationStore>)locationStores;
+
         [ImportingConstructor]
         public IssueLocationStoreAggregator([ImportMany] IEnumerable<IIssueLocationStore> locationStores)
         {
@@ -68,6 +70,24 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
             }
 
             return locationStores.SelectMany(x => x.GetLocations(filePath));
+        }
+
+        public IEnumerable<IAnalysisIssueVisualization> GetIssues()
+        {
+            return locationStores.SelectMany(x => x.GetIssues());
+        }
+
+        public void RefreshOnBufferChanged(string affectedFilePath)
+        {
+            if (affectedFilePath == null)
+            {
+                throw new ArgumentNullException(nameof(affectedFilePath));
+            }
+
+            foreach (var issueLocationStore in locationStores)
+            {
+                issueLocationStore.RefreshOnBufferChanged(affectedFilePath);
+            }
         }
 
         public void Refresh(IEnumerable<string> affectedFilePaths)

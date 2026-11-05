@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,19 +19,47 @@
  */
 
 using System;
+using System.Collections;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.IO;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.Core
 {
+    /// <summary>
+    /// Wrapper around <see cref="System.Environment"/> for testing
+    /// </summary>
     public interface IEnvironmentVariableProvider
     {
         /// <summary>
         /// Returns the value of the given variable, or null if the variable does not exist.
         /// </summary>
         string TryGet(string variableName);
+
+        /// <summary>
+        /// Gets the path to the system special folder that is identified by the specified enumeration.
+        /// </summary>
+        string GetFolderPath(Environment.SpecialFolder folder);
+
+        /// <summary>
+        /// Gets the current process environment variables
+        /// </summary>
+        List<(string name, string value)> GetAll();
     }
 
+    [Export(typeof(IEnvironmentVariableProvider))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
     public class EnvironmentVariableProvider : IEnvironmentVariableProvider
     {
+        public static EnvironmentVariableProvider Instance { get; } = new();
+
+        [ImportingConstructor]
+        private EnvironmentVariableProvider()
+        {
+            // no-op
+        }
+
         public string TryGet(string variableName)
         {
             if (string.IsNullOrEmpty(variableName))
@@ -40,6 +68,38 @@ namespace SonarLint.VisualStudio.Core
             }
 
             return Environment.GetEnvironmentVariable(variableName);
+        }
+
+        public string GetFolderPath(Environment.SpecialFolder folder) => Environment.GetFolderPath(folder);
+
+        public List<(string name, string value)> GetAll()
+        {
+            var variables = new List<(string name, string value)>();
+            foreach (DictionaryEntry environmentVariable in Environment.GetEnvironmentVariables())
+            {
+                if (environmentVariable is { Key: string variableName, Value: string variableValue })
+                {
+                    variables.Add((variableName, variableValue));
+                }
+            }
+            return variables;
+        }
+    }
+
+    /// <summary>
+    /// Extension methods to return common SLVS-specific values based on environment variables
+    /// </summary>
+    public static class EnvironmentVariableProviderExtensions
+    {
+        /// <summary>
+        /// Returns the root path under {User}\{AppData} to use for SLVS-specific settings
+        /// </summary>
+        public static string GetSLVSAppDataRootPath(this IEnvironmentVariableProvider provider)
+        {
+            var root = provider.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            Debug.Assert(root != null, "Environment.SpecialFolder.ApplicationData should not return null");
+
+            return Path.Combine(root, "SonarLint for Visual Studio");
         }
     }
 }

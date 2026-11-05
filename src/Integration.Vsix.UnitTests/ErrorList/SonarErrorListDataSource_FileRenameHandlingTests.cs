@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -76,33 +76,33 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
         [TestMethod]
         public void OnFilesRenamed_NoReferencesToRenamedFile_NoChanges()
         {
-            var factory = new Mock<IIssuesSnapshotFactory>();
+            var factory =  Substitute.For<IIssuesSnapshotFactory>();
             var testSubject = CreateTestSubject();
-            testSubject.AddFactory(factory.Object);
+            testSubject.AddFactory(factory);
 
             var fileRenames = new Dictionary<string, string> {{"old file", "new file"}};
 
-            factory.Setup(x => x.HandleFileRenames(fileRenames)).Returns(false);
+            factory.HandleFileRenames(fileRenames).Returns(false);
 
             RaiseFilesRenamedEvent(fileRenames);
-       
+
             mockTableSync.Verify(x => x.FactorySnapshotChanged(It.IsAny<ITableEntriesSnapshotFactory>()), Times.Never);
         }
 
         [TestMethod]
         public void OnFilesRenamed_HasReferencesToRenamedFile_ErrorListRefreshed()
         {
-            var factory = new Mock<IIssuesSnapshotFactory>();
+            var factory = Substitute.For<IIssuesSnapshotFactory>();
             var testSubject = CreateTestSubject();
-            testSubject.AddFactory(factory.Object);
+            testSubject.AddFactory(factory);
 
             var fileRenames = new Dictionary<string, string> { { "old file", "new file" } };
 
-            factory.Setup(x => x.HandleFileRenames(fileRenames)).Returns(true);
+            factory.HandleFileRenames(fileRenames).Returns(true);
 
             RaiseFilesRenamedEvent(fileRenames);
 
-            mockTableSync.Verify(x => x.FactorySnapshotChanged(factory.Object), Times.Once);
+            mockTableSync.Verify(x => x.FactorySnapshotChanged(factory), Times.Once);
         }
 
         private void RaiseFilesRenamedEvent(IReadOnlyDictionary<string, string> renamedFiles)

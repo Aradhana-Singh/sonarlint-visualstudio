@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,12 +23,10 @@ namespace SonarLint.VisualStudio.Integration.Vsix
     internal enum PackageCommandId
     {
         // Buttons
-        ManageConnections = 0x100,
         ProjectExcludePropertyToggle = 0x101,
         ProjectTestPropertyAuto = 0x102,
         ProjectTestPropertyTrue = 0x103,
         ProjectTestPropertyFalse = 0x104,
-
         // Menus
         ProjectSonarLintMenu = 0x850
     }

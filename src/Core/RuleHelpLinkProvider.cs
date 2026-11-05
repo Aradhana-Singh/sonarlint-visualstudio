@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,73 +18,36 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Web;
+using SonarLint.VisualStudio.Core.Binding;
 
 namespace SonarLint.VisualStudio.Core
 {
     public interface IRuleHelpLinkProvider
     {
-        string GetHelpLink(string ruleKey);
+        string GetHelpLink(SonarCompositeRuleId ruleId);
     }
 
-    public class RuleHelpLinkProvider : IRuleHelpLinkProvider
+    [Export(typeof(IRuleHelpLinkProvider))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
+    [method: ImportingConstructor]
+    public class RuleHelpLinkProvider(IActiveSolutionBoundTracker activeSolutionBoundTracker) : IRuleHelpLinkProvider
     {
-        private static readonly IDictionary<string, string> repoKeyToFolderNameMap = new Dictionary<string, string>
-        {
-            { SonarRuleRepoKeys.CSharpSecurityRules, "csharp" },
-
-            // Support for C# hotspots. No need to special-case the VB.NET hotspots, as their repo name is identical to the one on rules.sonarsource.com
-            { SonarRuleRepoKeys.CSharpRules, "csharp" }
-        };
-
-        public string GetHelpLink(string ruleKey)
-        {
+        public string GetHelpLink(SonarCompositeRuleId ruleId) =>
             // ruleKey is in format "javascript:S1234" (or javascript:SOMETHING for legacy keys)
             // NB: there are some "common" rules that are implemented on the server-side. We do
             // need to handle these case as they will never be raised in the IDE (and don't seem
             // to be documented on the rule site anyway).
             //   e.g. common-c:DuplicatedBlocks, common-cpp:FailedUnitTests
-
-            var colonIndex = ruleKey.IndexOf(':');
-            var repoKey = ruleKey.Substring(0, colonIndex);
-            var ruleId = ruleKey.Substring(colonIndex + 1);
-
-            var languageFolderName = GetWebsiteFolderName(repoKey);
-            var webSiteRuleId = GetWebsiteRuleId(ruleId);
-
-            return $"https://rules.sonarsource.com/{languageFolderName}/{webSiteRuleId}";
-        }
-
-        private string GetWebsiteFolderName(string repoKey)
-        {
-            // The rules for each language are in a separate folder in the rules website.
-            // For some languages, the folder name happens to match the repo key.
-            // The dictionary provides the mapping to use in cases where they are not the same.
-            if (repoKeyToFolderNameMap.TryGetValue(repoKey, out var folderName))
+            activeSolutionBoundTracker.CurrentConfiguration?.Project?.ServerConnection switch
             {
-                return folderName;
-            }
+                ServerConnection.SonarCloud sc => BuildRuleHelpUri(sc.Id, "rules", ruleId),
+                ServerConnection.SonarQube sq => BuildRuleHelpUri(sq.Id, "coding_rules", ruleId),
+                _ => null
+            };
 
-            // Assume the folder name is the same as the repo key
-            return repoKey;
-        }
-
-        private static string GetWebsiteRuleId(string ruleId)
-        {
-            // Website ruleId should be "RSPEC-1234" (or RSPEC-SOMETHING for legacy keys)
-            string webSiteId;
-            if (ruleId.Length > 1 &&
-                ruleId[0] == 'S' &&
-                char.IsDigit(ruleId[1]))
-            {
-                webSiteId = ruleId.Substring(1);
-            }
-            else
-            {
-                webSiteId = ruleId; // assume it's a legacy key
-            }
-
-            return "RSPEC-" + webSiteId;
-        }
+        private static string BuildRuleHelpUri(string baseUri, string path, SonarCompositeRuleId ruleId) =>
+            $"{baseUri.TrimEnd('/')}/{path}?languages={Uri.EscapeDataString(ruleId.Language.ServerLanguageKey)}&open={Uri.EscapeDataString(ruleId.Id)}&q={Uri.EscapeDataString(ruleId.RuleKey)}";
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,26 +18,32 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
 using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Initialization;
+using SonarLint.VisualStudio.Infrastructure.VS.Initialization;
+using SonarLint.VisualStudio.Integration.Resources;
 using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration
 {
     [Export(typeof(IActiveSolutionTracker))]
     [PartCreationPolicy(CreationPolicy.Shared)]
-    internal sealed class ActiveSolutionTracker : IActiveSolutionTracker, IVsSolutionEvents, IDisposable, IVsSolutionEvents7
+    internal sealed class ActiveSolutionTracker : IActiveSolutionTracker, IVsSolutionEvents2, IDisposable, IVsSolutionEvents7
     {
+        private readonly IServiceProvider serviceProvider;
+        private readonly ISolutionInfoProvider solutionInfoProvider;
+        private readonly ILogger logger;
         private bool isDisposed;
-        private readonly IVsSolution solution;
-        private readonly uint cookie;
+        private IVsSolution solution;
+        private uint cookie;
+
+        public string CurrentSolutionName { get; private set; }
 
         /// <summary>
         /// <see cref="IActiveSolutionTracker.ActiveSolutionChanged"/>
@@ -45,65 +51,99 @@ namespace SonarLint.VisualStudio.Integration
         public event EventHandler<ActiveSolutionChangedEventArgs> ActiveSolutionChanged;
 
         [ImportingConstructor]
-        public ActiveSolutionTracker([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
+        public ActiveSolutionTracker(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ISolutionInfoProvider solutionInfoProvider,
+            IInitializationProcessorFactory initializationProcessorFactory,
+            ILogger logger)
         {
-            this.solution = serviceProvider.GetService<SVsSolution, IVsSolution>();
-            Debug.Assert(this.solution != null, "Cannot find IVsSolution");
-            ErrorHandler.ThrowOnFailure(this.solution.AdviseSolutionEvents(this, out this.cookie));
+            this.serviceProvider = serviceProvider;
+            this.solutionInfoProvider = solutionInfoProvider;
+            this.logger = logger.ForContext(Strings.ActiveSolutionTracker_LogContext);
+            InitializationProcessor = initializationProcessorFactory.CreateAndStart<ActiveSolutionTracker>([], InitializeInternalAsync);
         }
 
-        #region IVsSolutionEvents
-        int IVsSolutionEvents.OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded)
+        public IInitializationProcessor InitializationProcessor { get; }
+
+        private Task InitializeInternalAsync(IThreadHandling threadHandling) =>
+            threadHandling.RunOnUIThreadAsync(() =>
+            {
+                if (isDisposed)
+                {
+                    // not subscribing to events if already disposed
+                    return;
+                }
+                CurrentSolutionName = solutionInfoProvider.GetSolutionName();
+                logger.WriteLine(Strings.ActiveSolutionTracker_InitializedSolution, CurrentSolutionName ?? Strings.ActiveSolutionTracker_NoSolutionPlaceholder);
+                solution = serviceProvider.GetService<SVsSolution, IVsSolution>();
+                Debug.Assert(solution != null, "Cannot find IVsSolution");
+                ErrorHandler.ThrowOnFailure(solution.AdviseSolutionEvents(this, out cookie));
+            });
+
+        #region IVsSolutionEvents2
+
+        int IVsSolutionEvents2.OnAfterMergeSolution(object pUnkReserved)
+        {
+            // handling of dummy solutions
+            if (CurrentSolutionName == null)
+            {
+                RaiseSolutionChangedEvent(true);
+            }
+            return VSConstants.S_OK;
+        }
+
+        public int OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel)
+        public int OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved)
+        public int OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnAfterLoadProject(IVsHierarchy pStubHierarchy, IVsHierarchy pRealHierarchy)
+        public int OnAfterLoadProject(IVsHierarchy pStubHierarchy, IVsHierarchy pRealHierarchy)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnQueryUnloadProject(IVsHierarchy pRealHierarchy, ref int pfCancel)
+        public int OnQueryUnloadProject(IVsHierarchy pRealHierarchy, ref int pfCancel)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnBeforeUnloadProject(IVsHierarchy pRealHierarchy, IVsHierarchy pStubHierarchy)
+        public int OnBeforeUnloadProject(IVsHierarchy pRealHierarchy, IVsHierarchy pStubHierarchy)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
+        public int OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
         {
             RaiseSolutionChangedEvent(true);
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnQueryCloseSolution(object pUnkReserved, ref int pfCancel)
+        public int OnQueryCloseSolution(object pUnkReserved, ref int pfCancel)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
+        public int OnBeforeCloseSolution(object pUnkReserved)
         {
             return VSConstants.S_OK;
         }
 
-        int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
+        public int OnAfterCloseSolution(object pUnkReserved)
         {
             RaiseSolutionChangedEvent(false);
             return VSConstants.S_OK;
         }
+
         #endregion
 
         #region IVsSolutionEvents7
@@ -141,9 +181,9 @@ namespace SonarLint.VisualStudio.Integration
         {
             if (!this.isDisposed)
             {
-                if (disposing)
+                if (disposing && InitializationProcessor.IsFinalized)
                 {
-                    this.solution.UnadviseSolutionEvents(this.cookie);
+                    this.solution?.UnadviseSolutionEvents(this.cookie);
                 }
 
                 this.isDisposed = true;
@@ -158,11 +198,32 @@ namespace SonarLint.VisualStudio.Integration
 
         #endregion
 
-        private void RaiseSolutionChangedEvent(bool isSolutionOpen)
+        private void RaiseSolutionChangedEvent(bool isSolutionOpen, [CallerMemberName] string eventType = "")
         {
+            var context = new MessageLevelContext { VerboseContext = [eventType] };
             // Note: if lightweight solution load is enabled then the solution might not
             // be fully opened at this point
-            ActiveSolutionChanged?.Invoke(this, new ActiveSolutionChangedEventArgs(isSolutionOpen));
+            if (isSolutionOpen)
+            {
+                var solutionName = solutionInfoProvider.GetSolutionName();
+                if (solutionName == null)
+                {
+                    logger.WriteLine(context, Strings.ActiveSolutionTracker_DummySolutionIgnored);
+                    // dummy solutions don't:
+                    // 1) have solution name -> we can't use them, might as well be no-solution state
+                    // 2) are not closed when another solution is opened -> IVsSolutionEvents2.OnAfterMergeSolution handles that case
+                    return;
+                }
+                CurrentSolutionName = solutionName;
+                logger.WriteLine(context, Strings.ActiveSolutionTracker_SolutionOpen, solutionName);
+            }
+            else
+            {
+                logger.WriteLine(context, Strings.ActiveSolutionTracker_SolutionClosed, CurrentSolutionName ?? Strings.ActiveSolutionTracker_DummySolutionPlaceholder);
+                CurrentSolutionName = null;
+            }
+
+            ActiveSolutionChanged?.Invoke(this, new ActiveSolutionChangedEventArgs(isSolutionOpen, CurrentSolutionName));
         }
     }
 }

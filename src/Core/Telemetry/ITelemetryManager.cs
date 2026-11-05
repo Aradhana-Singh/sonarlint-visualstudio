@@ -1,6 +1,6 @@
-﻿/*
+/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,17 +18,37 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-namespace SonarLint.VisualStudio.Core.Telemetry
+namespace SonarLint.VisualStudio.Core.Telemetry;
+
+public interface ITelemetryManager
 {
-    public interface ITelemetryManager
-    {
-        bool IsAnonymousDataShared { get; }
-        void OptOut();
-        void OptIn();
-        void Update();
-        void LanguageAnalyzed(string languageKey);
-        void ShowHotspotRequested();
-        void TaintIssueInvestigatedLocally();
-        void TaintIssueInvestigatedRemotely();
-    }
+    SlCoreTelemetryStatus GetStatus();
+
+    void OptOut();
+
+    void OptIn();
+
+    void TaintIssueInvestigatedLocally();
+
+    void TaintIssueInvestigatedRemotely();
+
+    void LinkClicked(string linkId);
+
+    void FixSuggestionResolved(string suggestionId, IEnumerable<bool> changeResolutionStatus);
+
+    void AddedManualBindings();
+
+    void AddedFromSharedBindings();
+
+    void AddedAutomaticBindings();
+
+    void DependencyRiskInvestigatedLocally();
+
+    void HotspotInvestigatedLocally();
+
+    void HotspotInvestigatedRemotely();
+
+    void SupportedLanguagesPanelOpened();
+
+    void SupportedLanguagesPanelCtaClicked();
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,43 +18,36 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
-using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using SonarLint.VisualStudio.Core.Notifications;
 using SonarLint.VisualStudio.Infrastructure.VS;
 
 namespace SonarLint.VisualStudio.Integration.Vsix.Helpers
 {
-    internal interface IStatusBarNotifier
-    {
-        void Notify(string message, bool showSpinner);
-    }
-
     [Export(typeof(IStatusBarNotifier))]
     [PartCreationPolicy(CreationPolicy.Shared)]
     internal class StatusBarNotifier : IStatusBarNotifier
     {
-        private IVsStatusbar vsStatusBar;
+        private readonly IVsUIServiceOperation vSServiceOperation;
 
         [ImportingConstructor]
-        public StatusBarNotifier([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
+        public StatusBarNotifier(IVsUIServiceOperation vSServiceOperation)
         {
-            RunOnUIThread.Run(() =>
-            {
-                vsStatusBar = serviceProvider.GetService(typeof(IVsStatusbar)) as IVsStatusbar;
-            });
+            this.vSServiceOperation = vSServiceOperation;
         }
 
         public void Notify(string message, bool showSpinner)
         {
-            RunOnUIThread.Run(() =>
-            {
-                object icon = (short)Microsoft.VisualStudio.Shell.Interop.Constants.SBAI_General;
-                vsStatusBar.Animation(showSpinner ? 1 : 0, ref icon);
+            vSServiceOperation.Execute<IVsStatusbar, IVsStatusbar>(vsStatusBar => DoNotify(vsStatusBar, message, showSpinner));
+        }
 
-                vsStatusBar.SetText(message);
-            });
+        private static void DoNotify(IVsStatusbar vsStatusBar, string message, bool showSpinner)
+        {
+            object icon = (short)Microsoft.VisualStudio.Shell.Interop.Constants.SBAI_General;
+            vsStatusBar.Animation(showSpinner ? 1 : 0, ref icon);
+
+            vsStatusBar.SetText(message);
         }
     }
 }

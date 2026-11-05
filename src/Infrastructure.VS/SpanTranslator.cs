@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,6 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+using System.ComponentModel.Composition;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.VisualStudio.Text;
 
 namespace SonarLint.VisualStudio.Infrastructure.VS
@@ -30,8 +32,11 @@ namespace SonarLint.VisualStudio.Infrastructure.VS
         SnapshotSpan TranslateTo(SnapshotSpan original, ITextSnapshot targetSnapshot, SpanTrackingMode spanTrackingMode);
     }
 
+    [Export(typeof(ISpanTranslator))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
     public class SpanTranslator : ISpanTranslator
     {
+        [ExcludeFromCodeCoverage]
         public SnapshotSpan TranslateTo(SnapshotSpan original,
             ITextSnapshot targetSnapshot,
             SpanTrackingMode spanTrackingMode) =>

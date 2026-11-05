@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -44,7 +44,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             firstIndicator = new Mock<ITestProjectIndicator>();
             secondIndicator = new Mock<ITestProjectIndicator>();
             testIndicators = new List<ITestProjectIndicator>();
-            
+
             testSubject = new TestProjectIndicator(testIndicators);
         }
 
@@ -63,7 +63,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             actual.Should().BeFalse();
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true)]
         [DataRow(false)]
         public void IsTestProject_OneIndicator_IndicatorHasResponse_IndicatorResponse(bool indicatorResponse)
@@ -85,7 +85,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             actual.Should().Be(false);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true)]
         [DataRow(false)]
         public void IsTestProject_TwoIndicators_FirstIndicatorHasResponse_SecondIndicatorNotCalled(bool firstIndicatorResponse)
@@ -100,7 +100,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             secondIndicator.Verify(x=> x.IsTestProject(It.IsAny<Project>()), Times.Never());
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true)]
         [DataRow(false)]
         public void IsTestProject_TwoIndicators_FirstIndicatorHasNoResponse_SecondIndicatorHasResponse_SecondIndicatorResponse(bool secondIndicatorResponse)

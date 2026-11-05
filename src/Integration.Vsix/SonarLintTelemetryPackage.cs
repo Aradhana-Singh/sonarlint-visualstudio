@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,11 +23,13 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Telemetry;
 using SonarLint.VisualStudio.Integration.Telemetry;
+
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
@@ -46,7 +48,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             Debug.Assert(!ThreadHelper.CheckAccess(), "Not expecting the package to be initialized on the UI thread");
 
             await base.InitializeAsync(cancellationToken, progress);
-            await JoinableTaskFactory.SwitchToMainThreadAsync();
+            await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             await InitOnUIThreadAsync();
         }
 
@@ -68,31 +70,12 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                 logger.WriteLine(Resources.Strings.Telemetry_Initializing);
                 telemetryManager = await this.GetMefServiceAsync<ITelemetryManager>();
                 logger.WriteLine(Resources.Strings.Telemetry_InitializationComplete);
-
-                await this.GetMefServiceAsync<ICFamilyTelemetryManager>();
-
-                if (await IsSolutionFullyOpenedAsync())
-                {
-                    telemetryManager.Update();
-                }
             }
             catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
                 // Suppress non-critical exceptions
                 logger?.WriteLine(Resources.Strings.Telemetry_ERROR, ex.Message);
             }
-        }
-
-        private async System.Threading.Tasks.Task<bool> IsSolutionFullyOpenedAsync()
-        {
-            Debug.Assert(ThreadHelper.CheckAccess(), "Expecting to be called on the UI thread");
-            var solution = await this.GetServiceAsync(typeof(SVsSolution)) as IVsSolution;
-            Debug.Assert(solution != null, "Cannot find SVsSolution");
-
-            object isLoaded;
-            var hresult = solution.GetProperty((int)__VSPROPID4.VSPROPID_IsSolutionFullyLoaded, out isLoaded);
-
-            return ErrorHandler.Succeeded(hresult) && (isLoaded as bool?) == true;
         }
 
         protected override void Dispose(bool disposing)

@@ -117,653 +117,142 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="ConnectingToSever" xml:space="preserve">
-    <value>Connecting to {0}</value>
-    <comment>Progress message when connecting to server. {0} is the server uri.</comment>
-  </data>
-  <data name="ConnectLinkText" xml:space="preserve">
-    <value>Connect...</value>
-    <comment>Link text for 'connect' command to initiate a connection with a SonarQube server</comment>
-  </data>
   <data name="ConnectSectionTitle" xml:space="preserve">
     <value>Connections</value>
     <comment>Title for the SonarQube connection section of the TE SonarQube page</comment>
   </data>
   <data name="CancelButtonText" xml:space="preserve">
-    <value>Ca_ncel</value>
+    <value>Cancel</value>
     <comment>Button text (with access key) for canceling an action – access key 'n'</comment>
   </data>
-  <data name="ConnectButtonText" xml:space="preserve">
-    <value>_Connect</value>
-    <comment>Button text for 'Connect' in SonarQube connect dialog</comment>
-  </data>
-  <data name="ConnectDialogTitle" xml:space="preserve">
-    <value>Connect to a SonarQube Server</value>
-    <comment>Connect dialog title</comment>
-  </data>
-  <data name="InsecureProtocolWarning" xml:space="preserve">
-    <value>The URL you entered is not secure. Use HTTPS connections to protect sensitive information.</value>
-    <comment>Message warning of consequences of connecting over an insecure channel</comment>
-  </data>
-  <data name="NotEmptyValidatorRequiredField" xml:space="preserve">
-    <value>Field can not be empty</value>
-    <comment>Not empty validator validation failed message - required field</comment>
-  </data>
-  <data name="PasswordLabel" xml:space="preserve">
-    <value>Password:</value>
-    <comment>Input label for password when connecting to a SonarQube server</comment>
-  </data>
-  <data name="InvalidServerUriFormat" xml:space="preserve">
-    <value>'{0}' is not a valid URL</value>
-    <comment>Server URI validator error message, formatted. {0} - invalid input string</comment>
-  </data>
-  <data name="SonarQubeServerLabel" xml:space="preserve">
-    <value>SonarQube server:</value>
-    <comment>Input label for SonarQube server URL</comment>
-  </data>
-  <data name="UsernameLabel" xml:space="preserve">
-    <value>Username/Token:</value>
-    <comment>Input label for username/token when connecting to a SonarQube server</comment>
-  </data>
-  <data name="ExceptionInsecureSchemesIsNotSubset" xml:space="preserve">
-    <value>Insecure schemes must be a subset of supported schemes</value>
-    <comment>Exception message stating that the specified set of insecure schemes was not a subset of all supported schemes</comment>
-  </data>
-  <data name="ConnectionFailed" xml:space="preserve">
-    <value>Cannot connect to the SonarQube server. Make sure you provided the correct connection information, including your sign-in credentials, and [try again]().
-See more information in the output window (SonarLint).</value>
-    <comment>The error message the user sees when the connection has failed. The message will appear in team explorer.
-Localization note: '[try again]()' is a special markup used to translate the text 'try again' into a hyperlink. Make sure to keep it localized content in with that format to avoid reducing functionality in the localized version of the product</comment>
-  </data>
-  <data name="BindButtonText" xml:space="preserve">
-    <value>Bind</value>
-    <comment>Button text for binding a SonarQube project to a VS solution</comment>
-  </data>
-  <data name="CancelLinkText" xml:space="preserve">
-    <value>Cancel</value>
-    <comment>Link text for canceling an action</comment>
-  </data>
-  <data name="UsernameRequired" xml:space="preserve">
-    <value>If a password is specified, a username must also be specified.</value>
-    <comment>Error message indicating that the username field is required if the password field is not empty</comment>
-  </data>
-  <data name="InvalidCharacterColon" xml:space="preserve">
-    <value>Colon (":") is not a permitted character.</value>
-    <comment>Error message indicating that the string must not contain an a colon (":") as is it an invalid character</comment>
-  </data>
-  <data name="ProjectToolTipProjectNameFormat" xml:space="preserve">
-    <value>{0} (Bound)</value>
-    <comment>SonarQube project tooltip for project name (with 'bound' marker indicating the project is bound to the current solution). {0} - project name</comment>
-  </data>
-  <data name="ProjectToolTipKeyFormat" xml:space="preserve">
-    <value>Key: {0}</value>
-    <comment>SonarQube project tooltip for project key. {0} - project key</comment>
-  </data>
-  <data name="BindingProjectsDisplayMessage" xml:space="preserve">
-    <value>Binding projects</value>
-    <comment>Display message</comment>
-  </data>
-  <data name="QualityProfileDownloadFailedMessageFormat" xml:space="preserve">
-    <value>Failed to download quality profile. Name: '{0}', Key: '{1}', Language: '{2}'</value>
-    <comment>Output window message indicating the quality profile file failed to download. {0} quality profile name, {1} quality profile key, {2} language name.</comment>
-  </data>
-  <data name="QualityProfileDownloadSuccessfulMessageFormat" xml:space="preserve">
-    <value>Successfully downloaded quality profile. Name: '{0}', Key: '{1}', Language: '{2}'</value>
-    <comment>Output window message indicating the quality profile file was successfully downloaded. {0} quality profile name, {1} quality profile key, {2} language name.</comment>
-  </data>
-  <data name="RuleSetDescription" xml:space="preserve">
-    <value>Rule set generated from SonarQube</value>
-    <comment>Generated rule set description.</comment>
-  </data>
-  <data name="UnexpectedWorkflowError" xml:space="preserve">
-    <value>Unexpected error during workflow execution: {0}.</value>
-    <comment>Error message in case of an unexpected exception during workflow execution. {0} exception message.</comment>
-  </data>
-  <data name="RefreshCommandDisplayText" xml:space="preserve">
-    <value>Refresh</value>
-    <comment>Refresh command display text</comment>
-  </data>
-  <data name="RefreshCommandTooltip" xml:space="preserve">
-    <value>Will refetch the SonarQube projects from the server using the existing credentials</value>
-    <comment>Refresh command tooltip</comment>
-  </data>
-  <data name="ServerNoProjectsInlineText" xml:space="preserve">
-    <value>(no projects)</value>
-    <comment>Text to be displayed inline next to the connected SonarQube server in the Team Explorer tree view when there are no SonarQube Projects available under the given server</comment>
-  </data>
-  <data name="ServerNoProjectsToolTipText" xml:space="preserve">
-    <value>This server has no available projects with which to bind to. Please create at least one project and then refresh this connection.</value>
-    <comment>Tool tip text to be displayed for the connected SonarQube server in the Team Explorer tree view when there are no SonarQube Projects available under the given server</comment>
-  </data>
-  <data name="RuleSetGenerationProgressMessage" xml:space="preserve">
-    <value>Generating project rule sets</value>
-    <comment>A progress notification message</comment>
-  </data>
-  <data name="EnsuringNugetPackagesProgressMessage" xml:space="preserve">
-    <value>Installing NuGet package '{0}' for project '{1}'</value>
-    <comment>A progress notification message. {0} nuget package id, {1} project name</comment>
-  </data>
-  <data name="FailedDuringNuGetPackageInstall" xml:space="preserve">
-    <value>Failed to install NuGet package '{0}' for project '{1}'. Message: {2}</value>
-    <comment>Output window message in case of failure - {0} nuget package id, {1} project name, {2} message</comment>
-  </data>
-  <data name="FailedToToBindSolution" xml:space="preserve">
-    <value>Failed to bind the solution to SonarQube project, [try again]().
-See more information in the output window (SonarLint).</value>
-    <comment>Team explorer notification in case of a failure to bind a solution to SonarQube project
-ocalization note: '[try again]()' is a special markup used to translate the text 'try again' into a hyperlink. Make sure to keep it localized content in with that format to avoid reducing functionality in the localized version of the product</comment>
-  </data>
-  <data name="BindingSolutionPrefixMessageFormat" xml:space="preserve">
-    <value>Binding solution to SonarQube project: {0}</value>
-    <comment>Output window message prefix that will be common to all the steps (more than one) in the binding workflow. {0} the step specific message in that workflow.</comment>
-  </data>
-  <data name="FinishedSolutionBindingWorkflowSuccessful" xml:space="preserve">
-    <value>Completed successfully</value>
-    <comment>A progress notification message</comment>
-  </data>
-  <data name="StartedSolutionBindingWorkflow" xml:space="preserve">
-    <value>Started</value>
-    <comment>A progress notification message</comment>
-  </data>
-  <data name="SyncButtonText" xml:space="preserve">
-    <value>Update</value>
-    <comment>Button text for syncing an already bound SonarQube project to a VS solution</comment>
-  </data>
-  <data name="ShowAllProjectsCommandText" xml:space="preserve">
-    <value>Show All Projects</value>
-    <comment>Server context menu command display text to show all projects (inc. unbound projects)</comment>
-  </data>
-  <data name="ToggleShowAllProjectsCommandTooltip" xml:space="preserve">
-    <value>Toggle visibility of unbound projects for this server.</value>
-    <comment>Server context menu command tool tip text to show all projects</comment>
-  </data>
-  <data name="FailedToDeserializeSQCOnfiguration" xml:space="preserve">
-    <value>Failed loading file: '{0}'. Please rebind solution to create a new configuration file.</value>
-    <comment>Output window message in case of deserialization error. {0} file path.</comment>
-  </data>
-  <data name="ExpectedAbsoluteUris" xml:space="preserve">
-    <value>The target URI must be an absolute URI</value>
-    <comment>Exception message</comment>
-  </data>
-  <data name="FailedToDeleteCredentials" xml:space="preserve">
-    <value>Failed to delete credentials for {0}.</value>
-    <comment>Exception message. {0} - the name of the thing we failed to delete.</comment>
-  </data>
-  <data name="UnexpectedTokenType" xml:space="preserve">
-    <value>Unexpected token type encountered</value>
-    <comment>Exception message</comment>
-  </data>
-  <data name="BoundProjectNotFound" xml:space="preserve">
-    <value>Bound project with key '{0}' was not found on the connected server. Select a different SonarQube project, or use [a different login]() that has access to the desired project.</value>
-    <comment>Team explorer error message when a persisted bound project is not found. {0} - SonarQube project key.</comment>
-  </data>
-  <data name="ConnectingToSonarQubePrefixMessageFormat" xml:space="preserve">
-    <value>Connecting to SonarQube server: {0}</value>
-    <comment>Output window message format. {0} the messages associated with the connection will all have this prefix and {0} will be the actual message.</comment>
-  </data>
-  <data name="ConnectionResultCancellation" xml:space="preserve">
-    <value>Canceled</value>
-    <comment>The place holder value in ConnectingToSonarQubePrefixMessageFormat</comment>
-  </data>
-  <data name="ConnectionResultFailure" xml:space="preserve">
-    <value>Failed</value>
-    <comment>The place holder value in ConnectingToSonarQubePrefixMessageFormat</comment>
-  </data>
-  <data name="ConnectionResultSuccess" xml:space="preserve">
-    <value>Succeeded</value>
-    <comment>The place holder value in ConnectingToSonarQubePrefixMessageFormat</comment>
-  </data>
-  <data name="HideUnboundProjectsCommandText" xml:space="preserve">
-    <value>Hide Unbound Projects</value>
-    <comment>Server context menu command display text to show all projects (inc. unbound projects)</comment>
-  </data>
-  <data name="DownloadingQualityProfileProgressMessage" xml:space="preserve">
-    <value>Download quality profile(s):</value>
-    <comment>A progress notification message.</comment>
-  </data>
-  <data name="AutomationServerDescription" xml:space="preserve">
-    <value>SonarQube server: {0}</value>
-    <comment>Narrator description of a SonarQube server node in the Team Explorer. {0} server URL</comment>
-  </data>
-  <data name="AutomationProjectBoundDescription" xml:space="preserve">
-    <value>Bound project: {0}</value>
-    <comment>Narrator description of a bound SonarQube project node in the Team Explorer. {0} project name</comment>
-  </data>
-  <data name="AutomationServerNoProjectsDescription" xml:space="preserve">
-    <value>SonarQube server: {0}. This server has no projects.</value>
-    <comment>Narrator description of an empty SonarQube server node in the Team Explorer. {0} server URL</comment>
-  </data>
-  <data name="TeamExplorerPageTitle" xml:space="preserve">
-    <value>SonarQube</value>
-    <comment>Title for the SonarQube Team Explorer page</comment>
-  </data>
-  <data name="MissingService" xml:space="preserve">
-    <value>Could not acquire service: {0}</value>
-    <comment>Exception message indicating the package could not acquire the given service. {0} service name</comment>
-  </data>
-  <data name="WarningsSettingsCategory" xml:space="preserve">
-    <value>Warnings</value>
-    <comment>Warnings settings category for Security options page</comment>
-  </data>
   <data name="CannotCompareVersionStrings" xml:space="preserve">
-    <value>A SonarQube server plugin has a malformed version and cannot be compared. Version was '{0}'.</value>
+    <value>A SonarQube (Server, Cloud) server plugin has a malformed version and cannot be compared. Version was '{0}'.</value>
     <comment>Exception message indicating that the provided version string is malformed and cannot be compared. {0} version string</comment>
-  </data>
-  <data name="ServerHasNoSupportedPluginVersion" xml:space="preserve">
-    <value>The specified SonarQube server does not have the minimum required version of any of the supported plugins (C#, VB.Net). </value>
-    <comment>Error message indicating that the server does not have the required version of any of the supported server plugins.</comment>
-  </data>
-  <data name="FailedToUnpackAdditionalFiles" xml:space="preserve">
-    <value>Failed to unpack additional files required for analyzers</value>
-    <comment>Output window message indicating failure when unpacking additional files for analyzers</comment>
-  </data>
-  <data name="UnpackingAdditionalFile" xml:space="preserve">
-    <value>Unpacking additional file: {0}</value>
-    <comment>Progress message indicating an additional files is being unpacked. {0} additional file name</comment>
-  </data>
-  <data name="MoreInfoLinkText" xml:space="preserve">
-    <value>More info...</value>
-    <comment>Link text for getting more information about SonarQube</comment>
-  </data>
-  <data name="ProductAuthors" xml:space="preserve">
-    <value>SonarSource and Microsoft</value>
-    <comment>Authors of the product</comment>
-  </data>
-  <data name="SonarQubeDescription" xml:space="preserve">
-    <value>SonarQube is an open source platform to manage code quality. Connect your solution to an existing SonarQube Server to get the same issues in Visual Studio and in your SonarQube server.</value>
-    <comment>Short descriptive text about SonarQube shown on the Team Explorer invitation card.</comment>
-  </data>
-  <data name="SonarQubeName" xml:space="preserve">
-    <value>SonarQube</value>
-    <comment>Name of SonarQube server product</comment>
-  </data>
-  <data name="FinishedSolutionBindingWorkflowNotAllPackagesInstalled" xml:space="preserve">
-    <value>Not all NuGet packages were installed. Please see output above for more information.</value>
-    <comment>Output message indicating not all NuGet packages were installed during the binding workflow</comment>
-  </data>
-  <data name="SolutionSaveCancelledBindAborted" xml:space="preserve">
-    <value>Cannot bind or sync if there are unsaved changes. Operation canceled.</value>
-    <comment>Output window message when the user cancels the solution save dialog</comment>
-  </data>
-  <data name="UnexpectedErrorMessageFormat" xml:space="preserve">
-    <value>{0}: Unexpected error: {1}.
-
-You can help us improve by reporting this bug at {2}.
-
-</value>
-    <comment>{0} - the class name, {1} - error message, {2} url.
-This is the general format to use when writing errors to output window or when there might not be enough context for the user to understand where is the error coming from.</comment>
-  </data>
-  <data name="CouldNotFindCodeAnalysisRuleSetPropertyOnProject" xml:space="preserve">
-    <value>Warning: could not find CodeAnalysisRuleSet for project '{0}'</value>
-    <comment>Warning message. '{0}' project unique name </comment>
-  </data>
-  <data name="DownloadingServerSettingsProgessMessage" xml:space="preserve">
-    <value>Downloading server settings.</value>
-    <comment>Progress message about downloading server settings</comment>
-  </data>
-  <data name="NoProjectsApplicableForBinding" xml:space="preserve">
-    <value>None (for selected SonarQube project's quality profile)</value>
-    <comment>Output window message indicating the current solution does not contain any projects that are applicable to the currently selected SonarQube project's quality profile.</comment>
-  </data>
-  <data name="DiscoveringSolutionProjectsProgressMessage" xml:space="preserve">
-    <value>Discovering solution projects</value>
-    <comment>Progress step message indicating projects are being discovered in the current solution</comment>
   </data>
   <data name="InvalidTestProjectRegexPattern" xml:space="preserve">
     <value>Test project regular expression pattern '{0}' is invalid. The default will be used instead. Please check your server settings.</value>
     <comment>Warning output message indicating that the test project name regex was invalid. {0} invalid regex pattern</comment>
   </data>
-  <data name="ProjectFilterDteProjectFailedToGetIVs" xml:space="preserve">
-    <value>Could not get the IVsHierarchy/IVsBuildPropertyStorage for the given project is IVsBuildPropertyStorage for the given EnvDTE.Project</value>
-    <comment>Exception message indicating was unable to get the equivalent IVs objects for the passed EnvDTE.Project.</comment>
-  </data>
-  <data name="ConflictDetailWeakenedRulesTitle" xml:space="preserve">
-    <value>Weakened rules:</value>
-  </data>
-  <data name="RuleSetConflictsDetected" xml:space="preserve">
-    <value>The applied ruleset is weakening the SonarQube quality profile in one or more projects. See output window (SonarLint) for more details. [Click here]() to fix automatically.</value>
-    <comment>[Click here]()? - markup (the 'Click here' text needs to be formatted [XXX]() for specific reason.</comment>
-  </data>
-  <data name="ConflictsManagerWarningMessage" xml:space="preserve">
-    <value>SonarLint conflicts manager warning: {0}</value>
-    <comment>Output window error message.
-{0} - message</comment>
-  </data>
-  <data name="ConflictDetailMissingRules" xml:space="preserve">
-    <value>Missing rules (or Action set to None): </value>
-    <comment>{0} - list of rule ids</comment>
-  </data>
-  <data name="ConflictDetailWeakenedRulesDetail" xml:space="preserve">
-    <value>Rule '{0}' action is {1}, instead of {2}.</value>
-    <comment>{0} - rule id
-{1} - RuleAction (enum)
-{2} - RuleAction (enum)</comment>
-  </data>
-  <data name="ConflictsManagerFailedInFindConflicts" xml:space="preserve">
-    <value>RuleSet '{0}' cannot be analyzed against '{1}' due to error: {2}. </value>
-    <comment>Output window message.
-{0} - file path
-{1} - file path
-{2} - exception message </comment>
-  </data>
-  <data name="ConflictsSummaryHeader" xml:space="preserve">
-    <value>RuleSet conflicts detected for project '{0}', configuration(s): {1}</value>
-    <comment>{0} - project file path
-{1} - configuration names</comment>
-  </data>
-  <data name="ExpectedRuleSetNotFound" xml:space="preserve">
-    <value>The expected RuleSet file '{0}' could not be resolved or the file does not exist. Cannot search conflicts for one or more project configuration of project '{1}'. Please rebind to the relevant SonarQube project from TeamExplorer window.</value>
-    <comment>Output window message.
-{0} - file path
-{1} - file path</comment>
-  </data>
-  <data name="InconsistentRuleSetDirectoriesWarning" xml:space="preserve">
-    <value>Different CodeAnalysisRuleSetDirectories value '{0}' for RuleSet '{1}'. Using value '{2}'.</value>
-    <comment>Output message
-{0} - msbuild property value
-{1} - rule set path
-{2} - msbuild property value</comment>
-  </data>
-  <data name="ConflictFixHeader" xml:space="preserve">
-    <value>RuleSet conflicts resolution summary for project '{0}', configuration(s): {1}</value>
-    <comment>{0} - project file path
-{1} - configuration names</comment>
-  </data>
-  <data name="ConflictFixResetInclude" xml:space="preserve">
-    <value>RuleSet imports were reset for: '{0}'.</value>
-    <comment>{0} - file path</comment>
-  </data>
-  <data name="ConflictFixRulesDeleted" xml:space="preserve">
-    <value>Conflicting rules were removed from '{0}':</value>
-    <comment>{0} - file path
-</comment>
-  </data>
-  <data name="ViewInSonarQubeMenuItemDisplayText" xml:space="preserve">
-    <value>View in SonarQube</value>
-    <comment>Menu item display text for the contextual command to view the SonarQube dashboard for the current item in the user's browser.</comment>
-  </data>
-  <data name="ViewInSonarQubeMenuItemTooltip" xml:space="preserve">
-    <value>Open the dashboard for this project in SonarQube using your web browser.</value>
-    <comment>Tooltip text for view project in SonarQube context menu item</comment>
-  </data>
-  <data name="BrowserServerMenuItemTooltip" xml:space="preserve">
-    <value>Browse the server in your web browser.</value>
-    <comment>Tooltip text for browser server context menu item</comment>
-  </data>
-  <data name="BrowseServerMenuItemDisplayText" xml:space="preserve">
-    <value>Browse</value>
-    <comment>Context menu item text for opening the server in the users's browser</comment>
-  </data>
-  <data name="ConflictDetailRuleSetInfo" xml:space="preserve">
-    <value>RuleSet '{0}' has:</value>
-    <comment>output window message.
-{0} - rule set file path </comment>
-  </data>
-  <data name="SolutionIsClosed" xml:space="preserve">
-    <value>The operation requires an open solution.</value>
-  </data>
-  <data name="DiscoveredIncludedOrExcludedProjectFormat" xml:space="preserve">
-    <value>* {0}</value>
-    <comment>Output window message
-{0} Unique project name</comment>
-  </data>
-  <data name="FilteredOutProjectFromBindingHeader" xml:space="preserve">
-    <value>The following projects are either not currently supported, excluded according to server specifications, or have been explicitly marked as excluded:</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="FilteredOutProjectFromBindingEnding" xml:space="preserve">
-    <value>You can change the exclusion options via the SonarLint project-level context menu i.e. Solution Explorer -&gt; Select project(s)</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintInfoBarUpdateCommandIsBusyRetry" xml:space="preserve">
-    <value>Could not update the binding because the command is not currently available. Please try again and ensure that the solution is not building or currently being debugged.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintInfoBarUnboundProjectsMessage" xml:space="preserve">
-    <value>One or more rule sets are out of date or not linked to the SonarQube quality profile rule set. See output window (SonarLint) for affected projects.</value>
-    <comment>Info bar message</comment>
-  </data>
-  <data name="SonarLintInfoBarUpdateCommandText" xml:space="preserve">
-    <value>Update</value>
-    <comment>Info bar command text</comment>
-  </data>
-  <data name="SonarLintCheckingForUnboundProjects" xml:space="preserve">
-    <value>Checking for unbound projects.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintFailedToAttachInfoBarToErrorList" xml:space="preserve">
-    <value>Failed to attach info bar to error list tool window.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintFoundUnboundProjects" xml:space="preserve">
-    <value>{0} unbound projects were found ({1}).</value>
-    <comment>Output window message
-{0} the number of unbound projects
-{1} projects unique names</comment>
-  </data>
-  <data name="SonarLintNoUnboundProjectWereFound" xml:space="preserve">
-    <value>No unbound projects were found.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintInfoBarUpdateCommandRetryNoActiveSection" xml:space="preserve">
-    <value>The SonarQube Team Explorer page was closed and we cannot proceed with the update. Please try again.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintInfoBarUpdateCommandInvalidSolutionBindings" xml:space="preserve">
-    <value>The current solution is not bound to the expected SonarQube project, aborting.</value>
-    <comment>Output window message</comment>
-  </data>
   <data name="SonarLintOutputPaneTitle" xml:space="preserve">
-    <value>SonarLint</value>
+    <value>SonarQube</value>
     <comment>Output pane title</comment>
   </data>
-  <data name="SonarQubeOptionalServiceFailed" xml:space="preserve">
-    <value>Warning failed calling '{0}' (http error code={1}). Some of the functionality will be reduced.</value>
-    <comment>Output window message.
-{0} - service
-{1} - http error code</comment>
-  </data>
-  <data name="SonarLintProfileCheck" xml:space="preserve">
-    <value>Checking if SonarQube Quality profile has changed.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckDifferentProfile" xml:space="preserve">
-    <value>The SonarQube project is using a different Quality Profile. Update is required.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckFailed" xml:space="preserve">
-    <value>Unexpected failure getting quality profile information. Automatic quality profile update will not be performed.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckNoProfiles" xml:space="preserve">
-    <value>The binding information is out of date. Update is required.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckProfileUpdated" xml:space="preserve">
-    <value>The Quality Profile for the SonarQube project has changed. Update is required.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckQualityProfileIsUpToDate" xml:space="preserve">
-    <value>Quality Profile is up-to-date.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintProfileCheckSolutionRequiresMoreProfiles" xml:space="preserve">
-    <value>The solution has changed and now requires additional Quality Profiles to be included. Update is required.</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="SonarLintInfoBarOldBindingFile" xml:space="preserve">
-    <value>SonarLint can now tell you when the quality profile in SonarQube project is updated. Press Update to enable this feature now.</value>
-    <comment>Info bar message</comment>
-  </data>
-  <data name="NoProjectsExcludedFromBinding" xml:space="preserve">
-    <value>None (for selected SonarQube project's quality profile)</value>
-    <comment>Output window message indicating the current solution does not contain any projects filtered out from the currently selected SonarQube project's quality profile.</comment>
-  </data>
-  <data name="DiscoveringSolutionExcludedProjectsHeader" xml:space="preserve">
-    <value>Excluded projects:</value>
-    <comment>Output window message displayed before listing all excluded projects.</comment>
-  </data>
-  <data name="DiscoveringSolutionIncludedProjectsHeader" xml:space="preserve">
-    <value>Included projects:</value>
-    <comment>Output window message displayed before listing all discovered projects.</comment>
-  </data>
-  <data name="SubTextPaddingFormat" xml:space="preserve">
-    <value>   {0}</value>
-    <comment>Output window message format. Used whenever the message should be displayed as a sub-message from a step message so the user can clearly identify the grouping. {0} the actual message to display.</comment>
-  </data>
-  <data name="InstalledAndMinimumSonarQubePlugin" xml:space="preserve">
-    <value>Plugin: '{0}', Language(s): '{1}', Installed version: '{2}', Minimum version: '{3}'</value>
-    <comment>Error message displayed for every supported plugin when none of them match the minimum required version. {0} the plugin name, {1} languages supported by the plugin, {2} the installed plugin version, {3} the minimum plugin version.</comment>
-  </data>
-  <data name="DetectingSonarQubePlugins" xml:space="preserve">
-    <value>Detecting server plugins</value>
-    <comment>Output window message printed before accessing to server plugins.</comment>
-  </data>
-  <data name="SolutionContainsNoSupportedProject" xml:space="preserve">
-    <value>This solution contains no supported project language (C#, VB.Net). Please create at least one project of the supported language and then try to reconnect.</value>
-    <comment>Output window message printed when some server plugin are supported but the current solution contains no supported project (based on project type GUID).</comment>
-  </data>
-  <data name="BindingProjectLanguageNotMatchingAnyQualityProfileLanguage" xml:space="preserve">
-    <value>Language for project '{0}' is not matching any of the available quality profile's languages</value>
-    <comment>Output window message displayed when the project language matches no quality profile language. {0} the project name.</comment>
-  </data>
-  <data name="SuccessfullyInstalledNugetPackageForProject" xml:space="preserve">
-    <value>Successfully installed NuGet package '{0}' for project '{1}'</value>
-    <comment>Output window message displayed when a nuget package has successfully been installed for a project. {0} The nuget package name. {1} the project name.</comment>
-  </data>
-  <data name="SupportedPluginFoundMessage" xml:space="preserve">
-    <value>Discovered a supported plugin: {0}</value>
-    <comment>Output window message displayed when the server plugin respects the minimum version requirements. {0} the plugin ToString() message.</comment>
-  </data>
-  <data name="UnsupportedPluginFoundMessage" xml:space="preserve">
-    <value>Discovered an unsupported plugin: {0}</value>
-    <comment>Output window message displayed when the server plugin doesn't respect the minimum version requirements. {0} the plugin ToString() message.</comment>
-  </data>
-  <data name="SonarQubeRuleSetNameFormat" xml:space="preserve">
-    <value>SonarQube - {0} {1}</value>
-    <comment>Format used to build the project specific ruleset file name. {0} SonarQube project name. {1} SonarQube quality profile name.</comment>
-  </data>
-  <data name="SonarQubeQualityProfilePageUrlFormat" xml:space="preserve">
-    <value>{0}profiles/show?key={1}</value>
-    <comment>Used to create the Quality Profile URL. This will be integrated as part of the ruleset description. {0} the server URL. {1} the quality profile key.</comment>
-  </data>
-  <data name="CannotDownloadQualityProfileForLanguage" xml:space="preserve">
-    <value>Cannot download the quality profile for language {0}</value>
-    <comment>Output window message displayed when the application failed to download the quality profile associated to a language. {0} the language name.</comment>
-  </data>
-  <data name="NoNuGetPackageForQualityProfile" xml:space="preserve">
-    <value>There is a problem with Sonar{0}, information about the associated NuGet package was not returned</value>
-    <comment>Output window message displayed when the result from the API export call returns no NuGet package info. {0} the language.</comment>
-  </data>
-  <data name="NoSonarAnalyzerActiveRulesForQualityProfile" xml:space="preserve">
-    <value>There are no active rules on the selected Quality Profile '{0}' for Language {1} (rules from the SonarAnalyzer repository). Connected mode requires at least one active rule.
-   Note that third party rules are excluded from SonarLint</value>
-    <comment>Output window message displayed when the result from the API export call returns no active rule from the SonarAnalyzer repository. {0} The name of the Quality Profile. {1} the language.</comment>
-  </data>
-  <data name="ConnectionStepRetrievingOrganizations" xml:space="preserve">
-    <value>Retrieving organizations</value>
-  </data>
-  <data name="ConnectionStepRetrievingProjects" xml:space="preserve">
-    <value>Retrieving projects</value>
-  </data>
-  <data name="ConnectionStepValidatinCredentials" xml:space="preserve">
-    <value>Validating credentials</value>
-  </data>
-  <data name="Bind_CannotSaveStandaloneConfiguration" xml:space="preserve">
-    <value>Cannot save configuration when in Standalone mode</value>
-  </data>
-  <data name="Bind_SavingBindingConfiguration" xml:space="preserve">
-    <value>Saving configuration...</value>
-    <comment>Message for save step in new binding mode</comment>
-  </data>
-  <data name="Bind_FailedToSaveConfiguration" xml:space="preserve">
-    <value>Failed to save configuration</value>
-    <comment>Message for save error in new binding workflow</comment>
-  </data>
-  <data name="Bind_FirstTimeBinding" xml:space="preserve">
-    <value>Establishing new binding...</value>
-  </data>
-  <data name="Bind_UpdatingLegacyBinding" xml:space="preserve">
-    <value>Updating legacy binding...</value>
-  </data>
-  <data name="Bind_UpdatingNewStyleBinding" xml:space="preserve">
-    <value>Updating binding...</value>
-  </data>
-  <data name="Bind_NuGetAnalyzersNoLongerInstalled" xml:space="preserve">
-    <value>INFO: SonarLint connected mode no longer installs the analyzers NuGet packages. The analyzers embedded in the VSIX are used instead.</value>
-  </data>
   <data name="Notifications_NotSupported" xml:space="preserve">
-    <value>Notifications are not supported on this version of SonarQube</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="OnlySupportedPluginsHaveNoProjectInSolution" xml:space="preserve">
-    <value>The languages supported by plugins on this SonarQube server ({0}) do not match any of the solution projects' languages.</value>
-    <comment>Output window message printed when the only supported plugin has no matching project types in the current solution. {0} the name of the language.</comment>
-  </data>
-  <data name="Telemetry_ERROR_Recording" xml:space="preserve">
-    <value>Telemetry: error occurred when recording: {0}</value>
-    <comment>Output window message</comment>
-  </data>
-  <data name="Telemetry_ERROR_SendingTelemetry" xml:space="preserve">
-    <value>Telemetry: error occurred when sending: {0}</value>
+    <value>Notifications are not supported on this version of SonarQube (Server, Cloud)</value>
     <comment>Output window message</comment>
   </data>
   <data name="Notifications_ERROR_Fetching" xml:space="preserve">
     <value>Failed to fetch notifications: {0}</value>
   </data>
-  <data name="Suppressions_ERROR_Fetching" xml:space="preserve">
-    <value>Failed to fetch suppressions: {0}</value>
+  <data name="ExclusionFileNotFound" xml:space="preserve">
+    <value>No file was found under '{0}'</value>
   </data>
-  <data name="Suppressions_NotConnected" xml:space="preserve">
-    <value>Cannot fetch suppressions - not connected to a SonarQube server</value>
-    <comment>Warning in output window</comment>
+  <data name="ExclusionGetError" xml:space="preserve">
+    <value>Error loading server settings. Analysis settings from the server (e.g. inclusions/exclusions) will not be applied in the IDE. Error: {0}</value>
   </data>
-  <data name="Suppression_Checking" xml:space="preserve">
-    <value>Checking for suppressions...</value>
+  <data name="MuteWindow_AcceptContent" xml:space="preserve">
+    <value>The issue is valid but will not be fixed now. It represents accepted technical debt.</value>
   </data>
-  <data name="Suppression_FinishedChecking" xml:space="preserve">
-    <value>Number of suppressions found: {0}</value>
+  <data name="MuteWindow_AcceptTitle" xml:space="preserve">
+    <value>Accept</value>
   </data>
-  <data name="SCCFS_FailedToCheckOutFilesForEditing" xml:space="preserve">
-    <value>Failed to check out files for editing. Error flags: {0}</value>
-    <comment>Output window message showing the tagVSQueryEditResultFlags enum value(s)</comment>
+  <data name="MuteWindow_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
   </data>
-  <data name="SCCFS_FailedToCheckOutFilesForSave" xml:space="preserve">
-    <value>Failed to check out files for saving. Error code: {0}</value>
-    <comment>Output window message showing the tagVSQuerySaveResult enum value</comment>
+  <data name="MuteWindow_FormattingHelpLink" xml:space="preserve">
+    <value>Formatting Help</value>
   </data>
-  <data name="Bind_Ruleset_InitialBinding" xml:space="preserve">
-    <value>Ruleset binding: initial binding. All projects need to be updated to reference the generated ruleset.</value>
+  <data name="MuteWindow_FormattingHelpExamples" xml:space="preserve">
+    <value>: *Bold*, ``Code``, * Bullet point</value>
   </data>
-  <data name="Bind_Ruleset_AllProjectsNeedToBeUpdated" xml:space="preserve">
-    <value>Ruleset binding: all projects need to be updated reference the generated ruleset.</value>
+  <data name="MuteWindow_CommentLabel" xml:space="preserve">
+    <value>Add a comment (optional):</value>
   </data>
-  <data name="Bind_Ruleset_SomeProjectsDoNotNeedToBeUpdated" xml:space="preserve">
-    <value>Ruleset binding: the following projects already reference the generated ruleset:</value>
+  <data name="MuteWindow_FalsePositiveContent" xml:space="preserve">
+    <value>The issue is raised unxpectedly on code that should not trigger an issue.</value>
   </data>
-  <data name="FailedToCreateBindingConfigForLanguage" xml:space="preserve">
-    <value>Failed to create the configuration for language {0}</value>
-    <comment>Output window message displayed when the application failed to fetch and create the binding configuration associated with a language. {0} the language name.</comment>
+  <data name="MuteWindow_FalsePositiveTitle" xml:space="preserve">
+    <value>False Positive</value>
   </data>
-  <data name="Bind_Project_NotRequired" xml:space="preserve">
-    <value>Project-level binding is not required for project '{0}'</value>
-    <comment>Output window message about projects that don't require binding</comment>
+  <data name="MuteWindow_SubmitButton" xml:space="preserve">
+    <value>Mark Issue as...</value>
   </data>
-  <data name="FailedToCheckIfTestProject" xml:space="preserve">
-    <value>Error identifying project '{0}' as test project: {1}</value>
-    <comment>Error message indicating that an error occured while checking if a project is a test project</comment>
+  <data name="MuteWindow_Title" xml:space="preserve">
+    <value>Mark Issue as Resolved on SonarQube (Server, Cloud)</value>
   </data>
-  <data name="Bind_ProjectRulesetDeclarations" xml:space="preserve">
-    <value>Project {0} RuleSet declarations:
-   {1}</value>
+  <data name="MuteWindow_WontFixContent" xml:space="preserve">
+    <value>The issue is valid but does not need fixing. It represents accepted technical debt.</value>
   </data>
-  <data name="RulesetSerializer_FailedToLoadRuleset" xml:space="preserve">
-    <value>Ruleset could not be loaded. File: {0}, Error: {1}</value>
-    <comment>Output window message for unloadable ruleset</comment>
+  <data name="MuteWindow_WontFixTitle" xml:space="preserve">
+    <value>Won't Fix</value>
   </data>
-  <data name="RulesetSerializer_RulesetDoesNotExist" xml:space="preserve">
-    <value>Ruleset file does not exist: {0}</value>
-    <comment>Output window message for a ruleset that does not exist on disc</comment>
+  <data name="ImportBeforeFileGenerator_CheckingIfFileExists" xml:space="preserve">
+    <value>Checking if file exists before importing targets. File: {0}</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_CreatingDirectory" xml:space="preserve">
+    <value>Creating directory {0}</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_FailedToWriteFile" xml:space="preserve">
+    <value>Failed to write file to disk: {0}</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_FailedToWriteFile_Verbose" xml:space="preserve">
+    <value>Failed to write file to disk with exception: {0}</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_FileAlreadyExists" xml:space="preserve">
+    <value>Skipped file writing as identical file was found.</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_ContentOfTargetsFileCanNotBeRead" xml:space="preserve">
+    <value>Skipped file writing as the content of the resource {0} can not be read.</value>
+  </data>
+  <data name="ImportBeforeFileGenerator_WritingTargetFileToDisk" xml:space="preserve">
+    <value>Writing file to imports before directory</value>
+  </data>
+  <data name="ImportsBeforeFileGeneratorLogContext" xml:space="preserve">
+    <value>ImportsBeforeFileGenerator</value>
+  </data>
+  <data name="Settings_UsingDefaultSettings" xml:space="preserve">
+    <value>Default settings will be used</value>
+  </data>
+  <data name="ActiveSolutionTracker_LogContext" xml:space="preserve">
+    <value>Solution Tracking</value>
+  </data>
+  <data name="ActiveSolutionTracker_SolutionOpen" xml:space="preserve">
+    <value>Solution {0} opened</value>
+  </data>
+  <data name="ActiveSolutionTracker_InitializedSolution" xml:space="preserve">
+    <value>Initialized with solution {0}</value>
+  </data>
+  <data name="ActiveSolutionTracker_NoSolutionPlaceholder" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="ActiveSolutionTracker_DummySolutionPlaceholder" xml:space="preserve">
+    <value>Dummy</value>
+  </data>
+  <data name="ActiveSolutionTracker_SolutionClosed" xml:space="preserve">
+    <value>Solution {0} closed</value>
+  </data>
+  <data name="ActiveSolutionTracker_DummySolutionIgnored" xml:space="preserve">
+    <value>Dummy solution encountered, ignoring...</value>
+  </data>
+  <data name="PluginStatuses_LogContext" xml:space="preserve">
+    <value>Plugin Statuses</value>
+  </data>
+  <data name="PluginStatuses_FailedToFetchPluginStatuses" xml:space="preserve">
+    <value>Failed to fetch plugin statuses: {0}</value>
+  </data>
+  <data name="PluginStatusesFailedNotificationText" xml:space="preserve">
+    <value>Some analyzers are unavailable</value>
+  </data>
+  <data name="PluginStatusesFailedNotificationSeeDetailsButton" xml:space="preserve">
+    <value>See Details</value>
+  </data>
+  <data name="PluginStatuses_SourceIde" xml:space="preserve">
+    <value>SonarQube for Visual Studio {0}</value>
+  </data>
+  <data name="PluginStatuses_SourceServer" xml:space="preserve">
+    <value>SonarQube Server {0}</value>
+  </data>
+  <data name="PluginStatuses_SourceCloud" xml:space="preserve">
+    <value>SonarQube Cloud</value>
   </data>
 </root>

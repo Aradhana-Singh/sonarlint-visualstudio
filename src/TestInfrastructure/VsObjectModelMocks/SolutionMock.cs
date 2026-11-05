@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,15 +21,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using EnvDTE;
 using FluentAssertions;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     public partial class SolutionMock : VsUIHierarchyMock, IVsSolution2
     {
@@ -523,7 +520,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             ProjectMock prj;
             if (!this.projects.TryGetValue(projectFile, out prj))
             {
-                projects[projectFile] = prj = 
+                projects[projectFile] = prj =
                     (isLegacy) ?
                     new LegacyProjectMock(projectFile) :
                     new ProjectMock(projectFile);
@@ -561,6 +558,15 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         {
             this.sinks.ForEach(s => s.OnAfterOpenSolution(this, 0));
             this.projects.Values.ToList().ForEach(p => this.SimulateProjectOpen(p));
+        }
+
+        public void SimulateSolutionMerge()
+        {
+            sinks.ForEach(s =>
+            {
+                (s as IVsSolutionEvents2)?.OnAfterMergeSolution(this);
+            });
+            projects.Values.ToList().ForEach(p => this.SimulateProjectOpen(p));
         }
 
         public void SimulateProjectOpen(ProjectMock project)

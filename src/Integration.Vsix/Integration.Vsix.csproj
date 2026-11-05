@@ -1,63 +1,11 @@
-﻿<Project>
+<Project>
 
   <Import Project="..\SonarLint.Product.props" />
   <Import Project="..\SonarLint.VsPkgRefs.props" />
-  
+
   <!-- The VSSDK targets need to be imported after the Net.Sdk targets which means we  have to import the
        .NET.Sdk targets using Import rather than specifying it as the Sdk in the Project element. -->
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-
-  <!-- Executive summary:
-       * to build the VS2019 vsix, build from inside VS2019.
-       * to build the VS2022 vsix, build from inside VS2022.
-       
-       or
-
-       * build from a 2019/2022 command line, without specifying the VSTargetVersion property.
-         The version of the command prompt determines the version of SLVS that is built.
-         e.g. building from the VS2022 command prompt will build SLVS2022.
-
-       or
-
-       * build from a 2019/2022 command line, and specify the version of VS to target by
-         setting the vsTargetVersion property to 2019 or 2022 e.g.
-           /p:vsTargetVersion=2019
-
-
-       Switching between debugging in VS2022 and VS2019
-       ************************************************
-       By default, the solution is set up to debug VS2022, so you should use that as the primary IDE.
-       
-       Debugging in VS2019 as possible, but you have to take care when switching between VS versions to
-       ensure that the correct NuGet packages are used.
-       
-       The following process should work reliably:
-       
-       1. Close all open IDEs
-       2. Open the appropriate version of the developer command prompt
-       3. Execute the following command from the command line:
-       
-          msbuild /t:restore,rebuild
-          
-       4. Open SLVS in the corresponding VS versio
-       5. F5
-       
-
-       ************************************************
-       
-       Background:
-       We want to be able to use the same set of projects to develop in multiple versions of VS (VS2019, VS2022).
-
-       To achieve this, this project file has the following features:
-
-       * wherever possible, VS assemblies are referenced using NuGet packages. See the file SonarLint.VsPkgRefs.props.
-
-       * the TeamFoundation assemblies specific to a particular version of VS, and are not available as NuGet packages.
-         This only affects the Integration.TeamExplorer project. However, it does mean we need to build two versions
-         of that assembly, which in turns we need to build separate VSIX packages.
-         To achieve this, this project conditionally imports different VSIX manifests based on the version of VS being
-         used to build the project/solution.
-  -->
 
   <Import Project="..\..\build\version.props" />
 
@@ -67,34 +15,18 @@
     <RequiresVCProjectEngine>true</RequiresVCProjectEngine>
     <RequiresNewtonsoft>true</RequiresNewtonsoft>
     <RequiresSystemIOAbstractions>true</RequiresSystemIOAbstractions>
+    <RequiresLibGit>true</RequiresLibGit>
+    <RequiresChannels>true</RequiresChannels>
+    <RequiresLanguageServices>true</RequiresLanguageServices>
   </PropertyGroup>
 
-  <!-- This project references the SonarLint TeamExplorer assembly which is VS-version specific -->
+  <!-- This project references the VCProjectEngine assembly which is VS-version specific, todo https://sonarsource.atlassian.net/browse/SLVS-1973 replace VCProjectEngine dll with nuget -->
   <Import Project="..\SonarLint.VSSpecificAssemblies.props" />
 
   <!-- ********************************************************** -->
-  <!-- Sonar C#/VB analyzers -->
+  <!-- Sonar C#/VB analyzers are now handled by DownloadDependencies.proj & <ItemGroup Label="Sonar Dependencies"> below -->
   <!-- ********************************************************** -->
-  <!-- We assume that the package restore has happened so the files are already on disc -->
   <Import Project="..\EmbeddedSonarAnalyzer.props" />
-  <ItemGroup Label="Embedded SonarLint analyzers">
-    <!-- Reference the packages we want to import, but don't include them as analyzers for this project -->
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="$(EmbeddedSonarAnalyzerVersion)" ExcludeAssets="all" PrivateAssets="all" />
-    <PackageReference Include="SonarAnalyzer.VisualBasic" Version="$(EmbeddedSonarAnalyzerVersion)" ExcludeAssets="all" PrivateAssets="all" />
-
-    <!-- Include all of the analyzer binaries including third-party binaries in the VSIX -->
-    <AllSonarAnalyzerAssemblies Include="$(NuGetPackageRoot)SonarAnalyzer.CSharp\$(EmbeddedSonarAnalyzerVersion)\analyzers\*.dll" />
-    <AllSonarAnalyzerAssemblies Include="$(NuGetPackageRoot)SonarAnalyzer.VisualBasic\$(EmbeddedSonarAnalyzerVersion)\analyzers\*.dll" />
-    <VSIXSourceItem Include="@(AllSonarAnalyzerAssemblies)" />
-
-    <!-- Make sure the Sonar.* analyzer assemblies we want to include in the AsmRef check to the output directory. -->
-    <!-- We don't want to copy third-party assemblies from the analyzers in case there are version conflicts e.g. NewtonSoft.Json.dll -->
-    <SonarAuthoredAnalyzerAssemblies Include="$(NuGetPackageRoot)SonarAnalyzer.CSharp\$(EmbeddedSonarAnalyzerVersion)\analyzers\Sonar*.dll" />
-    <SonarAuthoredAnalyzerAssemblies Include="$(NuGetPackageRoot)SonarAnalyzer.VisualBasic\$(EmbeddedSonarAnalyzerVersion)\analyzers\Sonar*.dll" />
-    <None Include="@(SonarAuthoredAnalyzerAssemblies)" CopyToOutputDirectory="PreserveNewest" />
-
-  </ItemGroup>
-  <!-- ********************************************************** -->
 
   <PropertyGroup>
     <ProjectGuid>{FF2AD819-28F4-493A-8E9B-1D3F16BD4689}</ProjectGuid>
@@ -123,47 +55,39 @@
   </ItemGroup>
 
   <ItemGroup Label="VSSDK Build Tools">
-    <PackageReference Condition=" $(VsTargetVersion) != '2022' " Include="Microsoft.VSSDK.BuildTools" Version="16.8.3038" GeneratePathProperty="true">
-      <IncludeAssets>runtime; build; native; contentfiles; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-
-    <PackageReference Condition=" $(VsTargetVersion) == '2022' " Include="Microsoft.VSSDK.BuildTools" Version="17.0.5321-preview5-gf917fac8" GeneratePathProperty="true">
+    <PackageReference Condition=" $(VsTargetVersion) == '2022' " Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" GeneratePathProperty="true">
       <IncludeAssets>runtime; build; native; contentfiles; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
 
-    
   <ItemGroup>
-    <PackageReference Include="NuGet.Core" Version="2.12.0" />
-    <PackageReference Include="NuGet.VisualStudio" Version="3.3.0" />
-
     <!-- The VSIX signing package is only required for signed builds, but the use of package.lock.json
          files means it's simpler to always include it so the contents of the lock file don't change for
          signed builds. -->
-    <PackageReference Include="Microsoft.VSSDK.Vsixsigntool" Version="16.2.29116.78" PrivateAssets="all" />
-
-    <!-- This package references Roslyn components used by VS. It isn't part of the VSSDK meta-package. -->
-    <PackageReference Include="Microsoft.VisualStudio.LanguageServices" Version="1.3.2" />
+    <PackageReference Include="Microsoft.VSSDK.Vsixsigntool" Version="17.10.34916.79" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Label="Project references">
-    <ProjectReference Include="..\..\sonarqube-webclient\SonarQube.Client\SonarQube.Client.csproj">
-      <Project>{BA771DF7-9F99-4DE3-B85B-3E5DB742A55C}</Project>
-      <Name>SonarQube.Client.2015</Name>
+    <ProjectReference Include="..\ConnectedMode\ConnectedMode.csproj">
+      <Project>{0BE551DB-3C46-42A5-BB38-DA80E83F8ABD}</Project>
+      <Name>ConnectedMode</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3bPkgdefProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
-    <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj">
-      <Project>{9CBAB074-AB53-4AC5-85E0-FD064D71B170}</Project>
-      <Name>Infrastructure.VS</Name>
+    <ProjectReference Include="..\Core\Core.csproj">
+      <Name>Core</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
-    <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj" />
-    <ProjectReference Include="..\Integration.TeamExplorer\Integration.TeamExplorer.csproj">
-      <Project>{9FCAEACD-EDEA-42D3-A8E4-16E42D1CF8F4}</Project>
-      <Name>Integration.TeamExplorer</Name>
+    <ProjectReference Include="..\Education\Education.csproj">
+      <Name>Education</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3bPkgdefProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
+    <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj">
+      <Project>{9CBAB074-AB53-4AC5-85E0-FD064D71B170}</Project>
+      <Name>Infrastructure.VS</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
@@ -177,40 +101,9 @@
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3bPkgdefProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
-    <ProjectReference Include="..\EmbeddedVsix\EmbeddedVsix.csproj">
-      <Name>EmbeddedVsix</Name>
-      <Project>{4BBE7B39-E00A-40FE-88FC-A53C7E49731F}</Project>
-      <VSIXSubPath>EmbeddedVsix</VSIXSubPath>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <IncludeOutputGroupsInVSIX>VSIXContainerProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-    </ProjectReference>
-    <ProjectReference Include="..\Progress\Progress.csproj">
-      <Project>{140a6fe4-c8f7-4af7-b4c8-eeeae4e0b1a4}</Project>
-      <Name>Progress</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
-    <ProjectReference Include="..\ProgressVS\ProgressVS.csproj">
-      <Project>{b00c57eb-f4ec-43ce-a849-90da04775b84}</Project>
-      <Name>ProgressVS</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
     <ProjectReference Include="..\Integration\Integration.csproj">
       <Project>{03278C1A-EE78-4FA7-A5B0-1AB0A81EA76F}</Project>
       <Name>Integration</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
-    <ProjectReference Include="..\Roslyn.Suppressions\Roslyn.Suppressions\Roslyn.Suppressions.csproj">
-      <Project>{082D5D8E-F914-4139-9AE3-3F48B679E3DA}</Project>
-      <Name>Roslyn.Suppressions</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
-    </ProjectReference>
-    <ProjectReference Include="..\TypeScript\TypeScript.csproj">
-      <Project>{69C939D0-DFAF-42CB-98F8-134400B60779}</Project>
-      <Name>TypeScript</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
@@ -220,9 +113,18 @@
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
-    <ProjectReference Include="..\CloudSecrets\CloudSecrets.csproj">
-      <Project>{4bc2f68c-6c25-4763-a22e-21b211749e04}</Project>
-      <Name>CloudSecrets</Name>
+    <ProjectReference Include="..\SLCore\SLCore.csproj">
+      <Name>SLCore</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
+    <ProjectReference Include="..\SLCore.Listeners\SLCore.Listeners.csproj">
+      <Name>SLCore.Listeners</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
+    <ProjectReference Include="..\RoslynAnalyzerServer\RoslynAnalyzerServer.csproj">
+      <Name>RoslynAnalyzerServer</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
@@ -241,7 +143,7 @@
       <ManifestResourceName>VSPackage</ManifestResourceName>
     </EmbeddedResource>
     <EmbeddedResource Update="Resources\Strings.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <Content Include="..\..\LICENSE">
@@ -254,43 +156,67 @@
       <IncludeInVSIX>true</IncludeInVSIX>
       <Link>THIRD-PARTY-NOTICES</Link>
     </Content>
+  </ItemGroup>
 
+  <ItemGroup Label="Sonar Dependencies">
+    <Content Include="$(JarsFolderName)\*.jar">
+      <IncludeInVSIX>True</IncludeInVSIX>
+    </Content>
+    <Content Include="$(SloopFolderName)\**\*">
+      <IncludeInVSIX>True</IncludeInVSIX>
+    </Content>
+    <Content Include="$(DotnetDLLsFolderName)\**\*">
+      <IncludeInVSIX>True</IncludeInVSIX>
+    </Content>
+    <Content Include="$(EsLintBridgeFolderName)\**\*">
+      <IncludeInVSIX>True</IncludeInVSIX>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Resources\sonarlint_200.png" />
-    <None Remove="Resources\sonarlint_32.png" />
-    <None Remove="Resources\sonarlint_wave_128px.png" />
-    <None Remove="secrets\LICENSE.txt" />
-    <None Remove="Settings\GeneralOptionsDialogControl.xaml" />
-    <None Remove="Settings\OtherOptionsDialogControl.xaml" />
-    <None Remove="SonarLint.vsct" />
-
-    <Content Include="Resources\sonarlint_32.png">
+    <None Remove="Resources\MavenPro-Regular.ttf" />
+    <Content Include="Resources\sonarqube_for_ide_16px.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="Resources\sonarlint_wave_128px.png">
+    <Content Include="Resources\sonarqube_for_ide_logo_16px.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="Resources\sonarlint_200.png">
+    <Content Include="Resources\sonarqube_for_ide_logo_200px.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="secrets\LICENSE.txt">
+    <Content Include="Resources\sonarqube_for_ide_logo_128px.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-
+    <Page Include="Commands\HelpMenu\AboutDialog.xaml" />
+    <Page Include="Events\Build\ErrorNotificationDialog.xaml" />
+    <Page Include="Settings\FileExclusions\AddExclusionDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Settings\FileExclusions\FileExclusionsDialogControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Settings\GeneralOptionsDialogControl.xaml" />
     <Page Include="Settings\OtherOptionsDialogControl.xaml" />
-
+    <Page Include="Settings\SolutionSettings\AddAnalysisPropertyDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Settings\SolutionSettings\AnalysisPropertiesControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Settings\SolutionSettings\SolutionSettingsDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SupportedLanguages\SupportedLanguagesDialogWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <VSCTCompile Include="SonarLint.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
       <SubType>Designer</SubType>
     </VSCTCompile>
-
   </ItemGroup>
 
   <ItemGroup>
@@ -338,9 +264,8 @@
   <Target Name="CopyVsixToBinariesAndSign" AfterTargets="Build" Inputs="$(TargetDir)$(TargetVsixContainerName)" Outputs="$(BinariesFolder)$(TargetVsixContainerName)">
     <Message Importance="high" Text="Copying vsix from $(TargetDir)$(TargetVsixContainerName) to $(BinariesFolder)$(TargetVsixContainerName)" />
     <Copy OverwriteReadOnlyFiles="true" SourceFiles="$(TargetDir)$(TargetVsixContainerName)" DestinationFiles="$(BinariesFolder)$(TargetVsixContainerName)" />
-
-    <Message Condition=" $(SignArtifacts) != 'true' " Importance="high" Text="Skipping signing VSIXes - SignArtifacts = '$(SignArtifacts)'" />
-    <CallTarget Condition=" $(SignArtifacts) == 'true' " Targets="LocateVsixSignToolAndBinaries;SignVsixes" />
+    <Message Condition=" $(SignArtifacts) != 'true' " Importance="normal" Text="Skipping VSIX signing - SignArtifacts = '$(SignArtifacts)'" />
+    <Exec Condition=" $(SignArtifacts) == 'true' " Command='sign code artifact-signing &quot;%(VSIXesToSign.FullPath)&quot; --artifact-signing-endpoint &quot;$(SIGNING_ENDPOINT)&quot; --artifact-signing-account &quot;$(SIGNING_ACCOUNT)&quot; --artifact-signing-certificate-profile &quot;$(SIGNING_CERTIFICATE_PROFILE)&quot; -v information' />
   </Target>
   <!-- ********************************************************** -->
 
@@ -348,76 +273,14 @@
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
 
   <!-- ********************************************************** -->
-  <!-- CFamily plugin handling -->
-  <!-- Download and unpack the jar, select the required files and -->
-  <!-- add them to the VSIX.                                      -->
+  <!-- Plugin dependencies handling -->
   <!-- ********************************************************** -->
   <PropertyGroup>
-    <!-- Download url for the CFamily plugin. Update this url to embed a new version of the plugin. -->
-    <PluginUrl>https://binaries.sonarsource.com/CommercialDistribution/sonar-cfamily-plugin/sonar-cfamily-plugin-$(EmbeddedSonarCFamilyAnalyzerVersion).jar</PluginUrl>
-
-    <CFamilyFolderName>lib</CFamilyFolderName>
-
-    <!-- Folder the embedded files should be copied to. This folder should be excluded from source code control. -->
-    <CFamilyTargetDirectory>$(MSBuildThisFileDirectory)$(CFamilyFolderName)</CFamilyTargetDirectory>
-
-    <!-- Hook the target that fetches the CFamily files into to the build process. 
-         This needs to be set after the SDK targets have been imported.
-    -->
-    <PrepareForBuildDependsOn>$(PrepareForBuildDependsOn);GetCFamilyFiles</PrepareForBuildDependsOn>
+    <JarsFolderName>DownloadedJars</JarsFolderName>
+    <DotnetDLLsFolderName>EmbeddedDotnetAnalyzerDLLs</DotnetDLLsFolderName>
+    <SloopFolderName>Sloop</SloopFolderName>
+    <EsLintBridgeFolderName>EmbeddedEsLintBridge</EsLintBridgeFolderName>
   </PropertyGroup>
-
-  <Target Name="GetCFamilyFiles">
-    <Message Importance="high" Text="Fetching the CFamily files..." />
-
-    <!-- Note: building the helper project explicitly using MSBuild rather than referencing it via a ProjectReference.
-         This makes is easier for us to control when the build is performed, so we can trigger it early enough
-         to include the downloaded files as normal Content files in this project.
-         Also, we are using the "Exec" task to invoke MSBuild.exe rather the "MSBuild" task when building
-         DownloadSonarPlugin.csproj to avoid getting file-locking errors when rebuilding.
-    -->
-    <Exec Command="&quot;$(MSBuildBinPath)\msbuild.exe&quot; ..\..\build\DownloadSonarPlugin\DownloadSonarPlugin.csproj /p:PluginUrl=$(PluginUrl) /p:TargetDirectory=&quot;$(CFamilyTargetDirectory)&quot; /p:UseSharedCompilation=false /t:Restore;Build;EmbedCFamilyFiles /p:VsTargetVersion=$(VsTargetVersion) /nr:false /p:BuildInParallel=false" LogStandardErrorAsError="true" IgnoreExitCode="false" />
-
-    <!-- Copy the license file to the same directory -->
-    <Copy SourceFiles=".\CFamily\LICENSE.txt" DestinationFolder="$(CFamilyTargetDirectory)" SkipUnchangedFiles="true" />
-
-    <ItemGroup>
-      <Content Include="$(CFamilyTargetDirectory)\**\*">
-        <!-- We need to include the files as content that is copied to the output directory so that
-             1) they get included in the VSIX, and 
-             2) they get copied to the bin folder of any test projects that reference this project.
-        -->
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <IncludeInVSIX>True</IncludeInVSIX>
-
-        <!-- Custom sub folder in the VSIX -->
-        <VSIXSubPath>$(CFamilyFolderName)</VSIXSubPath>
-        <Visible>false</Visible>
-      </Content>
-    </ItemGroup>
-  </Target>
-
-  
-  <!-- *************************************************************************** -->
-  <!-- Sonar Secrets -->
-  <!-- *************************************************************************** -->
-  <!-- In the VSIX, the secrets binary(ies) should be in the secrets subfolder next to the specific license file.
-       We don't need to copy the file(s). It's enough to specify the VSIXSubPath we want.
-  -->
-  <Target Name="SecretsBinariesToVSIX" AfterTargets="GeneratePkgDef" BeforeTargets="GetVsixSourceItems">
-    <ItemGroup>
-      <SonarSecretsFilesToAdd Include="$(OutDir)SonarLint.Secrets.*.dll" />
-    </ItemGroup>
-    
-    <Message Importance="high" Text="Adding the SonarSecrets files to the VSIX:@(SonarSecretsFilesToAdd)" />
-    
-    <ItemGroup>
-      <VSIXSourceItem Include="@(SonarSecretsFilesToAdd)">
-        <VSIXSubPath>secrets</VSIXSubPath>
-      </VSIXSourceItem>
-    </ItemGroup>
-
-  </Target>
 
   <!-- *************************************************************************** -->
   <!-- Include nuget packages in the VSIX: workaround for bug https://github.com/NuGet/Home/issues/5899 -->
@@ -425,8 +288,41 @@
 
   <Target Name="IncludeNuGetPackageReferences" AfterTargets="GetVsixSourceItems">
     <ItemGroup>
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'NewtonSoft.Json'" />
       <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.IO.Abstractions'" />
-      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'BouncyCastle'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'BouncyCastle.Cryptography'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'LibGit2Sharp'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Threading.Channels'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'System.Threading.Tasks.Extensions'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'DiffPlex'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'Google.Protobuf'" />
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.NuGetPackageId)' == 'Sentry'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- *************************************************************************** -->
+  <!-- Default VSIX packaging resolves the Alm assemblies from NuGet, not the strong-named
+       copies StrongNamer produces in ConnectedMode's build output, causing ConnectedMode.dll
+       to fail to load at runtime in signed builds. Use ConnectedMode's copies instead. -->
+  <!-- *************************************************************************** -->
+  <Target Name="IncludeStrongNamedAlmAuthenticationAssemblies" AfterTargets="GetVsixSourceItems">
+    <ItemGroup>
+      <_ConnectedModeOutputAssembly Include="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'SonarLint.VisualStudio.ConnectedMode'" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_ConnectedModeOutputDir>%(_ConnectedModeOutputAssembly.RootDir)%(_ConnectedModeOutputAssembly.Directory)</_ConnectedModeOutputDir>
+    </PropertyGroup>
+
+    <Error Condition="'$(_ConnectedModeOutputDir)' == ''" Text="Could not locate SonarLint.VisualStudio.ConnectedMode in ReferenceCopyLocalPaths; cannot package strong-named Alm assemblies." />
+    <Error Condition="!Exists('$(_ConnectedModeOutputDir)Microsoft.Alm.Authentication.dll') OR !Exists('$(_ConnectedModeOutputDir)Microsoft.Alm.Git.dll') OR !Exists('$(_ConnectedModeOutputDir)Microsoft.Vsts.Authentication.dll')" Text="Strong-named Alm assemblies not found in '$(_ConnectedModeOutputDir)'." />
+
+    <ItemGroup>
+      <VSIXSourceItem Remove="@(VSIXSourceItem)" Condition="'%(Filename)%(Extension)' == 'Microsoft.Alm.Authentication.dll' OR '%(Filename)%(Extension)' == 'Microsoft.Alm.Git.dll' OR '%(Filename)%(Extension)' == 'Microsoft.Vsts.Authentication.dll'" />
+
+      <VSIXSourceItem Include="$(_ConnectedModeOutputDir)Microsoft.Alm.Authentication.dll" />
+      <VSIXSourceItem Include="$(_ConnectedModeOutputDir)Microsoft.Alm.Git.dll" />
+      <VSIXSourceItem Include="$(_ConnectedModeOutputDir)Microsoft.Vsts.Authentication.dll" />
     </ItemGroup>
   </Target>
 
@@ -435,15 +331,15 @@
   <!-- *************************************************************************** -->
   <!-- If the set/versions of referenced assemblies changes the build will fail.
        Check the following:
-       
+
        New dependencies:
        * are they included in the VSIX?
        * if it's a third-party component, do the third-party license statements need to be updated?
-       
+
        New versions of existing dependencies:
        * is the new version of the dependency compatible with the minimum targetted .NET Framework?
        * if it is not already included in the VSIX, does it need to be?
-       
+
        If the dependency changes are ok, then re-run the build specifying "/p:AsmRefUpdateBaseline=true"
        to update the baseline file, then check in the updated baseline with the rest of your changes.
   -->
@@ -462,10 +358,6 @@
 
     <!-- Include SonarLint assemblies, the SonarQube.Client library, and the analyzers-->
     <AsmRefIncludePatterns>Sonar*</AsmRefIncludePatterns>
-    <!-- SonarSecrets is referenced as a released package, so it is always signed, regardless of the value of
-         SignAssembly. This messes up the comparison of unsigned assemblies we do below, causing the AsmRef
-         comparison to fail. For now, we'll expclude it from the comparison. -->
-    <AsmRefExcludePatterns>!SonarLint.Secrets.DotNet*</AsmRefExcludePatterns>
 
     <BaselineWithStrongNames>$(MSBuildProjectDirectory)\AsmRef_Integration.Vsix_Baseline_WithStrongNames.txt</BaselineWithStrongNames>
     <BaselineWithoutStrongNames>$(MSBuildProjectDirectory)\AsmRef_Integration.Vsix_Baseline_WithoutStrongNames.txt</BaselineWithoutStrongNames>
@@ -488,13 +380,17 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Resources\About_Background.png" />
+    <Resource Include="Resources\MavenPro-Regular.ttf" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
 
-  <!-- Target to help debugging the CI build - dumps report differences to the console. 
+  <!-- Target to help debugging the CI build - dumps report differences to the console.
        Note: there will always be differences in the reports since the timestamps will be
        different for each run.
   -->

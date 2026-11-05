@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -13,16 +13,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.VCProjectEngine;
-using Moq;
 using SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject;
 
 
@@ -31,27 +28,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
     [TestClass]
     public class CmdBuilderTests
     {
-
-        [TestMethod]
-        [DataRow("", "")]
-        [DataRow("Default", "")]
-        [DataRow("CompileAsC", "/TC")]
-        [DataRow("CompileAsCpp", "/TP")]
-        [DataRow("Invalid", "Unsupported CompileAs: Invalid")]
-        public void ConvertCompileAsAndGetLanguage(string input, string output)
-        {
-            if ("Invalid".Equals(input))
-            {
-                Action action = () => CmdBuilder.ConvertCompileAsAndGetLanguage(input);
-                action.Should().ThrowExactly<ArgumentException>().And.Message.Should()
-                    .StartWith(output);
-            }
-            else
-            {
-                CmdBuilder.ConvertCompileAsAndGetLanguage(input).Should().Be(output);
-            }
-        }
-
         [TestMethod]
         [DataRow("", "")]
         [DataRow("false", "")]
@@ -165,34 +141,11 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [TestMethod]
         [DataRow("", "")]
         [DataRow("Default", "")]
-        [DataRow(null, "")]
-        [DataRow("stdcpplatest", "/std:c++latest")]
-        [DataRow("stdcpp20", "/std:c++20")]
-        [DataRow("stdcpp17", "/std:c++17")]
-        [DataRow("stdcpp14", "/std:c++14")]
-        [DataRow("Invalid", "Unsupported LanguageStandard: Invalid")]
-        public void ConvertCppStandard(string input, string output)
-        {
-            if ("Invalid".Equals(input))
-            {
-                Action action = () => CmdBuilder.ConvertCppStandard(input);
-                action.Should().ThrowExactly<ArgumentException>().And.Message.Should()
-                    .StartWith(output);
-            }
-            else
-            {
-                CmdBuilder.ConvertCppStandard(input).Should().Be(output);
-            }
-        }
-
-        [TestMethod]
-        [DataRow("", "")]
-        [DataRow("Default", "")]
         [DataRow("16Bytes", "/Zp16")]
         [DataRow("8Bytes", "/Zp8")]
         [DataRow("4Bytes", "/Zp4")]
         [DataRow("2Bytes", "/Zp2")]
-        [DataRow("1Bytes", "/Zp1")]
+        [DataRow("1Byte", "/Zp1")]
         [DataRow("Invalid", "Unsupported StructMemberAlignment: Invalid")]
         public void ConvertStructMemberAlignment(string input, string output)
         {
@@ -232,11 +185,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [DataRow("UseStandardPreprocessor", "false", "/Zc:preprocessor- ")]
         [DataRow("ConformanceMode", "true", "/permissive- ")]
         [DataRow("ConformanceMode", "false", "/permissive ")]
-        [DataRow("LanguageStandard", "stdcpplatest", "/std:c++latest ")]
-        [DataRow("LanguageStandard", "stdcpp20", "/std:c++20 ")]
-        [DataRow("LanguageStandard", "stdcpp17", "/std:c++17 ")]
-        [DataRow("LanguageStandard", "stdcpp14", "/std:c++14 ")]
-        [DataRow("LanguageStandard", "Default", "")]
         [DataRow("ExceptionHandling", "Sync", "/EHsc ")]
         [DataRow("ExceptionHandling", "SyncCThrow", "/EHs ")]
         [DataRow("ExceptionHandling", "Async", "/EHa ")]
@@ -265,12 +213,10 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [DataRow("StructMemberAlignment", "8Bytes", "/Zp8 ")]
         [DataRow("StructMemberAlignment", "4Bytes", "/Zp4 ")]
         [DataRow("StructMemberAlignment", "2Bytes", "/Zp2 ")]
-        [DataRow("StructMemberAlignment", "1Bytes", "/Zp1 ")]
-        [DataRow("CompileAs", "Default", "")]
-        [DataRow("CompileAs", "CompileAsC", "/TC ")]
-        [DataRow("CompileAs", "CompileAsCpp", "/TP ")]
+        [DataRow("StructMemberAlignment", "1Byte", "/Zp1 ")]
         [DataRow("AdditionalIncludeDirectories", "a;;b;c", "/I\"a\" /I\"b\" /I\"c\" ")]
         [DataRow("AdditionalIncludeDirectories", ";;;", "")]
+        [DataRow("AdditionalIncludeDirectories", "; ;;", "")]
         [DataRow("PreprocessorDefinitions", "a;;b;;c;", "/D\"a\" /D\"b\" /D\"c\" ")]
         [DataRow("UndefinePreprocessorDefinitions", ";a;;b;;c;", "/Ua /Ub /Uc ")]
         [DataRow("ForcedIncludeFiles", "a/;;b\\;c\\\\", "/FI\"a\" /FI\"b\" /FI\"c\" ")]
@@ -279,32 +225,38 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [DataRow("AdditionalOptions", "/MD /Zc:wchar_t-", "/MD /Zc:wchar_t- ")]
         public void AddOptFromProperties(string input, string output, string cmd)
         {
-            var cmdBuilder = new CmdBuilder(false);
+            var cmdBuilder = new CmdBuilder(false, Substitute.For<ILanguageFlagsProvider>());
             var settingsMock = new Mock<IVCRulePropertyStorage>();
             settingsMock.Setup(x => x.GetEvaluatedPropertyValue(It.IsAny<string>())).Returns<string>(s => s == input ? output : "");
 
             cmdBuilder.AddOptFromProperties(settingsMock.Object);
 
             cmdBuilder.GetFullCmd().Should().Be(cmd);
-            cmdBuilder.HeaderFileLang.Should().Be("");
         }
 
         [TestMethod]
-        [DataRow("Default", "cpp")]
-        [DataRow("CompileAsC", "c")]
-        [DataRow("CompileAsCpp", "cpp")]
-        public void HeaderFileLang(string compileAs, string lang)
+        [DataRow(false, "", "", "")]
+        [DataRow(true, "", "", "")]
+        [DataRow(false, "compileAsFlagValue", "", "compileAsFlagValue ")]
+        [DataRow(true, "compileAsFlagValue", "", "compileAsFlagValue ")]
+        [DataRow(false, "", "languageStandardFlagValue", "languageStandardFlagValue ")]
+        [DataRow(true, "", "languageStandardFlagValue", "languageStandardFlagValue ")]
+        [DataRow(false, "compileAsFlagValue", "compileAsFlagValue", "compileAsFlagValue compileAsFlagValue ")]
+        [DataRow(true, "compileAsFlagValue", "compileAsFlagValue", "compileAsFlagValue compileAsFlagValue ")]
+        public void AddOptFromProperties_DelegatesToLanguageFlagsProvider_AddsAvailableLanguageFlags(bool isHeader, string compileAsFlag, string languageStandardFlag, string expectedCmd)
         {
-            var cmdBuilder = new CmdBuilder(true);
-            var settingsMock = new Mock<IVCRulePropertyStorage>();
-            settingsMock.Setup(x => x.GetEvaluatedPropertyValue(It.IsAny<string>())).Returns<string>(s => s == "CompileAs" ? compileAs : "");
+            var languageFlagsProvider = Substitute.For<ILanguageFlagsProvider>();
+            var vcRulePropertyStorage = Substitute.For<IVCRulePropertyStorage>();
+            vcRulePropertyStorage.GetEvaluatedPropertyValue("CompileAs").Returns("CompileAsValue");
+            vcRulePropertyStorage.GetEvaluatedPropertyValue("LanguageStandard_C").Returns("LanguageStandardCValue");
+            vcRulePropertyStorage.GetEvaluatedPropertyValue("LanguageStandard").Returns("LanguageStandardValue");
+            languageFlagsProvider.GetLanguageConfiguration("CompileAsValue", "LanguageStandardCValue", "LanguageStandardValue").Returns((compileAsFlag, languageStandardFlag));
+            var cmdBuilder = new CmdBuilder(isHeader, languageFlagsProvider);
 
-            cmdBuilder.AddOptFromProperties(settingsMock.Object);
+            cmdBuilder.AddOptFromProperties(vcRulePropertyStorage);
 
-            cmdBuilder.GetFullCmd().Should().Be("");
-            cmdBuilder.HeaderFileLang.Should().Be(lang);
+            cmdBuilder.GetFullCmd().Should().Be(expectedCmd);
         }
-
         [TestMethod]
         [DataRow("Create", false, "", "/Yc\"C:\\pch.h\" ")]
         [DataRow("Create", true, "", "/Yc\"C:\\pch.h\" ")]
@@ -314,7 +266,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [DataRow("Use", true, "C:\\a.h", "/FI\"C:\\a.h\" /Yu\"C:\\pch.h\" ")]
         public void PCHCreate(string mode, bool isHeader, string forceInclude, string command)
         {
-            var cmdBuilder = new CmdBuilder(isHeader);
+            var cmdBuilder = new CmdBuilder(isHeader, Substitute.For<ILanguageFlagsProvider>());
             var settingsMock = new Mock<IVCRulePropertyStorage>();
             settingsMock.Setup(x => x.GetEvaluatedPropertyValue(It.IsAny<string>())).Returns<string>(s =>
             {
@@ -343,7 +295,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
         [TestMethod]
         public void PCHUse()
         {
-            var cmdBuilder = new CmdBuilder(false);
+            var cmdBuilder = new CmdBuilder(false, Substitute.For<ILanguageFlagsProvider>());
             var settingsMock = new Mock<IVCRulePropertyStorage>();
             settingsMock.Setup(x => x.GetEvaluatedPropertyValue(It.IsAny<string>())).Returns<string>(s =>
             {
@@ -363,7 +315,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
 
             cmdBuilder.AddOptFromProperties(settingsMock.Object);
             cmdBuilder.GetFullCmd().Should().Be("/Yc\"C:\\pch.h\" ");
-            cmdBuilder.HeaderFileLang.Should().Be("");
         }
 
         [TestMethod]
@@ -421,6 +372,9 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily
 
         [TestMethod]
         [DataRow("a/b/c/", "\"a\\b\\c\"")]
+        [DataRow("   a/b/c/", "\"a\\b\\c\"")]
+        [DataRow("a/b/c/  ", "\"a\\b\\c\"")]
+        [DataRow("  a/b/c/  ", "\"a\\b\\c\"")]
         [DataRow("a\\b\\c\\", "\"a\\b\\c\"")]
         [DataRow("a\\b/c\\\\", "\"a\\b\\c\"")]
         [DataRow("\"a\\\\b/c\"", "\"a\\b\\c\"")]

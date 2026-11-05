@@ -5,41 +5,36 @@
   <Extern href="vsshlids.h"/>
 
   <Commands package="guidIssueVizSecurityPackage">
-
     <Buttons>
-
-      <Button guid="guidHotspotsCmdSet" id="HotspotsToolWindowCommandId" priority="0x0100" type="Button">
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+      <Button guid="SecurityMenuCmdSet" id="ViewReportCommand" priority="0x0100" type="Button">
+        <Parent guid="SonarLintCmdSet" id="SonarLintGroup"/>
         <Icon guid="guidImages" id="sonarlint" />
+        
         <Strings>
-          <ButtonText>SonarLint Security Hotspots</ButtonText>
+          <ButtonText>View SonarQube Report</ButtonText>
         </Strings>
       </Button>
-
-      <Button guid="guidHotspotsCmdSet" id="TaintToolWindowCommandId" priority="0x0101" type="Button">
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
-        <Icon guid="guidImages" id="sonarlint" />
-        <Strings>
-          <ButtonText>SonarLint Taint Vulnerabilities</ButtonText>
-        </Strings>
-      </Button>
-
     </Buttons>
 
     <Bitmaps>
-      <Bitmap guid="guidImages" href=".\Resources\sonarlint.png"/>
+      <Bitmap guid="guidImages" href=".\Resources\sonarqube_for_ide_logo_16px.png"/>
     </Bitmaps>
 
   </Commands>
 
   <Symbols>
+
     <!-- This is the package guid. -->
     <GuidSymbol name="guidIssueVizSecurityPackage" value="{D7D54E08-45E1-49A6-AA53-AF1CFAA6EBDC}" />
 
     <!-- This is the guid used to group the menu commands together -->
-    <GuidSymbol name="guidHotspotsCmdSet" value="{97856422-20A2-4DB5-A468-1BAA9B6EEC38}">
-      <IDSymbol name="HotspotsToolWindowCommandId" value="0x0100" />
-      <IDSymbol name="TaintToolWindowCommandId" value="0x0101" />
+    <GuidSymbol name="SecurityMenuCmdSet" value="{97856422-20A2-4DB5-A468-1BAA9B6EEC38}">
+      <IDSymbol name="ViewReportCommand" value="0x0102" />
+    </GuidSymbol>
+
+    <!-- Reference the external ConnectedModeMenu.vsct menu group -->
+    <GuidSymbol name="SonarLintCmdSet" value="{DB0701CC-1E44-41F7-97D6-29B160A70BCB}">
+      <IDSymbol name="SonarLintGroup" value="0x1022" />
     </GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{DA8715CC-ADBA-45C7-BBB3-DBAA608EF40A}" >

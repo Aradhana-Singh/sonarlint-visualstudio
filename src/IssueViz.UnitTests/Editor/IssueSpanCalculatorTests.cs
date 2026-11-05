@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,13 +18,11 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
-using SonarQube.Client;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
 {
@@ -34,6 +32,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
         private Mock<IChecksumCalculator> checksumCalculatorMock;
 
         private IssueSpanCalculator testSubject;
+        private const int SnapshotLength = 10000;
+        private const int SnapshotLineCount = 10000;
 
         [TestInitialize]
         public void TestInitialize()
@@ -46,13 +46,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<IssueSpanCalculator, IIssueSpanCalculator>(null, new[]
-            {
-                MefTestHelpers.CreateExport<IChecksumCalculator>(checksumCalculatorMock.Object)
-            });
+            MefTestHelpers.CheckTypeCanBeImported<IssueSpanCalculator, IIssueSpanCalculator>();
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(100, 1)]
         [DataRow(101, 100)]
         public void CalculateSpan_IssueStartLineIsOutsideOfSnapshot_ReturnsEmptySpan(int issueStartLine, int bufferLineCount)
@@ -334,6 +331,83 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
             checksumCalculatorMock.VerifyNoOtherCalls();
         }
 
+        [TestMethod]
+        public void CalculateSpan_ForStartAndEndLines_GetsPositionOfCorrectLines()
+        {
+            var startLine = CreateLineMock(lineNumber: 66, startPos: 1, endPos: 2);
+            var endLine = CreateLineMock(lineNumber: 224, startPos: 13, endPos: 23);
+            var textSnapshotMock = MockTextSnapshotForLines(startLine, endLine);
+
+            testSubject.CalculateSpan(textSnapshotMock.Object, startLine.LineNumber, endLine.LineNumber);
+
+            textSnapshotMock.Verify(mock => mock.GetLineFromLineNumber(startLine.LineNumber - 1), Times.Once);
+            textSnapshotMock.Verify(mock => mock.GetLineFromLineNumber(endLine.LineNumber - 1), Times.Once);
+        }
+
+        [TestMethod]
+        public void CalculateSpan_ForStartAndEndLines_ReturnsSnapshotSpanWithCorrectStartAndEnd()
+        {
+            var startLine = CreateLineMock(lineNumber:66, startPos:1, endPos:2);
+            var endLine = CreateLineMock(lineNumber:224, startPos:13, endPos:23);
+            var textSnapshotMock = MockTextSnapshotForLines(startLine, endLine);
+
+            var snapshotSpan = testSubject.CalculateSpan(textSnapshotMock.Object, startLine.LineNumber, endLine.LineNumber);
+
+            snapshotSpan.HasValue.Should().BeTrue();
+            snapshotSpan.Value.Start.Position.Should().Be(startLine.Start.Position);
+            snapshotSpan.Value.End.Position.Should().Be(endLine.End.Position);
+        }
+
+        [TestMethod]
+        [DataRow(0, 1)]
+        [DataRow(1, 0)]
+        [DataRow(SnapshotLineCount + 1, 1)]
+        [DataRow(1, SnapshotLineCount + 1)]
+        [DataRow(4, 1)]
+        public void CalculateSpan_ForInvalidStartAndEndLines_ReturnsNull(int startLineNumber, int endLineNumber)
+        {
+            var startLine = CreateLineMock(lineNumber:startLineNumber, startPos:1, endPos:2);
+            var endLine = CreateLineMock(lineNumber:endLineNumber, startPos:13, endPos:23);
+            var textSnapshotMock = MockTextSnapshotForLines(startLine, endLine);
+
+            var result = testSubject.CalculateSpan(textSnapshotMock.Object, startLine.LineNumber, endLine.LineNumber);
+
+            result.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void IsSameHash_SnapshotIsSameAsText_ReturnsTrue()
+        {
+            var textSnapshotMock = new SnapshotSpan(CreateSnapshotMock().Object, 1, 1);
+            checksumCalculatorMock.Setup(mock => mock.Calculate(It.IsAny<string>())).Returns("sameHash");
+
+            var result = testSubject.IsSameHash(textSnapshotMock, "test");
+
+            result.Should().BeTrue();
+        }
+
+        [TestMethod]
+        public void IsSameHash_SnapshotIsSameAsText_ReturnsFalse()
+        {
+            var textSnapshotMock = new SnapshotSpan(CreateSnapshotMock().Object, 1, 1);
+            checksumCalculatorMock.SetupSequence(mock => mock.Calculate(It.IsAny<string>())).Returns("hash1").Returns("hash2");
+
+            var result = testSubject.IsSameHash(textSnapshotMock, "test");
+
+            result.Should().BeFalse();
+        }
+
+        private static Mock<ITextSnapshot> MockTextSnapshotForLines(ITextSnapshotLine startLine, ITextSnapshotLine endLine)
+        {
+            var textSnapshot = new Mock<ITextSnapshot>();
+            textSnapshot.SetupGet(x => x.LineCount).Returns(SnapshotLineCount);
+            textSnapshot.SetupGet(x => x.Length).Returns(SnapshotLength);
+            textSnapshot.Setup(x => x.GetLineFromLineNumber(startLine.LineNumber - 1)).Returns(startLine);
+            textSnapshot.Setup(x => x.GetLineFromLineNumber(endLine.LineNumber - 1)).Returns(endLine);
+
+            return textSnapshot;
+        }
+
         private class VSLineDescription
         {
             public int ZeroBasedLineNumber { get; set; }
@@ -342,7 +416,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
             public string Text { get; set; }
         }
 
-        private static Mock<ITextSnapshot> CreateSnapshotMock(int bufferLineCount = 1000, int snapShotLength = 10000, params VSLineDescription[] lines)
+        private static Mock<ITextSnapshot> CreateSnapshotMock(int bufferLineCount = 1000, int snapShotLength = SnapshotLength, params VSLineDescription[] lines)
         {
             var textSnapshotMock = new Mock<ITextSnapshot>();
 
@@ -378,6 +452,20 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
 
             startLineMock.Setup(x => x.GetText())
                 .Returns(() => line.Text);
+
+            return startLineMock.Object;
+        }
+
+        private static ITextSnapshotLine CreateLineMock(int lineNumber, int startPos, int endPos)
+        {
+            var startLineMock = new Mock<ITextSnapshotLine>();
+            var textSnapshot = new Mock<ITextSnapshot>();
+
+            textSnapshot.SetupGet(x => x.Length).Returns(() => endPos +1);
+
+            startLineMock.SetupGet(x => x.LineNumber).Returns(() => lineNumber);
+            startLineMock.SetupGet(x => x.Start).Returns(() => new SnapshotPoint(textSnapshot.Object, startPos));
+            startLineMock.SetupGet(x => x.End).Returns(() => new SnapshotPoint(textSnapshot.Object, endPos));
 
             return startLineMock.Object;
         }

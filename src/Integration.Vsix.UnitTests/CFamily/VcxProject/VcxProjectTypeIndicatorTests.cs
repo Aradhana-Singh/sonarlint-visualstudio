@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@ using Microsoft.VisualStudio.VCProjectEngine;
 using Moq;
 using SonarLint.VisualStudio.Core.CFamily;
 using SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily.VcxProject
 {
@@ -35,10 +36,8 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.CFamily.VcxProject
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<VcxProjectTypeIndicator, IVcxProjectTypeIndicator>(null, new[]
-            {
-                MefTestHelpers.CreateExport<IProjectSystemHelper>(Mock.Of<IProjectSystemHelper>())
-            });
+            MefTestHelpers.CheckTypeCanBeImported<VcxProjectTypeIndicator, IVcxProjectTypeIndicator>(
+                MefTestHelpers.CreateExport<IProjectSystemHelper>());
         }
 
         [TestMethod]

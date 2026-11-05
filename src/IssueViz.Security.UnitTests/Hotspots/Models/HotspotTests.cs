@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,10 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.IssueVisualization.Security.Hotspots.Models;
@@ -36,13 +32,13 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
         [TestMethod]
         public void Ctor_NullLocation_ArgumentNullException()
         {
-            Action act = () => new Hotspot(
+            Action act = () => new Hotspot(id: Guid.NewGuid(),
                 "hotspot key",
+                false,
+                false,
                 "server-path",
                 primaryLocation: null,
                 ValidRule,
-                DateTimeOffset.MinValue,
-                DateTimeOffset.MinValue,
                 null);
 
             act.Should().Throw<ArgumentNullException>().And.ParamName.Should().Be("primaryLocation");
@@ -51,11 +47,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
         [TestMethod]
         public void Ctor_PropertiesSet()
         {
-            var creationDate = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromHours(123));
-            var lastUpdated = DateTimeOffset.UtcNow;
-
-            var hotspot = new Hotspot(
+            var hotspot = new Hotspot(id: Guid.NewGuid(),
                 "hotspot key",
+                true,
+                true,
                 "server-path",
                 primaryLocation: new AnalysisIssueLocation(
                     "message",
@@ -67,16 +62,16 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
                         4,
                         "hash")),
                 ValidRule,
-                creationDate,
-                lastUpdated,
-                null);
+                null,
+                "contextKey");
 
-            hotspot.HotspotKey.Should().Be("hotspot key");
+            hotspot.IssueServerKey.Should().Be("hotspot key");
+            hotspot.IsResolved.Should().BeTrue();
+            hotspot.IsOnNewCode.Should().BeTrue();
             hotspot.ServerFilePath.Should().Be("server-path");
             hotspot.RuleKey.Should().Be(ValidRule.RuleKey);
             hotspot.Rule.Should().BeSameAs(ValidRule);
-            hotspot.CreationTimestamp.Should().Be(creationDate);
-            hotspot.LastUpdateTimestamp.Should().Be(lastUpdated);
+            hotspot.RuleDescriptionContextKey.Should().Be("contextKey");
 
             hotspot.PrimaryLocation.FilePath.Should().Be("local-path.cpp");
             hotspot.PrimaryLocation.Message.Should().Be("message");
@@ -91,7 +86,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
         public void Ctor_NoFlows_EmptyFlows()
         {
             IReadOnlyList<IAnalysisIssueFlow> flows = null;
-            var hotspot = new Hotspot("hotspot key",
+            var hotspot = new Hotspot(id: Guid.NewGuid(),
+                "hotspot key",
+                false,
+                false,
                 "server-path",
                 new AnalysisIssueLocation(
                     "message",
@@ -103,8 +101,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
                         4,
                         "hash")),
                 ValidRule,
-                DateTimeOffset.MinValue,
-                DateTimeOffset.MinValue,
                 flows);
 
             hotspot.Flows.Should().BeEmpty();
@@ -114,7 +110,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
         public void Ctor_HasFlows_CorrectFlows()
         {
             var flows = new[] { Mock.Of<IAnalysisIssueFlow>(), Mock.Of<IAnalysisIssueFlow>() };
-            var hotspot = new Hotspot("hotspot key",
+            var hotspot = new Hotspot(id: Guid.NewGuid(),
+                "hotspot key",
+                false,
+                false,
                 "server-path",
                 new AnalysisIssueLocation(
                     "message",
@@ -126,8 +125,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.Hotspots.
                         4,
                         "hash")),
                 ValidRule,
-                DateTimeOffset.MinValue,
-                DateTimeOffset.MinValue,
                 flows);
 
             hotspot.Flows.Should().BeEquivalentTo(flows);

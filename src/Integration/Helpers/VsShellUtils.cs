@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -40,28 +40,6 @@ namespace SonarLint.VisualStudio.Integration
             Scope = "member",
             Target = "~F:SonarLint.VisualStudio.Integration.VsShellUtils.SonarLintOutputPaneGuid")]
         internal static Guid SonarLintOutputPaneGuid = new Guid("EB476B82-D73A-44A6-AFEF-830F7BBA73DB");
-
-        /// <summary>
-        /// Writes a message to the SonarLint output pane. Will append a new line after the message.
-        /// </summary>
-        public static void WriteToSonarLintOutputPane(IServiceProvider serviceProvider, string messageFormat, params object[] args)
-        {
-            if (serviceProvider == null)
-            {
-                throw new ArgumentNullException(nameof(serviceProvider));
-            }
-
-            if (messageFormat == null)
-            {
-                throw new ArgumentNullException(nameof(messageFormat));
-            }
-
-            IVsOutputWindowPane sonarLintPane = GetOrCreateSonarLintOutputPane(serviceProvider);
-            if (sonarLintPane != null)
-            {
-                WriteLineToPane(sonarLintPane, messageFormat, args);
-            }
-        }
 
         /// <summary>
         /// Writes a message to the SonarLint output pane. Will append a new line after the message.
@@ -191,12 +169,6 @@ namespace SonarLint.VisualStudio.Integration
             Debug.Assert(ErrorHandler.Succeeded(hrGetPane), "Failed in outputWindow.GetPane: " + hrGetPane.ToString());
 
             return pane;
-        }
-
-        private static void WriteLineToPane(IVsOutputWindowPane pane, string messageFormat, params object[] args)
-        {
-            int hr = pane.OutputStringThreadSafe(string.Format(CultureInfo.CurrentCulture, messageFormat, args: args) + Environment.NewLine);
-            Debug.Assert(ErrorHandler.Succeeded(hr), "Failed in OutputStringThreadSafe: " + hr.ToString());
         }
 
         private static void WriteLineToPane(IVsOutputWindowPane pane, string message)

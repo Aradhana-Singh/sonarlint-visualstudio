@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -63,7 +63,7 @@ namespace SonarLint.VisualStudio.Core.CSharpVB
         [XmlArrayItem(ElementName = "Setting")]
         public List<SonarLintKeyValuePair> Settings { get; set; } = new List<SonarLintKeyValuePair>();
 
-        [ XmlArrayItem(ElementName = "Rule")]
+        [XmlArrayItem(ElementName = "Rule")]
         public List<SonarLintRule> Rules { get; set; } = new List<SonarLintRule>();
     }
 
@@ -73,10 +73,10 @@ namespace SonarLint.VisualStudio.Core.CSharpVB
         public string Key { get; set; }
 
         [XmlArrayItem(ElementName = "Parameter")]
-        public List<SonarLintKeyValuePair> Parameters { get; set; } = new List<SonarLintKeyValuePair>();
+        public List<SonarLintKeyValuePair> Parameters { get; set; } = [];
     }
 
-    // The SonarLint.xml file has Settings elements and 
+    // The SonarLint.xml file has Settings elements and
     public class SonarLintKeyValuePair
     {
         [XmlElement]

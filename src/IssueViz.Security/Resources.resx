@@ -123,13 +123,378 @@
   <data name="FinishedPackageInitialization" xml:space="preserve">
     <value>Finished initializing security package.</value>
   </data>
+  <data name="HotspotsControl_CodeColumnHeader" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="HotspotsControl_ColColumnHeader" xml:space="preserve">
+    <value>Col</value>
+  </data>
+  <data name="HotspotsControl_DescriptionColumnHeader" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="HotspotsControl_StatusColumnHeader" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="HotspotsControl_FileColumnHeader" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="HotspotsControl_LineColumnHeader" xml:space="preserve">
+    <value>Line</value>
+  </data>
+  <data name="HotspotsControl_NavigationErrorTooltip" xml:space="preserve">
+    <value>Cannot navigate to location. The source code is different from the analyzed version.</value>
+  </data>
+  <data name="NavigateToHotspotTooltip" xml:space="preserve">
+    <value>Use double-click or Enter to navigate to the security hotspot.</value>
+  </data>
+  <data name="NavigateToTaintTooltip" xml:space="preserve">
+    <value>Use double-click or Enter to navigate to the taint vulnerability.</value>
+  </data>
+  <data name="ReportView_NotOnServerTooltip" xml:space="preserve">
+    <value>Finding does not exist on the server.</value>
+  </data>
+  <data name="ReportView_SonarCloudTooltip" xml:space="preserve">
+    <value>Finding exists on SonarQube Cloud.</value>
+  </data>
+  <data name="ReportView_SonarQubeTooltip" xml:space="preserve">
+    <value>Finding exists on SonarQube Server.</value>
+  </data>
   <data name="HotspotsToolWindowCaption" xml:space="preserve">
-    <value>SonarLint Security Hotspots</value>
+    <value>SonarQube Security Hotspots</value>
+  </data>
+  <data name="ReviewHotspotService_AnErrorOccurred" xml:space="preserve">
+    <value>An error occurred while reviewing hotspot: {0}.</value>
+  </data>
+  <data name="ReviewHotspotService_NotPermitted" xml:space="preserve">
+    <value>Reviewing hotspot was not permitted due to: {0}.</value>
+  </data>
+  <data name="ReviewHotspotWindow_AcknowledgeContent" xml:space="preserve">
+    <value>The code has been reviewed and does pose a risk. A fix is required.</value>
+  </data>
+  <data name="ReviewHotspotWindow_AcknowledgeTitle" xml:space="preserve">
+    <value>Acknowledged</value>
+  </data>
+  <data name="ReviewHotspotWindow_ReviewFailureMessage" xml:space="preserve">
+    <value>An error occurred while reviewing the hotspot. The status has not been changed.
+Please check the logs for more details.</value>
+  </data>
+  <data name="ReviewHotspotWindow_CheckReviewPermittedFailureMessage" xml:space="preserve">
+    <value>The hotspot can not be reviewed due to the following error: {0}
+Please check the logs for more details.</value>
+  </data>
+  <data name="ReviewHotspotWindow_NoStatusSelectedFailureMessage" xml:space="preserve">
+    <value>No hotspot has been selected.</value>
+  </data>
+  <data name="ReviewHotspotWindow_FailureTitle" xml:space="preserve">
+    <value>Review Hotspot Failure</value>
+  </data>
+  <data name="ReviewHotspotWindow_FixedContent" xml:space="preserve">
+    <value>The code has been reviewed and modified to follow the recommended secure coding practices.</value>
+  </data>
+  <data name="ReviewHotspotWindow_FixedTitle" xml:space="preserve">
+    <value>Fixed</value>
+  </data>
+  <data name="ReviewHotspotWindow_SafeContent" xml:space="preserve">
+    <value>The code has been reviewed and does not pose a risk. It does not need to be modified.</value>
+  </data>
+  <data name="ReviewHotspotWindow_SafeTitle" xml:space="preserve">
+    <value>Safe</value>
+  </data>
+  <data name="ChangeStatusWindow_Title" xml:space="preserve">
+    <value>Change Status on SonarQube (Server, Cloud)</value>
+  </data>
+  <data name="ChangeStatusWindow_SubmitButton" xml:space="preserve">
+    <value>Submit</value>
+  </data>
+  <data name="ChangeStatusWindow_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ReviewHotspotWindow_ToReviewContent" xml:space="preserve">
+    <value>This security hotspot needs to be reviewed to assess whether the code poses a risk.</value>
+  </data>
+  <data name="ReviewHotspotWindow_ToReviewTitle" xml:space="preserve">
+    <value>To Review</value>
   </data>
   <data name="StartedPackageInitialization" xml:space="preserve">
     <value>Initializing security package...</value>
   </data>
   <data name="TaintToolWindowCaption" xml:space="preserve">
-    <value>SonarLint Taint Vulnerabilities</value>
+    <value>SonarQube Taint Vulnerabilities</value>
+  </data>
+  <data name="HotspotsControl_CurrentDocumentFilter" xml:space="preserve">
+    <value>Current Document</value>
+  </data>
+  <data name="HotspotsControl_OpenDocumentsFilter" xml:space="preserve">
+    <value>Open Documents</value>
+  </data>
+  <data name="HotspotControl_LocalHotspotStatusTooltip" xml:space="preserve">
+    <value>The hotspots not yet present on the server need to be fixed locally.</value>
+  </data>
+  <data name="ViewIssueInSonarQubeCloud" xml:space="preserve">
+    <value>View in SonarQube Cloud</value>
+  </data>
+  <data name="ViewIssueInSonarQubeServer" xml:space="preserve">
+    <value>View in SonarQube Server</value>
+  </data>
+  <data name="ViewHotspotInBrowser" xml:space="preserve">
+    <value>View security hotspot in browser</value>
+  </data>
+  <data name="ReportViewToolWindowCaption" xml:space="preserve">
+    <value>SonarQube Report</value>
+  </data>
+  <data name="SolutionFindingsGroupTitle" xml:space="preserve">
+    <value>Solution findings</value>
+  </data>
+  <data name="DisplaySeverityTooltip" xml:space="preserve">
+    <value>Severity impact:</value>
+  </data>
+  <data name="NoDependencyRiskFoundText" xml:space="preserve">
+    <value>Analysis runs on open files. Please open a file to expand the scope.</value>
+  </data>
+  <data name="NoFindingsToDisplayTitle" xml:space="preserve">
+    <value>No findings to display.</value>
+  </data>
+  <data name="NoFindingsToDisplayCurrentFiltersTitle" xml:space="preserve">
+    <value>Please select different filters or</value>
+  </data>
+  <data name="NoFindingsToDisplayCurrentClearFiltersLink" xml:space="preserve">
+    <value>clear all current filters</value>
+  </data>
+  <data name="ChangeStatusWindow_CommentLabel" xml:space="preserve">
+    <value>Add a comment:</value>
+  </data>
+  <data name="ChangeStatusWindow_FormattingHelpExamples" xml:space="preserve">
+    <value>: *Bold*, ``Code``, * Bullet point</value>
+  </data>
+  <data name="ChangeStatusWindow_FormattingHelpLink" xml:space="preserve">
+    <value>Formatting Help</value>
+  </data>
+  <data name="CommentRequiredErrorMessage" xml:space="preserve">
+    <value>Comment is required.</value>
+  </data>
+  <data name="ChangeStatusMenuItem" xml:space="preserve">
+    <value>Change Status</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_AcceptedDescription" xml:space="preserve">
+    <value>This finding is valid, but it may not be fixed for a while.</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_ConfirmedDescription" xml:space="preserve">
+    <value>This finding has been reviewed and the risk is valid.</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_OpenDescription" xml:space="preserve">
+    <value>This finding has not yet been reviewed.</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_SafeDescription" xml:space="preserve">
+    <value>This finding does not pose a risk. No fix is needed.</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_FixedDescription" xml:space="preserve">
+    <value>This finding has been fixed.</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_ReopenTitle" xml:space="preserve">
+    <value>Reopen</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_ConfirmTitle" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_AcceptTitle" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_SafeTitle" xml:space="preserve">
+    <value>Safe</value>
+  </data>
+  <data name="ChangeDependencyRiskStatus_FixedTitle" xml:space="preserve">
+    <value>Fixed</value>
+  </data>
+  <data name="Synchronizer_Failure" xml:space="preserve">
+    <value>Failed to synchronize server issues: {0}.</value>
+  </data>
+  <data name="DependencyRiskStatusChangeFailedTitle" xml:space="preserve">
+    <value>Dependency Risk Status Change Failed</value>
+  </data>
+  <data name="DependencyRiskStatusChangeError" xml:space="preserve">
+    <value>An error occurred when changing the status.</value>
+  </data>
+  <data name="DependencyRiskNullTransitionError" xml:space="preserve">
+    <value>Cannot change status: transition is not specified</value>
+  </data>
+  <data name="Synchronizer_NotInConnectedMode" xml:space="preserve">
+    <value>Unable to fetch server issues: not in connected mode.</value>
+  </data>
+  <data name="Synchronizer_SLCoreNotReady" xml:space="preserve">
+    <value>Unable to fetch server issues: SLCore backend is not available.</value>
+  </data>
+  <data name="Synchronizer_NumberOfTaintIssues" xml:space="preserve">
+    <value>Fetched {0} taint vulnerabilities.</value>
+  </data>
+  <data name="Synchronizer_NumberOfDependencyRisks" xml:space="preserve">
+    <value>Fetched {0} dependency risks.</value>
+  </data>
+  <data name="Synchronizer_Verbose_ConfigScopeNotReady" xml:space="preserve">
+    <value>Configuration scope root hasn't been initialized...</value>
+  </data>
+  <data name="Synchronizer_Verbose_AlreadyInitialized" xml:space="preserve">
+    <value>Storage has already been initialized for current configuration scope</value>
+  </data>
+  <data name="Synchronizer_LogContext_General" xml:space="preserve">
+    <value>Server Issue Sync</value>
+  </data>
+  <data name="Synchronizer_LogContext_Taint" xml:space="preserve">
+    <value>Taint</value>
+  </data>
+  <data name="LogContext_DependencyRisks" xml:space="preserve">
+    <value>Dependency Risks</value>
+  </data>
+  <data name="LogContext_ShowInBrowser" xml:space="preserve">
+    <value>Show in Browser</value>
+  </data>
+  <data name="LogContext_ChangeStatus" xml:space="preserve">
+    <value>Change Status</value>
+  </data>
+  <data name="ShowDependencyRisk_Error_ShowingInBrowser" xml:space="preserve">
+    <value>Error when showing dependency risk in browser: {0}</value>
+  </data>
+  <data name="ChangeDependencyRisk_Error_ChangingStatus" xml:space="preserve">
+    <value>Error when changing dependency risk status: {0}</value>
+  </data>
+  <data name="ResolutionFilter_Resolved" xml:space="preserve">
+    <value>Resolved</value>
+  </data>
+  <data name="ResolutionFilter_Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="ServerHotspotTooltip" xml:space="preserve">
+    <value>{0} security hotspot existing on {1}</value>
+  </data>
+  <data name="LocalHotspotTooltip" xml:space="preserve">
+    <value>{0} security hotspot that does not exist on the server.</value>
+  </data>
+  <data name="ShowIssueVisualizationMenuItemHeader" xml:space="preserve">
+    <value>Show Issue Visualization</value>
+  </data>
+  <data name="SeverityLabel" xml:space="preserve">
+    <value>Minimum Severity:</value>
+  </data>
+  <data name="StatusLabel" xml:space="preserve">
+    <value>Status:</value>
+  </data>
+  <data name="NewCodeLabel" xml:space="preserve">
+    <value>New Code:</value>
+  </data>
+  <data name="ClearAllButton" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
+  <data name="ShowAdvancedFiltersTooltip" xml:space="preserve">
+    <value>Show advanced filters</value>
+  </data>
+  <data name="HideAdvancedFiltersTooltip" xml:space="preserve">
+    <value>Hide advanced filters</value>
+  </data>
+  <data name="DependencyRiskSingular" xml:space="preserve">
+    <value>Dependency Risk</value>
+  </data>
+  <data name="SecurityHotspotSingular" xml:space="preserve">
+    <value>Security Hotspot</value>
+  </data>
+  <data name="TaintVulnerabilitySingular" xml:space="preserve">
+    <value>Taint Vulnerability</value>
+  </data>
+  <data name="TaintVulnerabilityPlural" xml:space="preserve">
+    <value>Taint Vulnerabilities</value>
+  </data>
+  <data name="SecurityHotspotPlural" xml:space="preserve">
+    <value>Security Hotspots</value>
+  </data>
+  <data name="DependencyRiskPlural" xml:space="preserve">
+    <value>Dependency Risks</value>
+  </data>
+  <data name="IssueSingular" xml:space="preserve">
+    <value>Issue</value>
+  </data>
+  <data name="IssuePlural" xml:space="preserve">
+    <value>Issues</value>
+  </data>
+  <data name="FindingSingularSmall" xml:space="preserve">
+    <value>finding</value>
+  </data>
+  <data name="FindingPluralSmall" xml:space="preserve">
+    <value>findings</value>
+  </data>
+  <data name="FilterNotAvailableInStandaloneMode">
+    This filter is only available in Connected Mode
+  </data>
+  <data name="CollapseAllButtonTooltip" xml:space="preserve">
+    <value>Collapse all</value>
+  </data>
+  <data name="ExpandAllButtonTooltip" xml:space="preserve">
+    <value>Expand all</value>
+  </data>
+  <data name="FocusOnNewCodeTooltipGeneric" xml:space="preserve">
+    <value>Use Connected Mode to benefit from an accurate New Code Definition based on your SonarQube (Server, Cloud) settings.
+Without Connected Mode, any code added or changed in the last 30 days is considered New Code.</value>
+  </data>
+  <data name="FocusOnNewCodeTooltipConnectedCloud">
+    <value>New Code Definition based on your SonarQube Cloud settings.</value>
+  </data>
+  <data name="FocusOnNewCodeTooltipConnectedServer">
+    <value>New Code Definition based on your SonarQube Server settings.</value>
+  </data>
+  <data name="FocusOnNewCodeTooltipNotSupported">
+    <value>Focus on New Code is not available for the current SonarQube Server.</value>
+  </data>
+  <data name="FocusOnNewCodeText" xml:space="preserve">
+    <value>Focus on New Code</value>
+  </data>
+  <data name="FromOverallCodeText" xml:space="preserve">
+    <value>From Overall Code</value>
+  </data>
+  <data name="NewCodeDefinitionTooltip" xml:space="preserve">
+    <value>New Code Definition</value>
+  </data>
+  <data name="ActivateFocusOnNewCodeTooltip" xml:space="preserve">
+    <value>Activate Focus on New Code to view only new issues</value>
+  </data>
+  <data name="ReviewIssueService_AnErrorOccurred" xml:space="preserve">
+    <value>An error occurred while reviewing issue: {0}.</value>
+  </data>
+  <data name="ReviewIssueService_NotPermitted" xml:space="preserve">
+    <value>Reviewing issue was not permitted due to: {0}.</value>
+  </data>
+  <data name="ReviewIssueWindow_AcceptTitle" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="ReviewIssueWindow_AcceptContent" xml:space="preserve">
+    <value>This issue will not be fixed.</value>
+  </data>
+  <data name="ReviewIssueWindow_WontFixTitle" xml:space="preserve">
+    <value>Won't Fix</value>
+  </data>
+  <data name="ReviewIssueWindow_WontFixContent" xml:space="preserve">
+    <value>This issue won't be fixed as it is not relevant in this context.</value>
+  </data>
+  <data name="ReviewIssueWindow_FalsePositiveTitle" xml:space="preserve">
+    <value>False Positive</value>
+  </data>
+  <data name="ReviewIssueWindow_FalsePositiveContent" xml:space="preserve">
+    <value>This issue is a false alarm and can be ignored.</value>
+  </data>
+  <data name="ReviewIssueWindow_ReviewFailureMessage" xml:space="preserve">
+    <value>An error occurred while reviewing the issue. The status has not been changed.
+Please check the logs for more details.</value>
+  </data>
+  <data name="ReviewIssueWindow_CheckReviewPermittedFailureMessage" xml:space="preserve">
+    <value>The issue can not be reviewed due to the following error: {0}
+Please check the logs for more details.</value>
+  </data>
+  <data name="ReviewIssueWindow_NoStatusSelectedFailureMessage" xml:space="preserve">
+    <value>No status has been selected.</value>
+  </data>
+  <data name="ReviewIssueWindow_FailureTitle" xml:space="preserve">
+    <value>Review Issue Failure</value>
+  </data>
+  <data name="ReopenIssueMenuItem" xml:space="preserve">
+    <value>Reopen Issue</value>
+  </data>
+  <data name="ReopenTaintMenuItem" xml:space="preserve">
+    <value>Reopen Issue</value>
   </data>
 </root>

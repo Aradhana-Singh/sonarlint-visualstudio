@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,13 +19,13 @@
  */
 
 using System;
-    
+
 namespace SonarLint.VisualStudio.Core.Binding
 {
     public static class BoundSolutionUIContext
     {
         public const string GuidString = "C10779BB-5071-427D-9BE1-6F60EE064469";
 
-        public static Guid Guid = new Guid(GuidString);
+        public static readonly Guid Guid = new Guid(GuidString);
     }
 }

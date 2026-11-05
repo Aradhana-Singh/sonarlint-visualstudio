@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,16 +20,21 @@
 
 using System;
 using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Initialization;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
-    internal class ConfigurableActiveSolutionTracker : IActiveSolutionTracker
+    public class ConfigurableActiveSolutionTracker : IActiveSolutionTracker
     {
-        public event EventHandler<ActiveSolutionChangedEventArgs> ActiveSolutionChanged;
+        public virtual string CurrentSolutionName { get; set; }
+        public virtual event EventHandler<ActiveSolutionChangedEventArgs> ActiveSolutionChanged;
 
-        public void SimulateActiveSolutionChanged(bool isSolutionOpen)
+        public void SimulateActiveSolutionChanged(bool isSolutionOpen, string solutionName)
         {
-            this.ActiveSolutionChanged?.Invoke(this, new ActiveSolutionChangedEventArgs(isSolutionOpen));
+            CurrentSolutionName = solutionName;
+            this.ActiveSolutionChanged?.Invoke(this, new ActiveSolutionChangedEventArgs(isSolutionOpen, solutionName));
         }
+
+        public virtual IInitializationProcessor InitializationProcessor => Substitute.For<IInitializationProcessor>();
     }
 }

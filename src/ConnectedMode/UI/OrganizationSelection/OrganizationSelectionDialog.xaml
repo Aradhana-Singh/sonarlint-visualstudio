@@ -1,0 +1,80 @@
+﻿<Window x:Class="SonarLint.VisualStudio.ConnectedMode.UI.OrganizationSelection.OrganizationSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:res="clr-namespace:SonarLint.VisualStudio.ConnectedMode.UI.Resources"
+        xmlns:wpf="clr-namespace:SonarLint.VisualStudio.Core.WPF;assembly=SonarLint.VisualStudio.Core"
+        xmlns:ui="clr-namespace:SonarLint.VisualStudio.ConnectedMode.UI"
+        Title="{x:Static res:UiResources.OrganizationSelectionDialogTitle}"
+        WindowStartupLocation="CenterOwner"
+        FocusManager.FocusedElement="{Binding ElementName=OrganizationList}"
+        Loaded="OrganizationSelectionDialog_OnLoaded"
+        x:Name="OrganizationSelectionDialogWindow">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary
+                    Source="pack://application:,,,/SonarLint.VisualStudio.ConnectedMode;component/UI/Resources/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <wpf:BoolToVisibilityConverter x:Key="TrueToVisibleConverter" FalseValue="Collapsed" TrueValue="Visible"/>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Window.Style>
+        <Style TargetType="Window" BasedOn="{StaticResource ConnectedModeWindow}"></Style>
+    </Window.Style>
+
+    <Grid DataContext="{Binding ElementName=OrganizationSelectionDialogWindow, Path=ViewModel}" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="{x:Static res:UiResources.SelectOrganizationLabel}"/>
+        <Grid Grid.Row="1" Margin="0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static res:UiResources.ExistingOrganizationsLabel}" 
+                       Style="{StaticResource HeaderTextBlock}"/>
+            <Button Grid.Row="0" Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    Click="ChooseAnotherOrganizationButton_OnClick"
+                    Padding="10,2"
+                    Margin="0"
+                    Content="{x:Static res:UiResources.ChooseAnotherOrganizationButton}"/>
+
+            <ListBox x:Name="OrganizationList"
+                     ScrollViewer.CanContentScroll="True"
+                     Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                     Margin="0, 10, 0, 10"
+                     ItemsSource="{Binding Organizations}"
+                     SelectedItem="{Binding SelectedOrganization, Mode=TwoWay}"
+                     ItemTemplate="{StaticResource NameAndKeyListBoxItem}"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{x:Static res:UiResources.NoOrganizationExistsLabel}" 
+                                   Visibility="{Binding Path=NoOrganizationExists, Converter={StaticResource TrueToVisibleConverter}}"/>
+        </Grid>
+
+        <ui:ProgressAndErrorHandlerComponent Grid.Row="2" Margin="0,10" ProgressReporterViewModel="{Binding Path=ProgressReporterViewModel}"/>
+
+        <Grid Grid.Row="3" HorizontalAlignment="Right">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Content="{x:Static res:UiResources.OkButton}"
+                    IsDefault="True"
+                    Click="OkButton_OnClick"
+                    IsEnabled="{Binding IsValidSelectedOrganization}" 
+            />
+            <Button Grid.Column="1" Content="{x:Static res:UiResources.CancelButton}" IsCancel="True" />
+        </Grid>
+    </Grid>
+</Window>

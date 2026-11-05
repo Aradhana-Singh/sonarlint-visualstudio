@@ -1,0 +1,65 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using SonarLint.VisualStudio.IssueVisualization.Models;
+using SonarLint.VisualStudio.IssueVisualization.Security.ReportView.Filters;
+
+namespace SonarLint.VisualStudio.IssueVisualization.Security.ReportView;
+
+public interface IIssueViewModel
+{
+    Guid Id { get; }
+    int? Line { get; }
+    int? Column { get; }
+    string Title { get; }
+    string FilePath { get; }
+    string RuleId { get; }
+    DisplaySeverity DisplaySeverity { get; }
+    IssueType IssueType { get; }
+    DisplayStatus Status { get; }
+    bool IsResolved { get; }
+    bool IsOnNewCode { get; }
+    bool IsServerIssue { get; }
+}
+
+/// <summary>
+/// Used to display severity info in the UI in a uniform way for different <see cref="IssueType"/>
+/// </summary>
+public enum DisplaySeverity
+{
+    Info,
+    Low,
+    Medium,
+    High,
+    Blocker
+}
+
+public enum IssueType
+{
+    Issue,
+    SecurityHotspot,
+    TaintVulnerability,
+    DependencyRisk
+}
+
+public interface IAnalysisIssueViewModel : IIssueViewModel
+{
+    IAnalysisIssueVisualization Issue { get; }
+}

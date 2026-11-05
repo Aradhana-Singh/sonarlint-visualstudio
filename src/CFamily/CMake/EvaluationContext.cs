@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -52,8 +52,8 @@ namespace SonarLint.VisualStudio.CFamily.CMake
     {
         public EvaluationContext(string activeConfiguration,
             string rootDirectory,
-            string generator, 
-            string rootCMakeListsFilePath, 
+            string generator,
+            string rootCMakeListsFilePath,
             string cMakeSettingsFilePath)
         {
             ActiveConfiguration = activeConfiguration;

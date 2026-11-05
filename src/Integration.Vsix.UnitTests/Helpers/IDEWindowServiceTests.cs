@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@ using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.SystemAbstractions;
 using SonarLint.VisualStudio.Integration.Vsix;
 using SonarLint.VisualStudio.Integration.Vsix.Native;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
 {
@@ -53,8 +54,8 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<IDEWindowService, IIDEWindowService>(null,
-                new[] { MefTestHelpers.CreateExport<ILogger>(Mock.Of<ILogger>()) });
+            MefTestHelpers.CheckTypeCanBeImported<IDEWindowService, IIDEWindowService>(
+                MefTestHelpers.CreateExport<ILogger>());
         }
 
         [TestMethod]

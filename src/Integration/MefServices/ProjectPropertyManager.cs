@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -32,15 +32,9 @@ namespace SonarLint.VisualStudio.Integration
         private readonly IProjectSystemHelper projectSystem;
 
         [ImportingConstructor]
-        public ProjectPropertyManager(IHost host)
+        public ProjectPropertyManager(IProjectSystemHelper projectSystemHelper)
         {
-            if (host == null)
-            {
-                throw new ArgumentNullException(nameof(host));
-            }
-
-            this.projectSystem = host.GetService<IProjectSystemHelper>();
-            this.projectSystem.AssertLocalServiceIsNotNull();
+            this.projectSystem = projectSystemHelper;
         }
 
         #region IProjectPropertyManager

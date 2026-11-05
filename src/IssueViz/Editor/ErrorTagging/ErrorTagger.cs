@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,37 +18,58 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Adornments;
 using Microsoft.VisualStudio.Text.Tagging;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 
-namespace SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging
+namespace SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging;
+
+internal class ErrorTagger : FilteringTaggerBase<IIssueLocationTag, IErrorTag>
 {
-    internal class ErrorTagger : FilteringTaggerBase<IIssueLocationTag, IErrorTag>
+    private readonly IErrorTagTooltipProvider errorTagTooltipProvider;
+    private readonly IFocusOnNewCodeService focusOnNewCodeService;
+
+    public ErrorTagger(ITagAggregator<IIssueLocationTag> tagAggregator, ITextBuffer textBuffer, IErrorTagTooltipProvider errorTagTooltipProvider, IFocusOnNewCodeService focusOnNewCodeService)
+        : base(tagAggregator, textBuffer)
     {
-        private readonly IErrorTagTooltipProvider errorTagTooltipProvider;
+        this.errorTagTooltipProvider = errorTagTooltipProvider;
+        this.focusOnNewCodeService = focusOnNewCodeService;
+        focusOnNewCodeService.Changed += FocusOnNewCodeServiceOnChanged;
+    }
 
-        public ErrorTagger(ITagAggregator<IIssueLocationTag> tagAggregator, ITextBuffer textBuffer, IErrorTagTooltipProvider errorTagTooltipProvider)
-            : base(tagAggregator, textBuffer)
+    private void FocusOnNewCodeServiceOnChanged(object sender, NewCodeStatusChangedEventArgs e) => NotifyTagsChanged();
+
+    protected override TagSpan<IErrorTag> CreateTagSpan(IIssueLocationTag trackedTag, NormalizedSnapshotSpanCollection spans)
+    {
+        var issueViz = (IAnalysisIssueVisualization) trackedTag.Location;
+        string errorType;
+        if (issueViz.VsSeverity == __VSERRORCATEGORY.EC_ERROR)
         {
-            this.errorTagTooltipProvider = errorTagTooltipProvider;
+            errorType = PredefinedErrorTypeNames.SyntaxError;
+        }
+        else
+        {
+            errorType = focusOnNewCodeService.Current.IsEnabled && !issueViz.IsOnNewCode ? PredefinedErrorTypeNames.HintedSuggestion : PredefinedErrorTypeNames.Warning;
+        }
+        return new TagSpan<IErrorTag>(trackedTag.Location.Span.Value, new SonarErrorTag(errorType, issueViz.Issue, errorTagTooltipProvider));
+    }
+
+    protected override IEnumerable<IMappingTagSpan<IIssueLocationTag>> Filter(IEnumerable<IMappingTagSpan<IIssueLocationTag>> trackedTagSpans) =>
+        trackedTagSpans.Where(x => x.Tag.Location is IAnalysisIssueVisualization issueViz && !issueViz.IsResolved && IsValidPrimaryLocation(issueViz));
+
+    private static bool IsValidPrimaryLocation(IAnalysisIssueVisualization issueViz) => issueViz.Span.IsNavigable();
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            focusOnNewCodeService.Changed -= FocusOnNewCodeServiceOnChanged;
         }
 
-        protected override TagSpan<IErrorTag> CreateTagSpan(IIssueLocationTag trackedTag, NormalizedSnapshotSpanCollection spans)
-        {
-            var issueViz = (IAnalysisIssueVisualization)trackedTag.Location;
-            var tooltip = errorTagTooltipProvider.Create(issueViz.Issue);
-            return new TagSpan<IErrorTag>(trackedTag.Location.Span.Value, new ErrorTag(PredefinedErrorTypeNames.Warning, tooltip));
-        }
-
-        protected override IEnumerable<IMappingTagSpan<IIssueLocationTag>> Filter(IEnumerable<IMappingTagSpan<IIssueLocationTag>> trackedTagSpans) =>
-            trackedTagSpans.Where(x => IsValidPrimaryLocation(x.Tag.Location));
-
-        private static bool IsValidPrimaryLocation(IAnalysisIssueLocationVisualization locViz) =>
-            locViz is IAnalysisIssueVisualization && locViz.Span.IsNavigable();
+        base.Dispose(disposing);
     }
 }

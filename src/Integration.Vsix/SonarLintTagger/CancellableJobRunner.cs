@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,12 +22,33 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Threading;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Integration.Vsix.Resources;
+
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
+    public struct JobRunnerProgress
+    {
+        public enum RunnerState
+        {
+            NotStarted, Running, Finished, Cancelled, Faulted
+        }
+
+        public JobRunnerProgress(RunnerState currentState, int completed, int totalOperations)
+        {
+            CurrentState = currentState;
+            CompletedOperations = completed;
+            TotalOperations = totalOperations;
+        }
+
+        public RunnerState CurrentState { get; }
+        public int CompletedOperations { get; }
+        public int TotalOperations { get; }
+    }
+
     /// <summary>
     /// Runs a series of operations on a separate background thread.
     /// Can be cancelled.
@@ -36,30 +57,15 @@ namespace SonarLint.VisualStudio.Integration.Vsix
     {
         // Not overriding Equals etc - this type is only used for progress reporting.
         // It's not intended to be stored or compared
-        public struct JobRunnerProgress
-        {
-            public JobRunnerProgress(RunnerState currentState, int completed, int totalOperations)
-            {
-                CurrentState = currentState;
-                CompletedOperations = completed;
-                TotalOperations = totalOperations;
-            }
 
-            public RunnerState CurrentState { get; }
-            public int CompletedOperations { get; }
-            public int TotalOperations { get; }
-        }
 
-        public enum RunnerState
-        {
-            NotStarted, Running, Finished, Cancelled, Faulted
-        }
+
 
         private readonly IEnumerable<Action> operations;
         private readonly ILogger logger;
         private readonly string jobDescription;
         private readonly IProgress<JobRunnerProgress> progress;
-        
+
         private CancellationTokenSource cancellationSource;
         private DateTime startTime;
 
@@ -67,7 +73,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         private readonly int totalOperations;
 
         internal /* for testing */ WaitHandle TestingWaitHandle
-        { 
+        {
             get
             {
                 // NB this will throw if the cancellation source has
@@ -75,7 +81,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                 return cancellationSource?.Token.WaitHandle;
             }
         }
-        internal /* for testing */ RunnerState State { get; private set; }
+        internal /* for testing */ JobRunnerProgress.RunnerState State { get; private set; }
 
         public static CancellableJobRunner Start(string jobDescription, IEnumerable<Action> operations, IProgress<JobRunnerProgress> progress, ILogger logger)
         {
@@ -93,7 +99,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             this.operations = operations;
             this.progress = progress;
             this.logger = logger;
-            State = RunnerState.NotStarted;
+            State = JobRunnerProgress.RunnerState.NotStarted;
 
             totalOperations = operations.Count();
             completedOperations = 0;
@@ -103,7 +109,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
 
         private async System.Threading.Tasks.Task ExecuteAsync()
         {
-            State = RunnerState.Running;
+            State = JobRunnerProgress.RunnerState.Running;
 
             // See https://github.com/microsoft/vs-threading/blob/master/doc/cookbook_vs.md for
             // info on VS threading.
@@ -135,7 +141,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
 
                 if (!cancellationSource.Token.IsCancellationRequested)
                 {
-                    State = RunnerState.Finished;
+                    State = JobRunnerProgress.RunnerState.Finished;
                     var elapsedTime = DateTime.UtcNow - startTime;
                     logger.WriteLine(Strings.JobRunner_FinishedJob,
                         jobDescription, startTime.ToLongTimeString(), (long)elapsedTime.TotalMilliseconds);
@@ -145,7 +151,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             }
             catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
-                State = RunnerState.Faulted;
+                State = JobRunnerProgress.RunnerState.Faulted;
                 progress?.Report(new JobRunnerProgress(State, completedOperations, totalOperations));
                 logger.WriteLine(Strings.JobRunner_ExecutionError, jobDescription, startTime.ToLongTimeString(), ex.Message);
             }
@@ -166,7 +172,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             {
                 if (!cancellationSource?.Token.IsCancellationRequested ?? false)
                 {
-                    State = RunnerState.Cancelled;
+                    State = JobRunnerProgress.RunnerState.Cancelled;
                     logger.WriteLine(Strings.JobRunner_CancellingJob, jobDescription, startTime.ToLongTimeString());
                     cancellationSource?.Cancel();
                     progress?.Report(new JobRunnerProgress(State, completedOperations, totalOperations));

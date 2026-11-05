@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,7 +25,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 {
@@ -87,7 +87,7 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
         [TestMethod]
         public void GetFromFrame_FrameDocDataIsTextBuffer_ReturnsNull()
         {
-            // Arrange            
+            // Arrange
             Configure(activeFrameDocDataObject: ValidVsTextBuffer);
 
             // Act

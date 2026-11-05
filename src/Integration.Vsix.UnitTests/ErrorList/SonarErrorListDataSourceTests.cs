@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,16 +22,19 @@ using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using FluentAssertions;
+using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.Shell.TableManager;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.Integration.Vsix;
 using SonarLint.VisualStudio.Integration.Vsix.ErrorList;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
 using SonarLint.VisualStudio.IssueVisualization.TableControls;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
 {
@@ -84,7 +87,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
                 // Both imports should be satisfied...
                 errorDataSourceImporter.Import.Should().NotBeNull();
                 issueLocationStoreImporter.Import.Should().NotBeNull();
-
                 // ... and the the export should be a singleton, so the both importers should
                 // get the same instance
                 errorDataSourceImporter.Import.Should().BeSameAs(issueLocationStoreImporter.Import);
@@ -100,16 +102,24 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             act = () => new SonarErrorListDataSource(mockTableManagerProvider.Object, null, Mock.Of<IIssueSelectionService>());
             act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("fileRenamesEventSource");
 
-            act = () => new SonarErrorListDataSource(mockTableManagerProvider.Object,  Mock.Of<IFileRenamesEventSource>(), null);
+            act = () => new SonarErrorListDataSource(mockTableManagerProvider.Object, Mock.Of<IFileRenamesEventSource>(), null);
             act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("issueSelectionService");
         }
 
         [TestMethod]
-        public void Ctor_FetchesErrorTableManagerAndRegistersDataSource()
+        public void Ctor_FetchesErrorTableManagerAndRegistersDataSourceAndTableColumnDefinitions()
         {
+            var tableColumnDefinitions = new[] { StandardTableColumnDefinitions.DetailsExpander,
+                                                   StandardTableColumnDefinitions.ErrorSeverity, StandardTableColumnDefinitions.ErrorCode,
+                                                   StandardTableColumnDefinitions.ErrorSource, StandardTableColumnDefinitions.BuildTool,
+                                                   StandardTableColumnDefinitions.ErrorSource, StandardTableColumnDefinitions.ErrorCategory,
+                                                   StandardTableColumnDefinitions.Text, StandardTableColumnDefinitions.DocumentName,
+                                                   StandardTableColumnDefinitions.Line, StandardTableColumnDefinitions.Column,
+                                                   StandardTableColumnDefinitions.ProjectName,
+                                                   StandardTableKeyNames.SuppressionState};
             var testSubject = CreateTestSubject();
 
-            mockTableManager.Verify(x => x.AddSource(testSubject, It.IsAny<string[]>()), Times.Once);
+            mockTableManager.Verify(x => x.AddSource(testSubject, tableColumnDefinitions), Times.Once);
         }
 
         [TestMethod]
@@ -137,7 +147,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
         {
             var testSubject = CreateTestSubject();
 
-            Action act = () => testSubject.RefreshErrorList(null);
+            Action act = () => testSubject.RefreshErrorList(null, Substitute.For<IIssuesSnapshot>());
             act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("factory");
         }
 
@@ -146,7 +156,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
         {
             var testSubject = CreateTestSubjectWithFactory(ValidFactory);
 
-            Action act = () => testSubject.RefreshErrorList(ValidFactory);
+            Action act = () => testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
             act.Should().NotThrow();
         }
 
@@ -159,7 +169,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
 
             var unknownFactory = Mock.Of<IIssuesSnapshotFactory>();
 
-            testSubject.RefreshErrorList(unknownFactory);
+            testSubject.RefreshErrorList(unknownFactory, Substitute.For<IIssuesSnapshot>());
 
             CheckSinkWasNotNotified(mockSink);
         }
@@ -175,7 +185,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             testSubject.Subscribe(mockSink2.Object);
 
             // 1. Refresh -> both sinks notified
-            testSubject.RefreshErrorList(ValidFactory);
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
 
             CheckSinkWasNotified(mockSink1, ValidFactory);
             CheckSinkWasNotified(mockSink2, ValidFactory);
@@ -185,7 +195,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             mockSink2.Reset();
             sink1Token.Dispose();
 
-            testSubject.RefreshErrorList(ValidFactory);
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
 
             CheckSinkWasNotNotified(mockSink1);
             CheckSinkWasNotified(mockSink2, ValidFactory);
@@ -196,8 +206,8 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
         {
             var testSubject = CreateTestSubject();
 
-            var factory1 = Mock.Of<IIssuesSnapshotFactory>();
-            var factory2 = Mock.Of<IIssuesSnapshotFactory>();
+            var factory1 = Substitute.For<IIssuesSnapshotFactory>();
+            var factory2 = Substitute.For<IIssuesSnapshotFactory>();
             testSubject.AddFactory(factory1);
             testSubject.AddFactory(factory2);
 
@@ -219,7 +229,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             testSubject.Subscribe(mockSink1.Object);
             testSubject.Subscribe(mockSink2.Object);
 
-            var factory = Mock.Of<IIssuesSnapshotFactory>();
+            var factory = Substitute.For<IIssuesSnapshotFactory>();
 
             testSubject.AddFactory(factory);
 
@@ -236,15 +246,15 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             var disposeToken = testSubject.Subscribe(mockSink.Object);
 
             // 1. Manager is registered -> should be notified
-            testSubject.RefreshErrorList(ValidFactory);
-            testSubject.RefreshErrorList(ValidFactory);
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
 
             mockSink.Verify(x => x.FactorySnapshotChanged(ValidFactory), Times.Exactly(2));
 
             // 2. Unsubscribe -> no longer notified
             mockSink.Reset();
             disposeToken.Dispose();
-            testSubject.RefreshErrorList(ValidFactory);
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
 
             mockSink.Verify(x => x.FactorySnapshotChanged(It.IsAny<ITableEntriesSnapshotFactory>()), Times.Never);
         }
@@ -318,7 +328,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             testSubject.Subscribe(mockSink.Object);
 
             // Act
-            testSubject.RefreshErrorList(ValidFactory);
+            testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
 
             // Assert
             CheckSinkWasNotified(mockSink, ValidFactory);
@@ -368,7 +378,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.ErrorList
             testSubject.Subscribe(mockSink.Object);
 
             // Act & assert
-            Action act = () => testSubject.RefreshErrorList(ValidFactory);
+            Action act = () => testSubject.RefreshErrorList(ValidFactory, Substitute.For<IIssuesSnapshot>());
             act.Should().ThrowExactly<StackOverflowException>().And.Message.Should().Be("update custom error");
         }
 

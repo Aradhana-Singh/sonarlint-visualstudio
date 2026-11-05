@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,43 +18,45 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
+namespace SonarLint.VisualStudio.Core;
 
-namespace SonarLint.VisualStudio.Core
+public class SonarCompositeRuleId
 {
-    public class SonarCompositeRuleId
+    private const string Separator = ":";
+
+    /// <summary>
+    /// Attempts to parse an error code from the VS Error List as a Sonar rule in the form "[repo key]:[rule key]"
+    /// </summary>
+    public static bool TryParse(string errorListErrorCode, out SonarCompositeRuleId ruleId)
     {
-        private const string Separator = ":";
+        ruleId = null;
 
-        /// <summary>
-        /// Attempts to parse an error code from the VS Error List as a Sonar rule in the form "[repo key]:[rule key]"
-        /// </summary>
-        public static bool TryParse(string errorListErrorCode, out SonarCompositeRuleId ruleInfo)
+        if (!string.IsNullOrEmpty(errorListErrorCode))
         {
-            ruleInfo = null;
-
-            if (!string.IsNullOrEmpty(errorListErrorCode))
+            var keys = errorListErrorCode.Split([Separator], StringSplitOptions.RemoveEmptyEntries);
+            if (keys.Length == 2)
             {
-                var keys = errorListErrorCode.Split(new string[] {Separator}, StringSplitOptions.RemoveEmptyEntries);
-                if (keys.Length == 2)
-                {
-                    ruleInfo = new SonarCompositeRuleId(errorListErrorCode, keys[0], keys[1]);
-                }
+                ruleId = new SonarCompositeRuleId(keys[0], keys[1]);
             }
-
-            return ruleInfo != null;
         }
 
-        private SonarCompositeRuleId(string errorListErrorCode, string repoKey, string ruleKey)
-        {
-            ErrorListErrorCode = errorListErrorCode ?? throw new ArgumentNullException(nameof(errorListErrorCode));
-            RepoKey = repoKey ?? throw new ArgumentNullException(nameof(repoKey));
-            RuleKey = ruleKey ?? throw new ArgumentNullException(nameof(ruleKey));
-        }
-
-        public string ErrorListErrorCode { get; }
-        public string RepoKey { get; }
-        public string RuleKey { get; }
-        public override string ToString() => ErrorListErrorCode;
+        return ruleId != null;
     }
+
+    public SonarCompositeRuleId(string repoKey, string ruleKey)
+    {
+        RepoKey = repoKey ?? throw new ArgumentNullException(nameof(repoKey));
+        RuleKey = ruleKey ?? throw new ArgumentNullException(nameof(ruleKey));
+        Id = GetRuleId(repoKey, ruleKey);
+        Language = LanguageProvider.Instance.AllKnownLanguages.FirstOrDefault(x => x.HasRepoKey(repoKey))
+                   ?? Language.Unknown;
+    }
+
+    public static string GetRuleId(string repoKey, string ruleKey) => repoKey + Separator + ruleKey;
+
+    public string Id { get; }
+    public string RepoKey { get; }
+    public string RuleKey { get; }
+    public Language Language { get; }
+    public override string ToString() => Id;
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,147 +18,154 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.Core.Binding;
-using SonarLint.VisualStudio.Core.Suppression;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core.Initialization;
+using SonarLint.VisualStudio.Core.UserRuleSettings;
+using SonarLint.VisualStudio.Integration.Vsix.Analysis;
+using SonarLint.VisualStudio.SLCore.Analysis;
 
-namespace SonarLint.VisualStudio.Integration.Vsix.Analysis.UnitTests
+namespace SonarLint.VisualStudio.Integration.UnitTests.Analysis;
+
+[TestClass]
+public class AnalysisConfigMonitorTests
 {
-    [TestClass]
-    public class AnalysisConfigMonitorTests
+    private TestLogger logger;
+    private ISLCoreRuleSettingsUpdater slCoreRuleSettingsUpdater;
+    private IThreadHandling threadHandling;
+    private IUserSettingsProvider userSettingsProviderMock;
+    private IInitializationProcessorFactory initializationProcessorFactory;
+    private MockableInitializationProcessor createdInitializationProcessor;
+
+    [TestInitialize]
+    public void TestInitialize()
     {
-        [TestMethod]
-        [DataRow(SonarLintMode.Standalone)]
-        [DataRow(SonarLintMode.Connected)]
-        [DataRow(SonarLintMode.LegacyConnected)]
-        public void WhenUserSettingsChange_AnalysisIsRequested(SonarLintMode bindingMode)
+        userSettingsProviderMock = Substitute.For<IUserSettingsProvider>();
+        threadHandling = Substitute.ForPartsOf<NoOpThreadHandler>();
+        slCoreRuleSettingsUpdater = Substitute.For<ISLCoreRuleSettingsUpdater>();
+        logger = new TestLogger();
+    }
+
+    [TestMethod]
+    public void MefCtor_CheckIsExported() =>
+        MefTestHelpers.CheckTypeCanBeImported<AnalysisConfigMonitor, IAnalysisConfigMonitor>(
+            MefTestHelpers.CreateExport<IUserSettingsProvider>(),
+            MefTestHelpers.CreateExport<ILogger>(),
+            MefTestHelpers.CreateExport<IThreadHandling>(),
+            MefTestHelpers.CreateExport<ISLCoreRuleSettingsUpdater>(),
+            MefTestHelpers.CreateExport<IInitializationProcessorFactory>());
+
+    [TestMethod]
+    public void MefCtor_CheckIsSingleton() =>
+        MefTestHelpers.CheckIsSingletonMefComponent<AnalysisConfigMonitor>();
+
+    [TestMethod]
+    public void Ctor_UpdatesRoslynSettings()
+    {
+        var dependencies = new[] { userSettingsProviderMock };
+        var userSettings = new UserSettings(new AnalysisSettings(), "any");
+        userSettingsProviderMock.UserSettings.Returns(userSettings);
+
+        _ = CreateAndInitializeTestSubject();
+
+        Received.InOrder(() =>
         {
-            var builder = new TestEnvironmentBuilder(bindingMode);
+            initializationProcessorFactory.Create<AnalysisConfigMonitor>(
+                Arg.Is<IReadOnlyCollection<IRequireInitialization>>(x => x.SequenceEqual(dependencies)),
+                Arg.Any<Func<IThreadHandling, Task>>());
+            createdInitializationProcessor.InitializeAsync();
+            _ = userSettingsProviderMock.UserSettings;
+            userSettingsProviderMock.SettingsChanged += Arg.Any<EventHandler>();
+            createdInitializationProcessor.InitializeAsync(); // called as part of the CreateAndInitializeTestSubject method
+        });
+    }
 
-            builder.SimulateUserSettingsChanged();
+    [TestMethod]
+    public void WhenUninitialized_DoesNotReactToSettingsChangedEvents()
+    {
+        _ = CreateUninitializedTestSubject(out _);
 
-            // Should always re-analyse
-            builder.AssertAnalysisIsRequested();
-            builder.Logger.AssertOutputStringExists(AnalysisStrings.ConfigMonitor_UserSettingsChanged);
+        SimulateUserSettingsChanged();
 
-            if (bindingMode == SonarLintMode.Standalone)
-            {
-                builder.Logger.AssertOutputStringDoesNotExist(AnalysisStrings.ConfigMonitor_UserSettingsIgnoredForConnectedModeLanguages);
-            }
-            else
-            {
-                builder.Logger.AssertOutputStringExists(AnalysisStrings.ConfigMonitor_UserSettingsIgnoredForConnectedModeLanguages);
-            }
-        }
+        _ = userSettingsProviderMock.DidNotReceiveWithAnyArgs().UserSettings;
+    }
 
-        [TestMethod]
-        [DataRow(SonarLintMode.Standalone)]
-        [DataRow(SonarLintMode.Connected)]
-        [DataRow(SonarLintMode.LegacyConnected)]
-        public void WhenUserSettingsChange_HasSubscribersToConfigChangedEvent_SubscribersNotified(SonarLintMode bindingMode)
+    [TestMethod]
+    public void WhenUserSettingsChange_UpdatesRoslynAndSlCoreSettings()
+    {
+        _ = CreateAndInitializeTestSubject();
+        threadHandling.ClearReceivedCalls();
+
+        var userSettings = SimulateUserSettingsChanged();
+
+        Received.InOrder(() =>
         {
-            var builder = new TestEnvironmentBuilder(bindingMode);
-            var eventHandler = new Mock<EventHandler>();
-            builder.TestSubject.ConfigChanged += eventHandler.Object;
+            threadHandling.RunOnBackgroundThread(Arg.Any<Func<Task<int>>>());
+            slCoreRuleSettingsUpdater.UpdateStandaloneRulesConfiguration();
+        });
+        logger.AssertOutputStringExists(AnalysisStrings.ConfigMonitor_UserSettingsChanged);
+    }
 
-            builder.SimulateUserSettingsChanged();
+    [TestMethod]
+    public void WhenDisposed_EventsAreIgnored()
+    {
+        var testSubject = CreateAndInitializeTestSubject();
 
-            eventHandler.Verify(x=> x(builder.TestSubject, EventArgs.Empty), Times.Once);
-        }
+        // Act
+        testSubject.Dispose();
 
-        [TestMethod]
-        public void WhenSuppressionsUpdated_AnalysisIsRequested()
+        // Raise events and check they are ignored
+        SimulateUserSettingsChanged();
+        slCoreRuleSettingsUpdater.DidNotReceiveWithAnyArgs().UpdateStandaloneRulesConfiguration();
+    }
+
+    [TestMethod]
+    public void WhenDisposed_InitializationDoesNothing()
+    {
+        var testSubject = CreateUninitializedTestSubject(out var barrier);
+        testSubject.Dispose();
+
+        barrier.SetResult(1);
+
+        userSettingsProviderMock.DidNotReceiveWithAnyArgs().SettingsChanged += Arg.Any<EventHandler>();
+    }
+
+    private UserSettings SimulateUserSettingsChanged()
+    {
+        var userSettings = new UserSettings(new AnalysisSettings(), "any");
+        userSettingsProviderMock.UserSettings.Returns(userSettings);
+        userSettingsProviderMock.SettingsChanged += Raise.EventWith(null, EventArgs.Empty);
+        return userSettings;
+    }
+
+    private void AssertSwitchedToBackgroundThread() => threadHandling.Received(1).RunOnBackgroundThread(Arg.Any<Func<Task<int>>>());
+
+    private AnalysisConfigMonitor CreateUninitializedTestSubject(out TaskCompletionSource<byte> barrier)
+    {
+        var tcs = barrier = new TaskCompletionSource<byte>();
+        initializationProcessorFactory = MockableInitializationProcessor.CreateFactory<AnalysisConfigMonitor>(threadHandling, logger, processor =>
         {
-            var builder = new TestEnvironmentBuilder(SonarLintMode.Connected);
+            MockableInitializationProcessor.ConfigureWithWait(processor, tcs);
+            createdInitializationProcessor = processor;
+        });
+        return new AnalysisConfigMonitor(
+            userSettingsProviderMock,
+            slCoreRuleSettingsUpdater,
+            logger,
+            threadHandling,
+            initializationProcessorFactory);
+    }
 
-            builder.SimulateSuppressionsUpdated();
-
-            builder.AssertAnalysisIsRequested();
-            builder.Logger.AssertOutputStringExists(AnalysisStrings.ConfigMonitor_SuppressionsUpdated);
-        }
-
-        [TestMethod]
-        public void WhenSuppressionsUpdated_HasSubscribersToConfigChangedEvent_SubscribersNotified()
-        {
-            var builder = new TestEnvironmentBuilder(SonarLintMode.Connected);
-            var eventHandler = new Mock<EventHandler>();
-            builder.TestSubject.ConfigChanged += eventHandler.Object;
-
-            builder.SimulateSuppressionsUpdated();
-
-            eventHandler.Verify(x => x(builder.TestSubject, EventArgs.Empty), Times.Once);
-        }
-
-        [TestMethod]
-        [DataRow(SonarLintMode.Standalone)]
-        [DataRow(SonarLintMode.Connected)]
-        [DataRow(SonarLintMode.LegacyConnected)]
-        public void WhenDisposed_EventsAreIgnored(SonarLintMode bindingMode)
-        {
-            var builder = new TestEnvironmentBuilder(bindingMode);
-
-            // Act
-            builder.TestSubject.Dispose();
-
-            // Raise events and check they are ignored
-            builder.SimulateSuppressionsUpdated();
-            builder.SimulateUserSettingsChanged();
-
-            builder.AssertAnalysisIsNotRequested();
-        }
-
-        private class TestEnvironmentBuilder
-        {
-            private readonly Mock<IAnalysisRequester> analysisRequesterMock;
-            private readonly Mock<IUserSettingsProvider> userSettingsProviderMock;
-            private readonly Mock<ISuppressedIssuesMonitor> suppressedIssuesMonitorMock;
-
-            public TestEnvironmentBuilder(SonarLintMode bindingMode)
-            {
-                analysisRequesterMock = new Mock<IAnalysisRequester>();
-                userSettingsProviderMock = new Mock<IUserSettingsProvider>();
-                suppressedIssuesMonitorMock = new Mock<ISuppressedIssuesMonitor>();
-
-                var solutionBoundTracker = new ConfigurableActiveSolutionBoundTracker
-                {
-                    CurrentConfiguration = new BindingConfiguration(new BoundSonarQubeProject(), bindingMode, null)
-                };
-
-                Logger = new TestLogger();
-
-                TestSubject = new AnalysisConfigMonitor(analysisRequesterMock.Object,
-                    userSettingsProviderMock.Object, solutionBoundTracker, suppressedIssuesMonitorMock.Object, Logger);
-            }
-
-            public TestLogger Logger { get; }
-
-            public AnalysisConfigMonitor TestSubject { get; }
-
-            public void SimulateUserSettingsChanged()
-            {
-                userSettingsProviderMock.Raise(x => x.SettingsChanged += null, EventArgs.Empty);
-            }
-
-            public void SimulateSuppressionsUpdated()
-            {
-                suppressedIssuesMonitorMock.Raise(x=> x.SuppressionsUpdateRequested += null, EventArgs.Empty);
-            }
-
-            public void AssertAnalysisIsRequested()
-            {
-                analysisRequesterMock.Verify(x => x.RequestAnalysis((IAnalyzerOptions)null, Array.Empty<string>()), Times.Once);
-            }
-
-            public void AssertAnalysisIsNotRequested()
-            {
-                analysisRequesterMock.Invocations.Count.Should().Be(0);
-            }
-        }
+    private AnalysisConfigMonitor CreateAndInitializeTestSubject()
+    {
+        initializationProcessorFactory = MockableInitializationProcessor.CreateFactory<AnalysisConfigMonitor>(threadHandling, logger, processor => createdInitializationProcessor = processor);
+        var testSubject = new AnalysisConfigMonitor(
+            userSettingsProviderMock,
+            slCoreRuleSettingsUpdater,
+            logger,
+            threadHandling,
+            initializationProcessorFactory);
+        testSubject.InitializationProcessor.InitializeAsync().GetAwaiter().GetResult();
+        return testSubject;
     }
 }

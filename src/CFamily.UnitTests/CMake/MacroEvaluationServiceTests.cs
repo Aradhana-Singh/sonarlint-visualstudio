@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,8 +24,8 @@ using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.CFamily.CMake;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.CFamily.UnitTests.CMake
 {
@@ -68,7 +68,7 @@ namespace SonarLint.VisualStudio.CFamily.UnitTests.CMake
         }
 
         [TestMethod]
-        [DataRow("${name1}", "[XXX]")] // simple single param only 
+        [DataRow("${name1}", "[XXX]")] // simple single param only
         [DataRow("AAA_${name1}_BBB", "AAA_[XXX]_BBB")] // text and param
         [DataRow("${name1}${name1}", "[XXX][XXX]")] // duplicate param
         [DataRow("__${name1}__${a.x}__${AA.BB}__", "__[XXX]__[YYY]__[ZZZ]__")] // text and multiple params
@@ -126,7 +126,7 @@ namespace SonarLint.VisualStudio.CFamily.UnitTests.CMake
         {
             Func<string, string, IEvaluationContext, string> finder = (prefix, name, context) =>
                 macroData.FirstOrDefault(x => x.macroPrefix == prefix && x.macroName == name).valueToReturn;
-           
+
             var evaluator = new Mock<IMacroEvaluator>();
             evaluator.Setup(x => x.TryEvaluate(It.IsAny<string>(), It.IsAny<string>(), EvaluationContext))
                 .Returns(finder);

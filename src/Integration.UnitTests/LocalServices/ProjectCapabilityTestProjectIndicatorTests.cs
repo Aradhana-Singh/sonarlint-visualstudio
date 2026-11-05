@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,12 +22,13 @@ using System;
 using System.Runtime.InteropServices;
 using FluentAssertions;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-
-using VsServiceProvider = Microsoft.VisualStudio.Shell.ServiceProvider;
+using SonarLint.VisualStudio.TestInfrastructure;
 using IOLEServiceProvider = Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
+using VsServiceProvider = Microsoft.VisualStudio.Shell.ServiceProvider;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
 {
@@ -42,12 +43,15 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
         {
             var serviceProvider = new ConfigurableServiceProvider(assertOnUnexpectedServiceRequest: true);
             var configurableVsProjectSystemHelper = new ConfigurableVsProjectSystemHelper(serviceProvider);
-            serviceProvider.RegisterService(typeof(IProjectSystemHelper), configurableVsProjectSystemHelper, true);
+
+            var mefHost = ConfigurableComponentModel.CreateWithExports(
+                MefTestHelpers.CreateExport<IProjectSystemHelper>(configurableVsProjectSystemHelper));
+            serviceProvider.RegisterService(typeof(SComponentModel), mefHost);
 
             SetupCapabilityEvaluator(serviceProvider);
 
             SetupVSGlobalServiceProvider(serviceProvider);
-            
+
             testSubject = new ProjectCapabilityTestProjectIndicator(serviceProvider);
         }
 

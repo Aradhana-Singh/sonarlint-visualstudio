@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging.Buffer;
@@ -36,14 +36,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.SelectedIss
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            var aggregatorFactoryExport = MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(Mock.Of<IBufferTagAggregatorFactoryService>());
-            var locationServiceExport = MefTestHelpers.CreateExport<IAnalysisIssueSelectionService>(Mock.Of<IAnalysisIssueSelectionService>());
-            var taggableBufferIndicatorExport = MefTestHelpers.CreateExport<ITaggableBufferIndicator>(Mock.Of<ITaggableBufferIndicator>());
-
-            MefTestHelpers.CheckTypeCanBeImported<SelectedIssueLocationTaggerProvider, ITaggerProvider>(null, new[]
-            {
-                aggregatorFactoryExport, locationServiceExport, taggableBufferIndicatorExport
-            });
+            MefTestHelpers.CheckTypeCanBeImported<SelectedIssueLocationTaggerProvider, ITaggerProvider>(
+                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(),
+                MefTestHelpers.CreateExport<IAnalysisIssueSelectionService>(),
+                MefTestHelpers.CreateExport<ITaggableBufferIndicator>());
         }
 
         internal override ITaggerProvider CreateTestSubject(ITaggableBufferIndicator taggableBufferIndicator)

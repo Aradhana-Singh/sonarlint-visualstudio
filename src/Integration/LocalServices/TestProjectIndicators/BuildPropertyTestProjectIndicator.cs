@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -37,9 +37,7 @@ namespace SonarLint.VisualStudio.Integration
                 throw new ArgumentNullException(nameof(serviceProvider));
             }
 
-            projectSystem = serviceProvider.GetService<IProjectSystemHelper>();
-            projectSystem.AssertLocalServiceIsNotNull();
-
+            projectSystem = serviceProvider.GetMefService<IProjectSystemHelper>();
             propertyManager = serviceProvider.GetMefService<IProjectPropertyManager>();
             Debug.Assert(propertyManager != null, $"Failed to get {nameof(IProjectPropertyManager)}");
         }

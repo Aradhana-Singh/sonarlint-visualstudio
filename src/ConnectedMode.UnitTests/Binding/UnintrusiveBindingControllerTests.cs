@@ -1,0 +1,116 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.Security;
+using SonarLint.VisualStudio.ConnectedMode.Binding;
+using SonarLint.VisualStudio.ConnectedMode.Persistence;
+using SonarLint.VisualStudio.Core.Binding;
+using SonarLint.VisualStudio.TestInfrastructure;
+
+namespace SonarLint.VisualStudio.ConnectedMode.UnitTests.Binding;
+
+[TestClass]
+public class UnintrusiveBindingControllerTests
+{
+    private static readonly CancellationToken ACancellationToken = CancellationToken.None;
+    private static readonly UsernameAndPasswordCredentials ValidToken = new("TOKEN", new SecureString());
+    private static readonly BoundServerProject AnyBoundProject = new("any", "any", new ServerConnection.SonarCloud("any", credentials: ValidToken));
+    private IActiveSolutionChangedHandler activeSolutionChangedHandler;
+    private UnintrusiveBindingController testSubject;
+    private ISolutionBindingRepository solutionBindingRepository;
+    private IConfigurationPersister configurationPersister;
+
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        activeSolutionChangedHandler = Substitute.For<IActiveSolutionChangedHandler>();
+        solutionBindingRepository = Substitute.For<ISolutionBindingRepository>();
+        configurationPersister = Substitute.For<IConfigurationPersister>();
+        testSubject = new UnintrusiveBindingController(activeSolutionChangedHandler, solutionBindingRepository, configurationPersister);
+    }
+
+    [TestMethod]
+    public void MefCtor_CheckTypeIsNonShared() => MefTestHelpers.CheckIsNonSharedMefComponent<UnintrusiveBindingController>();
+
+    [TestMethod]
+    public void MefCtor_IBindingController_CheckIsExported() =>
+        MefTestHelpers.CheckTypeCanBeImported<UnintrusiveBindingController, IBindingController>(
+            MefTestHelpers.CreateExport<IActiveSolutionChangedHandler>(),
+            MefTestHelpers.CreateExport<ISolutionBindingRepository>(),
+            MefTestHelpers.CreateExport<IConfigurationPersister>()
+        );
+
+    [TestMethod]
+    public void Bind_NotifiesBindingChanged()
+    {
+        testSubject.Bind(AnyBoundProject);
+
+        activeSolutionChangedHandler
+            .Received(1)
+            .HandleBindingChange();
+    }
+
+    [TestMethod]
+    public void Bind_PersistsBindingInformation()
+    {
+        var cancellationToken = CancellationToken.None;
+
+        testSubject.Bind(AnyBoundProject);
+
+        configurationPersister.Received(1).Persist(AnyBoundProject);
+    }
+
+    [TestMethod]
+    public void Unbind_BindingDeletionSucceeded_HandlesBindingChangesAndDisconnects()
+    {
+        solutionBindingRepository.DeleteBinding(AnyBoundProject.LocalBindingKey).Returns(true);
+
+        testSubject.Unbind(AnyBoundProject.LocalBindingKey);
+
+        Received.InOrder(() =>
+        {
+            solutionBindingRepository.DeleteBinding(AnyBoundProject.LocalBindingKey);
+            activeSolutionChangedHandler.HandleBindingChange();
+        });
+    }
+
+    [TestMethod]
+    public void Unbind_BindingDeletionFailed_DoesNotCallHandleBindingChange()
+    {
+        solutionBindingRepository.DeleteBinding(AnyBoundProject.LocalBindingKey).Returns(false);
+
+        testSubject.Unbind(AnyBoundProject.LocalBindingKey);
+
+        solutionBindingRepository.Received(1).DeleteBinding(AnyBoundProject.LocalBindingKey);
+        activeSolutionChangedHandler.DidNotReceive().HandleBindingChange();
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void Unbind_ReturnsResultOfDeletedBinding(bool expectedResult)
+    {
+        solutionBindingRepository.DeleteBinding(AnyBoundProject.LocalBindingKey).Returns(expectedResult);
+
+        var result = testSubject.Unbind(AnyBoundProject.LocalBindingKey);
+
+        result.Should().Be(expectedResult);
+    }
+}

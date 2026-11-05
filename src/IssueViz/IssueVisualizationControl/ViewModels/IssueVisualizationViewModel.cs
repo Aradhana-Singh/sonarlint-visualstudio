@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.ViewModels.Commands;
 using SonarLint.VisualStudio.IssueVisualization.Models;
@@ -39,7 +38,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
         string FileName { get; }
         string Description { get; }
         string RuleKey { get; }
-        AnalysisIssueSeverity Severity { get; }
         IAnalysisIssueVisualization CurrentIssue { get; }
         IAnalysisIssueFlowVisualization CurrentFlow { get; set; }
         IReadOnlyList<ILocationListItem> LocationListItems { get; }
@@ -67,7 +65,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
 
         private bool pausePropertyChangeNotifications;
 
-        public IssueVisualizationViewModel(IAnalysisIssueSelectionService selectionService, 
+        public IssueVisualizationViewModel(IAnalysisIssueSelectionService selectionService,
             ILocationNavigator locationNavigator,
             IFileNameLocationListItemCreator fileNameLocationListItemCreator,
             INavigateToCodeLocationCommand navigateToCodeLocationCommand,
@@ -84,8 +82,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
 
             selectionService.SelectionChanged += SelectionEvents_OnSelectionChanged;
 
-            UpdateState(SelectionChangeLevel.Issue, 
-                selectionService.SelectedIssue, 
+            UpdateState(SelectionChangeLevel.Issue,
+                selectionService.SelectedIssue,
                 selectionService.SelectedFlow,
                 selectionService.SelectedLocation);
         }
@@ -121,12 +119,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
         public string Description => CurrentIssue?.Issue?.PrimaryLocation.Message;
 
         public string RuleKey => CurrentIssue?.Issue?.RuleKey;
-
-
-        public AnalysisIssueSeverity Severity =>
-            CurrentIssue?.Issue is IAnalysisIssue analysisIssue
-                ? analysisIssue.Severity
-                : AnalysisIssueSeverity.Info;
 
         public IAnalysisIssueVisualization CurrentIssue
         {
@@ -182,6 +174,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
                     NotifyPropertyChanged(nameof(LineNumber));
                     CalculateNonNavigableLocations();
                     break;
+
                 case nameof(IAnalysisIssueVisualization.CurrentFilePath):
                     NotifyPropertyChanged(nameof(FileName));
                     break;
@@ -249,8 +242,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
             UpdateState(e.SelectionChangeLevel, e.SelectedIssue, e.SelectedFlow, e.SelectedLocation);
         }
 
-        private void UpdateState(SelectionChangeLevel selectionChangeLevel, 
-            IAnalysisIssueVisualization selectedIssue, 
+        private void UpdateState(SelectionChangeLevel selectionChangeLevel,
+            IAnalysisIssueVisualization selectedIssue,
             IAnalysisIssueFlowVisualization selectedFlow,
             IAnalysisIssueLocationVisualization selectedLocation)
         {
@@ -322,7 +315,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
                         .TakeWhile(x => x.CurrentFilePath == location.CurrentFilePath)
                         .ToList();
 
-                    listItems.AddRange(sequentialLocations.Select(x => (ILocationListItem) new LocationListItem(x)));
+                    listItems.AddRange(sequentialLocations.Select(x => (ILocationListItem)new LocationListItem(x)));
 
                     i += sequentialLocations.Count - 1;
                 }

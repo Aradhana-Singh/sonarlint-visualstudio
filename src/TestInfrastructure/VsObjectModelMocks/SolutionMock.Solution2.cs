@@ -1,6 +1,6 @@
-/*
+﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,8 +24,9 @@ using System.Linq;
 using EnvDTE;
 using EnvDTE80;
 using FluentAssertions;
+using SonarLint.VisualStudio.Integration;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     /// <summary>
     /// EnvDTE implementation of <see cref="Solution"/> and <see cref="Solution2"/>

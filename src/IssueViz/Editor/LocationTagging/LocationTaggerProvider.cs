@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,7 +23,7 @@ using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using SonarLint.VisualStudio.Integration;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
 {
@@ -38,9 +38,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging
         private readonly ILogger logger;
 
         [ImportingConstructor]
-        public LocationTaggerProvider(IIssueLocationStoreAggregator locationStore, 
-            IIssueSpanCalculator spanCalculator, 
-            ITaggableBufferIndicator taggableBufferIndicator, 
+        public LocationTaggerProvider(IIssueLocationStoreAggregator locationStore,
+            IIssueSpanCalculator spanCalculator,
+            ITaggableBufferIndicator taggableBufferIndicator,
             ILogger logger)
         {
             this.locationStore = locationStore;

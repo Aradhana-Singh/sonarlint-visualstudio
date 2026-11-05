@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
 {
@@ -41,12 +42,11 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.LocalServices
             projectSystemHelper = new Mock<IProjectSystemHelper>();
             projectPropertyManager = new Mock<IProjectPropertyManager>();
 
-            var mefExports = MefTestHelpers.CreateExport<IProjectPropertyManager>(projectPropertyManager.Object);
-            var mefModel = ConfigurableComponentModel.CreateWithExports(mefExports);
+            var mefModel = ConfigurableComponentModel.CreateWithExports(
+                MefTestHelpers.CreateExport<IProjectPropertyManager>(projectPropertyManager.Object),
+                MefTestHelpers.CreateExport<IProjectSystemHelper>(projectSystemHelper.Object));
 
             var serviceProvider = new Mock<IServiceProvider>();
-
-            serviceProvider.Setup(x => x.GetService(typeof(IProjectSystemHelper))).Returns(projectSystemHelper.Object);
             serviceProvider.Setup(x => x.GetService(typeof(SComponentModel))).Returns(mefModel);
 
             projectSystemHelper

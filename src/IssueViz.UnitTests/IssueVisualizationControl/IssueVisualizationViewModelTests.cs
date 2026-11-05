@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -40,8 +40,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
     [TestClass]
     public class IssueVisualizationViewModelTests
     {
-        private const AnalysisIssueSeverity DefaultNullIssueSeverity = AnalysisIssueSeverity.Info;
-
         private Mock<IAnalysisIssueSelectionService> selectionServiceMock;
         private Mock<ILocationNavigator> locationNavigatorMock;
         private Mock<IFileNameLocationListItemCreator> fileNameLocationListItemCreatorMock;
@@ -84,7 +82,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var newLocation = CreateLocation();
             var newFlow = CreateFlow(newLocation);
-            var newIssue = CreateIssue(flows: new[] {newFlow});
+            var newIssue = CreateIssue(flows: new[] { newFlow });
 
             selectionServiceMock.Setup(x => x.SelectedIssue).Returns(newIssue);
             selectionServiceMock.Setup(x => x.SelectedFlow).Returns(newFlow);
@@ -150,7 +148,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var location = CreateLocation();
             var flow = CreateFlow(location);
-            var issue = CreateIssue(flows: new[] {flow});
+            var issue = CreateIssue(flows: new[] { flow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issue, flow, location);
 
@@ -166,7 +164,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var location = CreateLocation();
             var flow = CreateFlow(location);
-            var issue = CreateIssue(flows: new[] {flow});
+            var issue = CreateIssue(flows: new[] { flow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issue, flow, location);
             propertyChangedEventHandler.Reset();
@@ -194,14 +192,14 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         public void HasNonNavigableLocations_ReturnsTrueIfPrimaryOrSecondaryHaveNonNavigableSpans(bool issueIsNavigable, bool locationIsNavigable, bool expectedNonNavigableLocations)
         {
             var navigableSpan = (SnapshotSpan?)null;
-            var locationSpan = locationIsNavigable ? new SnapshotSpan() : navigableSpan; 
+            var locationSpan = locationIsNavigable ? new SnapshotSpan() : navigableSpan;
             var issueSpan = issueIsNavigable ? new SnapshotSpan() : navigableSpan;
 
             var testedLocation = CreateLocation("test.cpp", locationSpan);
             var navigableLocation = CreateLocation("test.cpp", navigableSpan);
 
-            var flow =  CreateFlow(testedLocation, navigableLocation);
-            var issue = CreateIssue(span: issueSpan, flows: new[] {flow});
+            var flow = CreateFlow(testedLocation, navigableLocation);
+            var issue = CreateIssue(span: issueSpan, flows: new[] { flow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issue);
 
@@ -347,39 +345,6 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
 
         #endregion
 
-        #region Severity
-
-        [TestMethod]
-        public void Severity_CurrentIssueIsNull_DefaultSeverity()
-        {
-            testSubject.Severity.Should().Be(DefaultNullIssueSeverity);
-        }
-
-        [TestMethod]
-        public void Severity_CurrentIssueHasNoAnalysisIssue_DefaultSeverity()
-        {
-            var issueViz = CreateIssue();
-
-            RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issueViz);
-
-            testSubject.Severity.Should().Be(DefaultNullIssueSeverity);
-        }
-
-        [TestMethod]
-        public void Severity_CurrentIssueHasAnalysisIssue_IssueSeverity()
-        {
-            var issue = new Mock<IAnalysisIssue>();
-            issue.SetupGet(x => x.Severity).Returns(AnalysisIssueSeverity.Blocker);
-
-            var issueViz = CreateIssue(issue: issue.Object);
-
-            RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issueViz);
-
-            testSubject.Severity.Should().Be(AnalysisIssueSeverity.Blocker);
-        }
-
-        #endregion
-
         #region Issue changed
 
         [TestMethod]
@@ -397,7 +362,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var newLocation = CreateLocation();
             var newFlow = CreateFlow(newLocation);
-            var newIssue = CreateIssue(flows: new[] {newFlow});
+            var newIssue = CreateIssue(flows: new[] { newFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, newIssue, newFlow, newLocation);
 
@@ -411,7 +376,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var previousLocation = CreateLocation();
             var previousFlow = CreateFlow(previousLocation);
-            var previousIssue = CreateIssue(flows: new[] {previousFlow});
+            var previousIssue = CreateIssue(flows: new[] { previousFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, previousIssue, previousFlow, previousLocation);
             propertyChangedEventHandler.Reset();
@@ -428,14 +393,14 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var previousLocation = CreateLocation();
             var previousFlow = CreateFlow(previousLocation);
-            var previousIssue = CreateIssue(flows: new[] {previousFlow});
+            var previousIssue = CreateIssue(flows: new[] { previousFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, previousIssue, previousFlow, previousLocation);
             propertyChangedEventHandler.Reset();
 
             var newLocation = CreateLocation();
             var newFlow = CreateFlow(newLocation);
-            var newIssue = CreateIssue(flows: new[] {newFlow});
+            var newIssue = CreateIssue(flows: new[] { newFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, newIssue, newFlow, newLocation);
 
@@ -460,17 +425,17 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         {
             var previousLocation = CreateLocation();
             var previousFlow = CreateFlow(previousLocation);
-            var previousIssue = CreateIssue(flows: new[] {previousFlow});
+            var previousIssue = CreateIssue(flows: new[] { previousFlow });
 
             Mock.Get(previousIssue).SetupAdd(x => x.PropertyChanged += null);
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, previousIssue, previousFlow, previousLocation);
 
-            Mock.Get(previousIssue).VerifyAdd(x=> x.PropertyChanged += It.IsAny<PropertyChangedEventHandler>(), Times.Once);
+            Mock.Get(previousIssue).VerifyAdd(x => x.PropertyChanged += It.IsAny<PropertyChangedEventHandler>(), Times.Once);
 
             var newLocation = CreateLocation();
             var newFlow = CreateFlow(newLocation);
-            var newIssue = CreateIssue(flows: new[] {newFlow});
+            var newIssue = CreateIssue(flows: new[] { newFlow });
 
             Mock.Get(newIssue).SetupAdd(x => x.PropertyChanged += null);
 
@@ -483,9 +448,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         [TestMethod]
         public void SelectionService_OnIssueChanged_UnregisterFromPreviousLocationsAndRegisterToNewLocations()
         {
-            var previousLocations = new[] {CreateLocation(), CreateLocation()};
+            var previousLocations = new[] { CreateLocation(), CreateLocation() };
             var previousFlow = CreateFlow(previousLocations);
-            var previousIssue = CreateIssue(flows: new[] {previousFlow});
+            var previousIssue = CreateIssue(flows: new[] { previousFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, previousIssue, previousFlow, previousLocations.First());
 
@@ -494,9 +459,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
                 Mock.Get(previousLocation).VerifyAdd(x => x.PropertyChanged += It.IsAny<PropertyChangedEventHandler>(), Times.Once);
             }
 
-            var newLocations = new[] {CreateLocation(), CreateLocation()};
+            var newLocations = new[] { CreateLocation(), CreateLocation() };
             var newFlow = CreateFlow(newLocations);
-            var newIssue = CreateIssue(flows: new[] {newFlow});
+            var newIssue = CreateIssue(flows: new[] { newFlow });
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, newIssue, newFlow, newLocations.First());
 
@@ -622,7 +587,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Flow, null, previousFlow);
 
-            Mock.Get(previousListItem).Verify(x=> x.Dispose(), Times.Never);
+            Mock.Get(previousListItem).Verify(x => x.Dispose(), Times.Never);
 
             var newLocation = CreateLocation();
             var newFlow = CreateFlow(newLocation);
@@ -807,7 +772,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
 
             testSubject.CurrentLocationListItem = new LocationListItem(locationViz);
 
-            locationNavigatorMock.Verify(x => x.TryNavigate(locationViz), Times.Once);
+            locationNavigatorMock.Verify(x => x.TryNavigatePartial(locationViz), Times.Once);
         }
 
         [TestMethod]
@@ -820,7 +785,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
 
             RaiseSelectionChangedEvent(SelectionChangeLevel.Flow, null, selectedFlow.Object, locationViz);
 
-            locationNavigatorMock.Verify(x => x.TryNavigate(It.IsAny<IAnalysisIssueLocationVisualization>()), Times.Never);
+            locationNavigatorMock.Verify(x => x.TryNavigatePartial(It.IsAny<IAnalysisIssueLocationVisualization>()), Times.Never);
         }
 
         #endregion
@@ -860,7 +825,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
             location.SetupRemove(m => m.PropertyChanged -= (sender, args) => { });
 
             var flow = CreateFlow(location.Object);
-            var issue = CreateIssue(flows: new[] {flow});
+            var issue = CreateIssue(flows: new[] { flow });
             RaiseSelectionChangedEvent(SelectionChangeLevel.Issue, issue);
 
             location.VerifyRemove(x => x.PropertyChanged -= It.IsAny<PropertyChangedEventHandler>(), Times.Never);
@@ -920,7 +885,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         }
 
         private IAnalysisIssueVisualization CreateIssue(
-            SnapshotSpan? span = null, 
+            SnapshotSpan? span = null,
             string filePath = null,
             IAnalysisIssueBase issue = null,
             params IAnalysisIssueFlowVisualization[] flows)

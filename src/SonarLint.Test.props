@@ -4,11 +4,36 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <LangVersion>latest</LangVersion>
 
     <IsTestProject>true</IsTestProject>
     <RequiresSigning>false</RequiresSigning>
     <SonarQubeTestProject>true</SonarQubeTestProject>
+
+    <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)TestProjects.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+
+  <ItemGroup Label="Test framework">
+    <PackageReference Include="MSTest" Version="4.4.1" />
+
+    <PackageReference Include="Moq" Version="4.21.0" />
+
+    <PackageReference Include="NSubstitute" Version="6.2.0"/>
+    <PackageReference Include="NSubstitute.Analyzers.CSharp" Version="1.0.17"/>
+
+    <PackageReference Include="FluentAssertions" Version="5.9.0" />
+    <PackageReference Include="FluentAssertions.Analyzers" Version="0.34.1" />
+  </ItemGroup>
   
+  <ItemGroup>
+    <Using Include="FluentAssertions" />
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <Using Include="NSubstitute" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\TestInfrastructure\TestParallelization.cs">
+      <Link>TestParallelization.cs</Link>
+    </Compile>
+  </ItemGroup>
+
 </Project>

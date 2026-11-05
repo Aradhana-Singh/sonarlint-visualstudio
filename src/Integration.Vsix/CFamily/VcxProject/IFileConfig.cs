@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
         string CDCommand { get; }
         string CDFile { get; }
         string EnvInclude { get; }
-        string HeaderFileLanguage { get; }
+        bool IsHeaderFile { get;  }
     }
 }

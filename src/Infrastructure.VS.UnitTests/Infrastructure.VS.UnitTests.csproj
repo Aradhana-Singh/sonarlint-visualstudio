@@ -8,12 +8,8 @@
     <AssemblyName>SonarLint.VisualStudio.Infrastructure.VS.UnitTests</AssemblyName>
   </PropertyGroup>
 
-  <ItemGroup Label="Test framework">
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
-    <PackageReference Include="Moq" Version="4.14.5" />
-    <PackageReference Include="FluentAssertions" Version="5.9.0" />
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="3.11.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,13 +17,13 @@
     <ProjectReference Include="..\TestInfrastructure\TestInfrastructure.csproj" />
   </ItemGroup>
 
+  <PropertyGroup Label="Specify which external/VS-specific refs are required">
+    <RequiresLanguageServices>true</RequiresLanguageServices>
+  </PropertyGroup>
+  <Import Project="..\SonarLint.VSSpecificAssemblies.props" />
+
   <ItemGroup>
-    <Reference Include="System.ComponentModel.Composition"/>
+    <Reference Include="System.ComponentModel.Composition" />
+    <Compile Remove="..\TestInfrastructure\TestParallelization.cs"/>
   </ItemGroup>
-
-  <ItemGroup Label="Package references">
-    <!-- The VS.Setup.Config.Interop package is not in the v17 SDK meta-package, but it is in the v15.0.1 meta-package -->
-    <PackageReference Include="Microsoft.VisualStudio.Setup.Configuration.Interop" Version="1.16.30" PrivateAssets="all" />
-  </ItemGroup>
-
 </Project>

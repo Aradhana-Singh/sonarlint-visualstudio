@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,12 +19,15 @@
  */
 
 using SonarLint.VisualStudio.Core.Analysis;
+using SonarLint.VisualStudio.Integration.Vsix.SonarLintTagger;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
-    internal interface IIssueTracker
+    internal interface IFileState : IDisposable
     {
         string FilePath { get; }
-        void RequestAnalysis(IAnalyzerOptions options);
+        IEnumerable<AnalysisLanguage> DetectedLanguages { get; }
+
+        FileSnapshot UpdateFileState();
     }
 }

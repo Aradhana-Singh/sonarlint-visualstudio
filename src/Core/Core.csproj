@@ -11,15 +11,13 @@
 
     <RequiresNewtonsoft>true</RequiresNewtonsoft>
     <RequiresSystemIOAbstractions>true</RequiresSystemIOAbstractions>
+    <RequiresChannels>true</RequiresChannels>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\sonarqube-webclient\SonarQube.Client\SonarQube.Client.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
 
@@ -29,10 +27,34 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>CoreStrings.resx</DependentUpon>
     </Compile>
+    <Compile Update="Persistence\PersistenceStrings.Designer.cs">
+      <DependentUpon>PersistenceStrings.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+    <Compile Update="Resources\Strings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
     <EmbeddedResource Update="CoreStrings.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>CoreStrings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <EmbeddedResource Update="Persistence\PersistenceStrings.resx">
+      <SubType>Designer</SubType>
+      <LastGenOutput>PersistenceStrings.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
   </ItemGroup>
   
 </Project>

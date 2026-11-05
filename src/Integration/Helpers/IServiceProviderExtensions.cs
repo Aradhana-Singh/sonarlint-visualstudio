@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -72,24 +72,6 @@ namespace SonarLint.VisualStudio.Integration
             return GetMefService<T>(componentModel);
         }
 
-        public static System.Threading.Tasks.Task<T> GetMefServiceAsync<T>(this Microsoft.VisualStudio.Shell.IAsyncServiceProvider serviceProvider)
-            where T : class
-        {
-            if (serviceProvider == null)
-            {
-                throw new ArgumentNullException(nameof(serviceProvider));
-            }
-
-            return GetMefServiceIteratorAsync<T>(serviceProvider);
-        }
-
-        private static async System.Threading.Tasks.Task<T> GetMefServiceIteratorAsync<T>(this Microsoft.VisualStudio.Shell.IAsyncServiceProvider serviceProvider)
-            where T : class
-        {
-            IComponentModel componentModel = await serviceProvider.GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
-            return GetMefService<T>(componentModel);
-        }
-
         public static T GetMefService<T>(this IComponentModel componentModel)
             where T : class
         {
@@ -116,14 +98,22 @@ namespace SonarLint.VisualStudio.Integration
             }
         }
 
-        [Conditional("DEBUG")]
-        // Note: Conditional DEBUG methods are still compiled in release mode but won't be called.
-        // However, they do contribute to the lines of code for code coverage purposes, so if
-        // possible use #if DEBUG instead.
-        internal static void AssertLocalServiceIsNotNull<T>(this T service)
-            where T : class, ILocalService
+        public static System.Threading.Tasks.Task<T> GetMefServiceAsync<T>(this Microsoft.VisualStudio.Shell.IAsyncServiceProvider serviceProvider)
+            where T : class
         {
-            Debug.Assert(service != null, $"Local service {typeof(T).FullName} is not registered");
+            if (serviceProvider == null)
+            {
+                throw new ArgumentNullException(nameof(serviceProvider));
+            }
+
+            return GetMefServiceIteratorAsync<T>(serviceProvider);
+        }
+
+        private static async System.Threading.Tasks.Task<T> GetMefServiceIteratorAsync<T>(this Microsoft.VisualStudio.Shell.IAsyncServiceProvider serviceProvider)
+            where T : class
+        {
+            IComponentModel componentModel = await serviceProvider.GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
+            return GetMefService<T>(componentModel);
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,38 +18,32 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using SonarLint.VisualStudio.Core.Analysis;
+using SonarLint.VisualStudio.Core.CSharpVB;
 using SonarLint.VisualStudio.Core.Helpers;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
+using SonarLint.VisualStudio.IssueVisualization.Helpers;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Models
 {
     public interface IAnalysisIssueVisualizationConverter
     {
-        IAnalysisIssueVisualization Convert(IAnalysisIssueBase issue, ITextSnapshot textSnapshot = null);
+        IAnalysisIssueVisualization Convert(IAnalysisIssueBase issue, ITextSnapshot textSnapshot = null, string projectName = null);
     }
 
     [Export(typeof(IAnalysisIssueVisualizationConverter))]
     [PartCreationPolicy(CreationPolicy.Shared)]
-    internal class AnalysisIssueVisualizationConverter : IAnalysisIssueVisualizationConverter
+    [method: ImportingConstructor]
+    internal class AnalysisIssueVisualizationConverter(IIssueSpanCalculator issueSpanCalculator, ISpanTranslator spanTranslator, IRoslynQuickFixProvider roslynQuickFixProvider, IAnalysisSeverityToVsSeverityConverter severityConverter) : IAnalysisIssueVisualizationConverter
     {
-        private static readonly IReadOnlyList<IAnalysisIssueFlowVisualization> EmptyConvertedFlows = Array.Empty<IAnalysisIssueFlowVisualization>();
-        private static readonly IReadOnlyList<IQuickFixVisualization> EmptyConvertedFixes = Array.Empty<IQuickFixVisualization>();
+        private static readonly IReadOnlyList<IAnalysisIssueFlowVisualization> EmptyConvertedFlows = [];
+        private static readonly IReadOnlyList<IQuickFixApplication> EmptyConvertedFixes = [];
 
-        private readonly IIssueSpanCalculator issueSpanCalculator;
-
-        [ImportingConstructor]
-        public AnalysisIssueVisualizationConverter(IIssueSpanCalculator issueSpanCalculator)
-        {
-            this.issueSpanCalculator = issueSpanCalculator;
-        }
-
-        public IAnalysisIssueVisualization Convert(IAnalysisIssueBase issue, ITextSnapshot textSnapshot = null)
+        public IAnalysisIssueVisualization Convert(IAnalysisIssueBase issue, ITextSnapshot textSnapshot = null, string projectName = null)
         {
             var issueSpan = textSnapshot == null
                 ? null
@@ -59,7 +53,11 @@ namespace SonarLint.VisualStudio.IssueVisualization.Models
 
             var quickFixes = GetQuickFixVisualizations(issue, textSnapshot);
 
-            var issueVisualization = new AnalysisIssueVisualization(flows, issue, issueSpan, quickFixes);
+            var vsSeverity = issue is IAnalysisIssue analysisIssue
+                ? severityConverter.GetVsSeverity(analysisIssue, projectName)
+                : __VSERRORCATEGORY.EC_MESSAGE;
+
+            var issueVisualization = new AnalysisIssueVisualization(flows, issue, issueSpan, quickFixes, vsSeverity);
 
             if (textSnapshot != null)
             {
@@ -111,28 +109,48 @@ namespace SonarLint.VisualStudio.IssueVisualization.Models
             return convertedLocations;
         }
 
-        private IReadOnlyList<IQuickFixVisualization> GetQuickFixVisualizations(IAnalysisIssueBase issue, ITextSnapshot textSnapshot)
+        private IReadOnlyList<IQuickFixApplication> GetQuickFixVisualizations(IAnalysisIssueBase issue, ITextSnapshot textSnapshot)
         {
             if (!(issue is IAnalysisIssue analysisIssue) || textSnapshot == null)
             {
                 return EmptyConvertedFixes;
             }
 
-            var convertedQuickFixes = analysisIssue.Fixes.Select(fix =>
-            {
-                var editVisualizations = fix.Edits.Select(edit =>
+            return analysisIssue
+                .Fixes
+                .Select(fix =>
                 {
-                    var editSpan = issueSpanCalculator.CalculateSpan(edit.RangeToReplace, textSnapshot) ?? new SnapshotSpan();
+                    if (fix is IRoslynQuickFix roslynQuickFix)
+                    {
+                        if (roslynQuickFixProvider.TryGet(roslynQuickFix.Id, out var roslynQuickFixApplication))
+                        {
+                            return roslynQuickFixApplication;
+                        }
+                        Debug.Fail("Roslyn quick fix not found");
+                    }
+                    if (fix is ITextBasedQuickFix textBasedQuickFix)
+                    {
+                        return HandleTextBasedQuickFix(textSnapshot, textBasedQuickFix);
+                    }
+                    return null;
+                })
+                .Where(x => x is not null).ToArray();
+        }
 
-                    return new QuickFixEditVisualization(edit, editSpan);
-                });
+        private TextBasedQuickFixApplication HandleTextBasedQuickFix(
+            ITextSnapshot textSnapshot,
+            ITextBasedQuickFix textBasedQuickFix)
+        {
+            var editVisualizations = textBasedQuickFix.Edits.Select(edit =>
+            {
+                var editSpan = issueSpanCalculator.CalculateSpan(edit.RangeToReplace, textSnapshot) ?? new SnapshotSpan();
 
-                var fixVisualization = new QuickFixVisualization(fix, editVisualizations.ToArray());
+                return new TextBasedQuickFixEditVisualization(edit, editSpan);
+            });
 
-                return fixVisualization;
-            }).ToArray();
+            var fixVisualization = new TextBasedQuickFixVisualization(textBasedQuickFix, editVisualizations.ToArray(), spanTranslator);
 
-            return convertedQuickFixes;
+            return new TextBasedQuickFixApplication(fixVisualization, spanTranslator);
         }
     }
 }

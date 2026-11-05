@@ -1,0 +1,114 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.ComponentModel.Composition;
+using System.IO;
+using System.IO.Abstractions;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Integration.Vsix.Helpers;
+using SonarLint.VisualStudio.SLCore.Configuration;
+
+namespace SonarLint.VisualStudio.Integration.Vsix.SLCore
+{
+    [Export(typeof(ISLCoreLocator))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
+    internal class SLCoreLocator : ISLCoreLocator
+    {
+        private const string DefaultPathInsideVsix = "Sloop\\";
+        private readonly string basePathInsideVsix;
+        private readonly ISonarLintSettings slSettings;
+        private readonly ILogger logger;
+        private readonly IFileSystem fileSystem;
+        private readonly IGlobalJreProvider globalJreProvider;
+        private const string SlCoreJreSubPath = "jre\\bin\\java.exe";
+        private const string LibSubPath = "lib\\*";
+        private readonly IVsixRootLocator vsixRootLocator;
+
+        [ImportingConstructor]
+        public SLCoreLocator(IVsixRootLocator vsixRootLocator, ISonarLintSettings sonarLintSettings, IGlobalJreProvider globalJreProvider, ILogger logger)
+            : this(vsixRootLocator, DefaultPathInsideVsix, sonarLintSettings, globalJreProvider, logger, new FileSystem())
+        {
+        }
+
+        internal /* for testing */ SLCoreLocator(
+            IVsixRootLocator vsixRootLocator,
+            string basePathInsideVsix,
+            ISonarLintSettings slSettings,
+            IGlobalJreProvider globalJreProvider,
+            ILogger logger,
+            IFileSystem fileSystem)
+        {
+            this.vsixRootLocator = vsixRootLocator;
+            this.basePathInsideVsix = basePathInsideVsix;
+            this.slSettings = slSettings;
+            this.globalJreProvider = globalJreProvider;
+            this.logger = logger;
+            this.fileSystem = fileSystem;
+        }
+
+        public bool IsCustomJreSet() => !string.IsNullOrWhiteSpace(slSettings.JreLocation);
+
+        public bool IsGlobalJreAvailable() => IsJreFullPath(globalJreProvider.JreFullPath);
+
+        public void SetCustomJreToGlobal()
+        {
+            var globalJrePath = globalJreProvider.JreFullPath;
+            if (!IsJreFullPath(globalJrePath))
+            {
+                throw new InvalidOperationException("Jre not found");
+            }
+
+            var jreHomePath = globalJrePath.Substring(0, globalJrePath.Length - JavaLocationConstants.WindowsJreSubPath.Length);
+            slSettings.JreLocation = jreHomePath;
+        }
+
+        private static bool IsJreFullPath(string path) => path != null && path.EndsWith(JavaLocationConstants.WindowsJreSubPath);
+
+        public SLCoreLaunchParameters LocateExecutable()
+        {
+            var vsixRoot = vsixRootLocator.GetVsixRoot();
+            return new (GetCustomJrePathFromSettings() ?? GetEmbeddedJrePath(vsixRoot),
+                $"-classpath \"{Path.Combine(vsixRoot, basePathInsideVsix, LibSubPath)}\" org.sonarsource.sonarlint.core.backend.cli.SonarLintServerCli");
+        }
+
+        private string GetEmbeddedJrePath(string vsixRoot)
+        {
+            return Path.Combine(vsixRoot, basePathInsideVsix, SlCoreJreSubPath);
+        }
+
+        private string GetCustomJrePathFromSettings()
+        {
+            if (!IsCustomJreSet())
+            {
+                return null;
+            }
+
+            var customJrePath = Path.Combine(slSettings.JreLocation, JavaLocationConstants.WindowsJreSubPath);
+            if (fileSystem.File.Exists(customJrePath))
+            {
+                logger.LogVerbose(string.Format(Resources.Strings.SlCoreLocator_UsingCustomJreLocation, customJrePath));
+                return customJrePath;
+            }
+
+            logger.LogVerbose(string.Format(Resources.Strings.SlCoreLocator_CustomJreLocationNotFound, customJrePath));
+            return null;
+        }
+    }
+}

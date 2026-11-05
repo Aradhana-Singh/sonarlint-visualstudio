@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,8 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-
 namespace SonarLint.VisualStudio.Core.InfoBar
 {
     public interface IInfoBarManager
@@ -36,17 +34,36 @@ namespace SonarLint.VisualStudio.Core.InfoBar
         /// <summary>
         /// Attach an info bar with a message and a button to an existing tool window
         /// </summary>
+        /// <remarks>
+        /// The created info bar will have one button with a "button" style
+        /// </remarks>
         /// <param name="toolWindowGuid">Tool window Guid</param>
         /// <param name="message">Message to show on the info bar</param>
         /// <param name="buttonText">The button text</param>
         /// <param name="imageMoniker">Image</param>
-        /// <returns><see cref="IInfoBar"/></returns>
         IInfoBar AttachInfoBarWithButton(Guid toolWindowGuid, string message, string buttonText, SonarLintImageMoniker imageMoniker);
 
         /// <summary>
-        /// Detaches an <see cref="IInfoBar"/> from its tool window
+        /// Attach an info bar with a message and multiple buttons to an existing tool window
+        /// </summary>
+        /// <remarks>
+        /// The created info bar will have multiple buttons with a "hyperlink" style
+        /// </remarks>
+        IInfoBar AttachInfoBarWithButtons(Guid toolWindowGuid, string message, IEnumerable<string> buttonTexts, SonarLintImageMoniker imageMoniker);
+
+        /// <summary>
+        /// Attach an info bar with a message and multiple buttons to the main window
+        /// </summary>
+        /// <remarks>
+        /// If there is one buttonText it will be rendered as a button on the info bar.
+        /// If there are multiple buttonTexts they will all be rendered as hyperlinks.
+        /// </remarks>
+        IInfoBar AttachInfoBarToMainWindow(string message, SonarLintImageMoniker imageMoniker, params string[] buttonTexts);
+
+        /// <summary>
+        /// Closes an <see cref="IInfoBar"/>
         /// </summary>
         /// <param name="currentInfoBar">Instance of <see cref="IInfoBar"/> created by <see cref="AttachInfoBar(Guid, string, SonarLintImageMoniker)"/></param>
-        void DetachInfoBar(IInfoBar currentInfoBar);
+        void CloseInfoBar(IInfoBar currentInfoBar);
     }
 }

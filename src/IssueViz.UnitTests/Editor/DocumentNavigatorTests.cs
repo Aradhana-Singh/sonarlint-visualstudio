@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -28,9 +28,9 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Outlining;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
-using ThreadHelper = SonarLint.VisualStudio.Integration.UnitTests.ThreadHelper;
+using ThreadHelper = SonarLint.VisualStudio.TestInfrastructure.ThreadHelper;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
 {
@@ -73,13 +73,11 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<DocumentNavigator, IDocumentNavigator>(null, new[]
-            {
-                MefTestHelpers.CreateExport<SVsServiceProvider>(Mock.Of<IServiceProvider>()),
-                MefTestHelpers.CreateExport<IVsEditorAdaptersFactoryService>(Mock.Of<IVsEditorAdaptersFactoryService>()),
-                MefTestHelpers.CreateExport<IOutliningManagerService>(Mock.Of<IOutliningManagerService>()),
-                MefTestHelpers.CreateExport<IEditorOperationsFactoryService>(Mock.Of<IEditorOperationsFactoryService>())
-            });
+            MefTestHelpers.CheckTypeCanBeImported<DocumentNavigator, IDocumentNavigator>(
+                MefTestHelpers.CreateExport<SVsServiceProvider>(),
+                MefTestHelpers.CreateExport<IVsEditorAdaptersFactoryService>(),
+                MefTestHelpers.CreateExport<IOutliningManagerService>(),
+                MefTestHelpers.CreateExport<IEditorOperationsFactoryService>());
         }
 
         [TestMethod]

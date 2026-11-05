@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -101,6 +101,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         }
 
         private void LogWinApiFailure(string apiName) =>
-            logger.LogDebug(Strings.IDEWindowService_WinAPICallFailed, apiName, Marshal.GetLastWin32Error());
+            logger.LogVerbose(Strings.IDEWindowService_WinAPICallFailed, apiName, Marshal.GetLastWin32Error());
     }
 }

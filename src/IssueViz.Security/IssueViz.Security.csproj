@@ -28,8 +28,10 @@
   </PropertyGroup>
 
   <ItemGroup Label="Taint Xaml Sources">
-    <None Remove="Taint\TaintList\sonarlint.png" />
-    <Resource Include="Taint\TaintList\sonarlint.png" />
+    <Resource Include="Commands\Resources\sonarqube_for_ide_logo_16px.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="SharedUI\sonarqube_for_ide_logo_16px.png" />
   </ItemGroup>
 
   <ItemGroup Label="Framework references">
@@ -43,32 +45,36 @@
   </ItemGroup>
 
   <ItemGroup Label="Package references">
-    <PackageReference Include="Microsoft.Owin" Version="4.1.1" />
-    <PackageReference Include="Microsoft.Owin.Host.HttpListener" Version="4.1.1" />
+    <PackageReference Include="Microsoft.Owin" Version="4.2.3" />
+    <PackageReference Include="Microsoft.Owin.Host.HttpListener" Version="4.2.3" />
   </ItemGroup>
 
   <ItemGroup Label="Project references">
+    <ProjectReference Include="..\ConnectedMode\ConnectedMode.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\IssueViz\IssueViz.csproj" />
   </ItemGroup>
   
   <ItemGroup>
-    <Page Include="Hotspots\HotspotsList\HotspotsControl.xaml">
+    <Page Include="ReportView\Filters\Filter.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ReportView\SeverityIcons.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ReportView\Hotspots\HotspotSeverity.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ReviewStatus\ChangeStatusWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ReportView\ReportViewControl.xaml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
     <Page Include="SharedUI\SharedResources.xaml">
       <Generator>XamlIntelliSenseFileGenerator</Generator>
     </Page>
-    <Page Include="Taint\TaintList\TaintIssuesControl.xaml">
-      <Generator>XamlIntelliSenseFileGenerator</Generator>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Page>
-    <Compile Update="OpenInIDE\OpenInIDEResources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>OpenInIDEResources.resx</DependentUpon>
-    </Compile>
 
     <Compile Update="Resources.Designer.cs">
       <DependentUpon>Resources.resx</DependentUpon>
@@ -82,14 +88,9 @@
       <DependentUpon>TaintResources.resx</DependentUpon>
     </Compile>
 
-    <EmbeddedResource Update="OpenInIDE\OpenInIDEResources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>OpenInIDEResources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-
     <EmbeddedResource Update="Resources.resx">
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
     </EmbeddedResource>
 
     <EmbeddedResource Update="Taint\TaintResources.resx">

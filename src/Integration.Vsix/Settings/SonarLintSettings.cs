@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,135 +18,123 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Settings;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Shell.Settings;
 
-namespace SonarLint.VisualStudio.Integration.Vsix
+namespace SonarLint.VisualStudio.Integration.Vsix.Settings;
+
+[Export(typeof(ISonarLintSettings))]
+[PartCreationPolicy(CreationPolicy.Shared)]
+internal sealed class SonarLintSettings : ISonarLintSettings, IDisposable
 {
-    [Export(typeof(ISonarLintSettings))]
-    [PartCreationPolicy(CreationPolicy.Shared)]
-    public class SonarLintSettings : ISonarLintSettings, IProfileManager
+    public const string SettingsRoot = "SonarLintForVisualStudio";
+
+    // Lazily create the settings store on first use (we can't create it in the constructor)
+    private readonly Lazy<WritableSettingsStore> writableSettingsStore;
+
+    private bool disposed;
+
+    [ImportingConstructor]
+    public SonarLintSettings(IWritableSettingsStoreFactory storeFactory)
     {
-        public const string SettingsRoot = "SonarLintForVisualStudio";
+        // Called from MEF constructor -> must be free-threaded
+        writableSettingsStore = new Lazy<WritableSettingsStore>(() => storeFactory.Create(SettingsRoot), LazyThreadSafetyMode.PublicationOnly);
+    }
 
-        private readonly WritableSettingsStore writableSettingsStore;
+    public bool IsActivateMoreEnabled
+    {
+        get => GetValueOrDefault(nameof(IsActivateMoreEnabled), false);
+        set => SetValue(nameof(IsActivateMoreEnabled), value);
+    }
 
-        [ImportingConstructor]
-        public SonarLintSettings(SVsServiceProvider serviceProvider)
-            : this(new ShellSettingsManager(serviceProvider))
+    public DaemonLogLevel DaemonLogLevel
+    {
+        get => (DaemonLogLevel)GetValueOrDefault(nameof(DaemonLogLevel), (int)DaemonLogLevel.Minimal);
+        set => SetValue(nameof(DaemonLogLevel), (int)value);
+    }
+
+    public string JreLocation
+    {
+        get => GetValueOrDefault(nameof(JreLocation), string.Empty);
+        set => SetValue(nameof(JreLocation), value);
+    }
+
+    public bool IsFocusOnNewCodeEnabled
+    {
+        get => GetValueOrDefault(nameof(IsFocusOnNewCodeEnabled), false);
+        set => SetValue(nameof(IsFocusOnNewCodeEnabled), value);
+    }
+
+    public bool IsShowBuildErrorNotificationEnabled
+    {
+        get => GetValueOrDefault(nameof(IsShowBuildErrorNotificationEnabled), true);
+        set => SetValue(nameof(IsShowBuildErrorNotificationEnabled), value);
+    }
+
+    public CredentialStoreType CredentialStoreType
+    {
+        get => (CredentialStoreType)GetValueOrDefault(nameof(CredentialStoreType), (int)CredentialStoreType.Default);
+        set => SetValue(nameof(CredentialStoreType), (int)value);
+    }
+
+    public PragmaRuleSeverity PragmaRuleSeverity
+    {
+        get => (PragmaRuleSeverity)GetValueOrDefault(nameof(PragmaRuleSeverity), (int)PragmaRuleSeverity.Warn);
+        set => SetValue(nameof(PragmaRuleSeverity), (int)value);
+    }
+
+    public bool UseAbsoluteFilePaths
+    {
+        get => GetValueOrDefault(nameof(UseAbsoluteFilePaths), false);
+        set => SetValue(nameof(UseAbsoluteFilePaths), value);
+    }
+
+    public void Dispose() => disposed = true;
+
+    internal bool GetValueOrDefault(string key, bool defaultValue)
+    {
+        try
         {
+            return GetWritableSettingsStore()?.GetBoolean(SettingsRoot, key, defaultValue)
+                   ?? defaultValue;
         }
-
-        internal SonarLintSettings(SettingsManager settingsManager)
+        catch (ArgumentException)
         {
-            if (settingsManager == null)
-            {
-                throw new ArgumentNullException(nameof(settingsManager));
-            }
-
-            this.writableSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
-            if (this.writableSettingsStore != null &&
-                !this.writableSettingsStore.CollectionExists(SettingsRoot))
-            {
-                this.writableSettingsStore.CreateCollection(SettingsRoot);
-            }
-        }
-
-        internal /* testing purposes */ bool GetValueOrDefault(string key, bool defaultValue)
-        {
-            try
-            {
-                return this.writableSettingsStore?.GetBoolean(SettingsRoot, key, defaultValue)
-                ?? defaultValue;
-            }
-            catch (ArgumentException)
-            {
-                return defaultValue;
-            }
-        }
-
-        internal /* testing purposes */ void SetValue(string key, bool value)
-        {
-            this.writableSettingsStore?.SetBoolean(SettingsRoot, key, value);
-        }
-
-        internal /* testing purposes */ string GetValueOrDefault(string key, string defaultValue)
-        {
-            try
-            {
-                return this.writableSettingsStore?.GetString(SettingsRoot, key, defaultValue)
-                ?? defaultValue;
-            }
-            catch (ArgumentException)
-            {
-                return defaultValue;
-            }
-        }
-
-        internal /* testing purposes */ void SetValue(string key, string value)
-        {
-            this.writableSettingsStore?.SetString(SettingsRoot, key, value);
-        }
-
-        internal /* testing purposes */ int GetValueOrDefault(string key, int defaultValue)
-        {
-            try
-            {
-                return this.writableSettingsStore?.GetInt32(SettingsRoot, key, defaultValue)
-                    ?? defaultValue;
-            }
-            catch (ArgumentException)
-            {
-                return defaultValue;
-            }
-        }
-
-        internal /* testing purposes */ void SetValue(string key, int value)
-        {
-            this.writableSettingsStore?.SetInt32(SettingsRoot, key, value);
-        }
-
-        #region IProfileManager
-        public void SaveSettingsToXml(IVsSettingsWriter writer)
-        {
-            // We do not support import/export
-        }
-
-        public void LoadSettingsFromXml(IVsSettingsReader reader)
-        {
-            // We do not support import/export
-        }
-
-        public void SaveSettingsToStorage()
-        {
-            // No-op; settings are live
-        }
-
-        public void LoadSettingsFromStorage()
-        {
-            // No-op; settings are live
-        }
-
-        public void ResetSettings()
-        {
-            // Not supported
-        }
-        #endregion // IProfileManager
-
-        public bool IsActivateMoreEnabled
-        {
-            get { return this.GetValueOrDefault(nameof(IsActivateMoreEnabled), false); }
-            set { this.SetValue(nameof(IsActivateMoreEnabled), value); }
-        }
-
-        public DaemonLogLevel DaemonLogLevel
-        {
-            get { return (DaemonLogLevel)this.GetValueOrDefault(nameof(DaemonLogLevel), (int)DaemonLogLevel.Minimal); }
-            set { this.SetValue(nameof(DaemonLogLevel), (int)value); }
+            return defaultValue;
         }
     }
+
+    internal string GetValueOrDefault(string key, string defaultValue)
+    {
+        try
+        {
+            return GetWritableSettingsStore()?.GetString(SettingsRoot, key, defaultValue)
+                   ?? defaultValue;
+        }
+        catch (ArgumentException)
+        {
+            return defaultValue;
+        }
+    }
+
+    internal int GetValueOrDefault(string key, int defaultValue)
+    {
+        try
+        {
+            return GetWritableSettingsStore()?.GetInt32(SettingsRoot, key, defaultValue)
+                   ?? defaultValue;
+        }
+        catch (ArgumentException)
+        {
+            return defaultValue;
+        }
+    }
+
+    internal void SetValue(string key, bool value) => GetWritableSettingsStore()?.SetBoolean(SettingsRoot, key, value);
+
+    internal void SetValue(string key, string value) => GetWritableSettingsStore()?.SetString(SettingsRoot, key, value ?? string.Empty);
+
+    internal void SetValue(string key, int value) => GetWritableSettingsStore()?.SetInt32(SettingsRoot, key, value);
+
+    private WritableSettingsStore GetWritableSettingsStore() => disposed ? null : writableSettingsStore.Value;
 }

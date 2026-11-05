@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,6 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+using SonarLint.VisualStudio.Core;
+
 namespace SonarLint.VisualStudio.Integration
 {
     public static class Constants
@@ -33,16 +35,6 @@ namespace SonarLint.VisualStudio.Integration
         public const string CodeAnalysisRuleSetDirectoriesPropertyKey = "CodeAnalysisRuleSetDirectories";
 
         /// <summary>
-        /// The directory name of the SonarQube specific files that are being created in legacy connected mode
-        /// </summary>
-        public const string LegacySonarQubeManagedFolderName = "SonarQube";
-
-        /// <summary>
-        /// The directory name of the SonarQube specific files that are being created in legacy connected mode
-        /// </summary>
-        public const string SonarlintManagedFolderName = ".sonarlint";
-
-        /// <summary>
         /// The generated rule set name
         /// </summary>
         public const string RuleSetName = "SonarQube";
@@ -53,15 +45,9 @@ namespace SonarLint.VisualStudio.Integration
         public const string AdditionalFilesItemTypeName = "AdditionalFiles";
 
         /// <summary>
-        /// The SonarQube home page
+        /// The documentation page for Connected Mode
         /// </summary>
-        public const string SonarQubeHomeWebUrl = "http://sonarqube.org";
-
-        /// <summary>
-        /// SonarLint issues home page
-        /// </summary>
-        /// <remarks>The link launches the community site filtered to the SonarLint fault page</remarks>
-        public const string SonarLintIssuesWebUrl = "https://community.sonarsource.com/tags/c/bug/fault/6/sonarlint";
+        public const string ConnectedModeHelpPage = DocumentationLinks.ConnectedMode;
 
         /// <summary>
         /// The property key which corresponds to the ItemType of a <see cref="EnvDTE.ProjectItem"/>.

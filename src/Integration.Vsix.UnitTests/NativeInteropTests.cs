@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
     [TestClass]
     public class NativeInteropTests
     {
-        private Mock<IWin32Window> win32WindowMock; 
+        private Mock<IWin32Window> win32WindowMock;
         private Mock<INativeMethods> nativeMethodsMock;
 
         private NativeInterop testSubject;
@@ -41,7 +41,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         {
             win32WindowMock = new Mock<IWin32Window>(MockBehavior.Strict);
             nativeMethodsMock = new Mock<INativeMethods>(MockBehavior.Strict);
-            
+
             testSubject = new NativeInterop(nativeMethodsMock.Object);
         }
 

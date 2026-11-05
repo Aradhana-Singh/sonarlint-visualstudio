@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Import Project="..\SonarLint.Product.props" />
+  <Import Project="..\SonarLint.VsPkgRefs.props" />
 
   <PropertyGroup>
     <ProjectGuid>{58619C0F-0F3D-4E8C-B204-A19B332D45E5}</ProjectGuid>
@@ -24,10 +25,10 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Update="Rules\Resources.Designer.cs">
+    <Compile Update="SubProcess\CFamilyStrings.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
+      <DependentUpon>CFamilyStrings.resx</DependentUpon>
     </Compile>
   </ItemGroup>
 
@@ -36,9 +37,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Update="Rules\Resources.resx">
+    <EmbeddedResource Update="SubProcess\CFamilyStrings.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <LastGenOutput>CFamilyStrings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
 

@@ -1,14 +1,23 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
+
   <!-- Manually set the version of the SonarC# and VB analyzers to embed.
        NB we assume that the SonarC# and SonarVB NuGet packages have the same version number. -->
   <PropertyGroup>
-    <!-- Note: don't forget to upload the new packages to the package feed when changing 
-         the SonarAnalyzer version -->
-    <EmbeddedSonarAnalyzerVersion>8.38.0.46746</EmbeddedSonarAnalyzerVersion>
-    <EmbeddedSonarCFamilyAnalyzerVersion>6.31.0.44497</EmbeddedSonarCFamilyAnalyzerVersion>
-    <EmbeddedSonarJSAnalyzerVersion>8.6.0.16913</EmbeddedSonarJSAnalyzerVersion>
-    <EmbeddedSonarSecretsAnalyzerVersion>1.0.2</EmbeddedSonarSecretsAnalyzerVersion>
+    <!-- Note: Guide on how to update the analyzers is on the xtranet! -->
+    <!-- sonar-csharp-enterprise-plugin & sonar-vbnet-enterprise-plugin -->
+    <EmbeddedSonarAnalyzerVersion>10.35.0.4138</EmbeddedSonarAnalyzerVersion>
+    <!-- sonar-cfamily-plugin, only used for integration tests -->
+    <EmbeddedSonarCFamilyAnalyzerVersion>6.85.0.102562</EmbeddedSonarCFamilyAnalyzerVersion>
+    <!-- sonar-javascript-plugin -->
+    <EmbeddedSonarJSAnalyzerVersion>14.3.0.46350</EmbeddedSonarJSAnalyzerVersion>
+    <EmbeddedEsLintBridgeVersion>1.0.0</EmbeddedEsLintBridgeVersion>
+    <!-- sonar-html-plugin -->
+    <EmbeddedSonarHtmlAnalyzerVersion>3.28.0.8018</EmbeddedSonarHtmlAnalyzerVersion>
+    <!-- sonar-text-plugin -->
+    <EmbeddedSonarSecretsJarVersion>2.54.0.13918</EmbeddedSonarSecretsJarVersion>
+    <!-- sonarqube-ide-visualstudio-roslyn --> 
+    <EmbeddedSonarSqvsRoslynJarVersion>1.2.0.364</EmbeddedSonarSqvsRoslynJarVersion>
+    <!-- SLOOP: Binaries for SonarLint Out Of Process -->
+    <EmbeddedSloopVersion>12.2.0.87867</EmbeddedSloopVersion>
   </PropertyGroup>
- 
 </Project>

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,9 +25,8 @@ using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.IssueVisualization.Helpers;
 using SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl;
+using SonarLint.VisualStudio.IssueVisualization.Models;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualizationControl
 {
@@ -40,6 +39,14 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
             Action act = () => new SeverityToMonikerConverter().ConvertBack(null, null, null, null);
 
             act.Should().Throw<NotImplementedException>("ConvertBack is not required");
+        }
+
+        [TestMethod]
+        public void Convert_NullParameter_InformationMoniker()
+        {
+            var result = (ImageMoniker)new SeverityToMonikerConverter().Convert(null, null, null, null);
+
+            result.Should().Be(KnownMonikers.StatusInformation);
         }
 
         [TestMethod]
@@ -62,15 +69,11 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
 
         private void VerifyConversion(__VSERRORCATEGORY vsSeverity, object expectedMoniker)
         {
-            const AnalysisIssueSeverity value = AnalysisIssueSeverity.Info;
+            var issueVisMock = new Mock<IAnalysisIssueVisualization>();
+            issueVisMock.SetupGet(x => x.VsSeverity).Returns(vsSeverity);
 
-            var toVsSeverityConverterMock = new Mock<IAnalysisSeverityToVsSeverityConverter>();
-            toVsSeverityConverterMock
-                .Setup(x => x.Convert(value))
-                .Returns(vsSeverity);
-
-            var result = (ImageMoniker)new SeverityToMonikerConverter(toVsSeverityConverterMock.Object).Convert(value, null, null, null);
-            var expected = (ImageMoniker) expectedMoniker;
+            var result = (ImageMoniker)new SeverityToMonikerConverter().Convert(issueVisMock.Object, null, null, null);
+            var expected = (ImageMoniker)expectedMoniker;
 
             result.Should().Be(expected);
         }

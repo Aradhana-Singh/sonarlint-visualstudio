@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,8 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#if VS2022 // see https://github.com/SonarSource/sonarlint-visualstudio/issues/2760
-
 using System;
 using System.ComponentModel;
 using FluentAssertions;
@@ -31,7 +29,7 @@ using static Microsoft.VisualStudio.Shell.DialogPage;
 
 namespace SonarLint.VisualStudio.Integration.Vsix.Tests
 {
-    [TestClass]
+    [TestClass, Ignore(" https://github.com/SonarSource/sonarlint-visualstudio/issues/2760")]
     public class OtherOptionsDialogPageTests
     {
         private class OtherOptionsDialogPageTestable : OtherOptionsDialogPage
@@ -55,7 +53,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
         {
             // Arrange
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(true);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Enabled);
 
             var optionsPage = CreateTestSubject(telemetryManager.Object);
 
@@ -72,7 +70,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
         {
             // Arrange
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(false);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Disabled);
             var optionsPage = CreateTestSubject(telemetryManager.Object);
 
             // Act
@@ -123,7 +121,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
             // Arrange
             var isOptInOrOptOutCalled = false;
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(false);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Disabled);
             telemetryManager.Setup(x => x.OptIn()).Callback(() => isOptInOrOptOutCalled = true);
             telemetryManager.Setup(x => x.OptOut()).Callback(() => isOptInOrOptOutCalled = true);
 
@@ -143,7 +141,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
             // Arrange
             var isOptInOrOptOutCalled = false;
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(true);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Enabled);
             telemetryManager.Setup(x => x.OptIn()).Callback(() => isOptInOrOptOutCalled = true);
             telemetryManager.Setup(x => x.OptOut()).Callback(() => isOptInOrOptOutCalled = true);
 
@@ -164,7 +162,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
             var isOptInCalled = false;
             var isOptOutCalled = false;
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(false);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Disabled);
             telemetryManager.Setup(x => x.OptIn()).Callback(() => isOptInCalled = true);
             telemetryManager.Setup(x => x.OptOut()).Callback(() => isOptOutCalled = true);
 
@@ -186,7 +184,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
             var isOptInCalled = false;
             var isOptOutCalled = false;
             var telemetryManager = new Mock<ITelemetryManager>();
-            telemetryManager.Setup(x => x.IsAnonymousDataShared).Returns(true);
+            telemetryManager.Setup(x => x.GetStatus()).Returns(SlCoreTelemetryStatus.Enabled);
             telemetryManager.Setup(x => x.OptIn()).Callback(() => isOptInCalled = true);
             telemetryManager.Setup(x => x.OptOut()).Callback(() => isOptOutCalled = true);
 
@@ -222,5 +220,3 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Tests
         }
     }
 }
-
-#endif

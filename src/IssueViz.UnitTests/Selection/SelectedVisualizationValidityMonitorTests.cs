@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
@@ -34,11 +34,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<SelectedVisualizationValidityMonitor, ISelectedVisualizationValidityMonitor>(null, new[]
-            {
-                MefTestHelpers.CreateExport<IIssueSelectionService>(Mock.Of<IIssueSelectionService>()),
-                MefTestHelpers.CreateExport<IIssueLocationStoreAggregator>(Mock.Of<IIssueLocationStoreAggregator>())
-            });
+            MefTestHelpers.CheckTypeCanBeImported<SelectedVisualizationValidityMonitor, ISelectedVisualizationValidityMonitor>(
+                MefTestHelpers.CreateExport<IIssueSelectionService>(),
+                MefTestHelpers.CreateExport<IIssueLocationStoreAggregator>());
         }
 
         [TestMethod]

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -31,6 +31,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.Infrastructure.VS;
+using SonarLint.VisualStudio.TestInfrastructure;
 using IVsHierarchy = Microsoft.VisualStudio.Shell.Interop.IVsHierarchy;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests
@@ -41,8 +42,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         private ConfigurableServiceProvider serviceProvider;
         private SolutionMock solutionMock;
         private ProjectSystemHelper testSubject;
-        private ConfigurableProjectSystemFilter projectFilter;
-        private Mock<IProjectToLanguageMapper> projectToLanguageMapper;
 
         [TestInitialize]
         public void TestInitialize()
@@ -50,11 +49,8 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             this.solutionMock = new SolutionMock();
             this.serviceProvider = new ConfigurableServiceProvider();
             this.serviceProvider.RegisterService(typeof(SVsSolution), this.solutionMock);
-            this.projectFilter = new ConfigurableProjectSystemFilter();
-            this.serviceProvider.RegisterService(typeof(IProjectSystemFilter), this.projectFilter);
-            projectToLanguageMapper = new Mock<IProjectToLanguageMapper>();
 
-            this.testSubject = new ProjectSystemHelper(this.serviceProvider, projectToLanguageMapper.Object);
+            this.testSubject = new ProjectSystemHelper(this.serviceProvider);
         }
 
         [TestMethod]
@@ -63,7 +59,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             var batch = new CompositionBatch();
 
             batch.AddExport(MefTestHelpers.CreateExport<SVsServiceProvider>(Mock.Of<IServiceProvider>()));
-            batch.AddExport(MefTestHelpers.CreateExport<IProjectToLanguageMapper>(Mock.Of<IProjectToLanguageMapper>()));
 
             var helperImport = new SingleObjectImporter<IProjectSystemHelper>();
             var vsHierarchyLocator = new SingleObjectImporter<IVsHierarchyLocator>();
@@ -117,355 +112,24 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             ProjectMock csProject = this.solutionMock.AddOrGetProject("c#");
             csProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, csProject);
             csProject.ProjectKind = ProjectSystemHelper.CSharpProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(csProject)).Returns(true);
 
             ProjectMock vbProject = this.solutionMock.AddOrGetProject("vb.net");
             vbProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, vbProject);
             vbProject.ProjectKind = ProjectSystemHelper.VbProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(vbProject)).Returns(true);
 
-            ProjectMock otherProject = this.solutionMock.AddOrGetProject("other");
+            ProjectMock otherProject = this.solutionMock.AddOrGetProject("other"); // other can still contain secrets
             otherProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, otherProject);
-            otherProject.ProjectKind ="other";
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(otherProject)).Returns(false);
+            otherProject.ProjectKind = "other";
 
             ProjectMock erronousProject = this.solutionMock.AddOrGetProject("err");
             erronousProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, null);
             erronousProject.ProjectKind = ProjectSystemHelper.VbProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(erronousProject)).Returns(true);
 
             // Act
             var actual = this.testSubject.GetSolutionProjects().ToArray();
 
             // Assert
-            CollectionAssert.AreEqual(new[] { csProject, vbProject }, actual,
-                "Unexpected projects: {0}", string.Join(", ", actual.Select(p => p.Name)));
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsFileInProject_ProjectArgCheck()
-        {
-            Action act = () => this.testSubject.IsFileInProject(null, "file");
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("project");
-        }
-
-        [TestMethod]
-        [DataRow(null)]
-        [DataRow("")]
-        [DataRow("\t\n")]
-        public void ProjectSystemHelper_IsFileInProject_FileArgCheck(string file)
-        {
-            Action act = () => this.testSubject.IsFileInProject(new ProjectMock("project"), file);
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("file");
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsFileInProject()
-        {
-            // Arrange
-            ProjectMock project1 = this.solutionMock.AddOrGetProject("project1");
-            ProjectMock project2 = this.solutionMock.AddOrGetProject("project2");
-            const string file1 = "file1";
-            const string file2 = "file2";
-            const string file3 = "file3";
-            project1.AddOrGetFile(file1);
-            project1.AddOrGetFile(file2);
-
-            // Act + Assert
-            this.testSubject.IsFileInProject(project1, file1).Should().BeTrue();
-            this.testSubject.IsFileInProject(project1, file2).Should().BeTrue();
-            this.testSubject.IsFileInProject(project1, file3).Should().BeFalse();
-            this.testSubject.IsFileInProject(project2, file1).Should().BeFalse();
-            this.testSubject.IsFileInProject(project2, file2).Should().BeFalse();
-            this.testSubject.IsFileInProject(project2, file3).Should().BeFalse();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsFileInProject_DifferentCase()
-        {
-            // Arrange
-            ProjectMock project = this.solutionMock.AddOrGetProject("project1");
-            const string existingFile = "FILENAME";
-            const string newFile = "filename";
-            project.AddOrGetFile(existingFile);
-
-            // Act + Assert
-            this.testSubject.IsFileInProject(project, newFile).Should().BeTrue();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_FindFileInProject_Missing_ReturnsNull()
-        {
-            var project = this.solutionMock.AddOrGetProject("project");
-            project.AddOrGetFile("fileThatExists.txt");
-
-            this.testSubject.FindFileInProject(project, "fileNotInTheProject.txt").Should().BeNull();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_FindFileInProject_ProjectArgCheck()
-        {
-            Action act = () => testSubject.FindFileInProject(null, "file");
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("project");
-        }
-
-        [TestMethod]
-        [DataRow(null)]
-        [DataRow("")]
-        [DataRow("\t\n")]
-        public void ProjectSystemHelper_FindFileInProject_FileArgChecks(string fileName)
-        {
-            Action act = () => this.testSubject.FindFileInProject(new ProjectMock("project"), fileName);
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("file");
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_FindFileInProject_Exists_ReturnsProjectItem()
-        {
-            var project = this.solutionMock.AddOrGetProject("project");
-            var itemId = project.AddOrGetFile("fileInProject");
-
-            var file1ExtObj = Mock.Of<ProjectItem>();
-            project.SetExtObjProperty(itemId, file1ExtObj);
-
-            var actual = this.testSubject.FindFileInProject(project, "fileInProject");
-            actual.Should().BeSameAs(file1ExtObj);
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_FindFileInProject_ExistsButWrongExtObjType_ReturnsNull()
-        {
-            var project = this.solutionMock.AddOrGetProject("project");
-            var itemId = project.AddOrGetFile("fileInProject");
-
-            var extObjectItem = new object();
-            project.SetExtObjProperty(itemId, extObjectItem);
-
-            var actual = this.testSubject.FindFileInProject(project, "fileInProject");
-            actual.Should().BeNull();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_GetSolutionItemsProject()
-        {
-            // Arrange
-            const string SolutionItemsName = "Hello world";
-            this.SetSolutionFolderName(SolutionItemsName);
-            DTEMock dte = new DTEMock();
-            this.serviceProvider.RegisterService(typeof(SDTE), dte);
-            dte.Solution = this.solutionMock;
-
-            // Act
-            Project project1 = this.testSubject.GetSolutionItemsProject(true);
-
-            // Assert
-            project1.Should().NotBeNull("Could not find the solution items project");
-            project1.Name.Should().Be(SolutionItemsName, "Unexpected project name");
-            this.solutionMock.Projects.Count().Should().Be(1, "Unexpected project count");
-            project1.Should().Be(this.solutionMock.Projects.Single(), "Unexpected project");
-
-            // Act, ask again (exists already)
-            Project project2 = this.testSubject.GetSolutionItemsProject(false);
-
-            // Assert
-            project2.Should().Be(project1, "Should be the same project as in the first time");
-        }
-
-        [TestMethod]
-        public void GetSolutionFolderProject_WhenFolderDoesntExistButForceCreate_ExpectsANonNullProject()
-        {
-            /// Arrange
-            const string solutionFolderName = "SomeFolderName";
-            DTEMock dte = new DTEMock();
-            this.serviceProvider.RegisterService(typeof(SDTE), dte);
-            dte.Solution = this.solutionMock;
-
-            // Act
-            Project project1 = this.testSubject.GetSolutionFolderProject(solutionFolderName, true);
-
-            // Assert
-            project1.Should().NotBeNull("Could not find the solution items project");
-            project1.Name.Should().Be(solutionFolderName, "Unexpected project name");
-            this.solutionMock.Projects.Count().Should().Be(1, "Unexpected project count");
-            project1.Should().Be(this.solutionMock.Projects.Single(), "Unexpected project");
-        }
-
-        [TestMethod]
-        public void GetSolutionFolderProject_WhenFolderDoesntExistButDontForceCreate_ExpectsANullProject()
-        {
-            /// Arrange
-            const string solutionFolderName = "SomeFolderName";
-            DTEMock dte = new DTEMock();
-            this.serviceProvider.RegisterService(typeof(SDTE), dte);
-            dte.Solution = this.solutionMock;
-
-            // Act
-            Project project1 = this.testSubject.GetSolutionFolderProject(solutionFolderName, false);
-
-            // Assert
-            project1.Should().BeNull("Could not find the solution items project");
-        }
-
-        [TestMethod]
-        public void GetSolutionFolderProject_WhenCalledMultipleTimes_ReturnsSameProject()
-        {
-            // Arrange
-            const string solutionFolderName = "SomeFolderName";
-            DTEMock dte = new DTEMock();
-            this.serviceProvider.RegisterService(typeof(SDTE), dte);
-            dte.Solution = this.solutionMock;
-            Project project1 = this.testSubject.GetSolutionFolderProject(solutionFolderName, true);
-
-            // Act, ask again (exists already)
-            Project project2 = this.testSubject.GetSolutionFolderProject(solutionFolderName, false);
-
-            // Assert
-            project2.Should().Be(project1, "Should be the same project as in the first time");
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_GetFilteredSolutionProjects()
-        {
-            ProjectMock csProject = this.solutionMock.AddOrGetProject("c#");
-            csProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, csProject);
-            csProject.ProjectKind = ProjectSystemHelper.CSharpProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(csProject)).Returns(true);
-
-            ProjectMock vbProject = this.solutionMock.AddOrGetProject("vb.net");
-            vbProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, vbProject);
-            vbProject.ProjectKind = ProjectSystemHelper.VbProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(vbProject)).Returns(true);
-
-            ProjectMock otherProject = this.solutionMock.AddOrGetProject("other");
-            otherProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, otherProject);
-            otherProject.ProjectKind = "other";
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(otherProject)).Returns(false);
-
-            ProjectMock erronousProject = this.solutionMock.AddOrGetProject("err");
-            erronousProject.SetExtObjProperty(VSConstants.VSITEMID_ROOT, null);
-            erronousProject.ProjectKind = ProjectSystemHelper.VbProjectKind;
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(erronousProject)).Returns(true);
-
-            // Filter out C#, keep VB
-            projectFilter.MatchingProjects.Add(vbProject);
-
-            // Act
-            var actual = this.testSubject.GetFilteredSolutionProjects().ToArray();
-
-            // Assert
-            CollectionAssert.AreEqual(new[] { vbProject }, actual,
-                "Unexpected projects: {0}", string.Join(", ", actual.Select(p => p.Name)));
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_AddFileToProject_ProjectArgCheck()
-        {
-            Action act = () => this.testSubject.AddFileToProject(null, "file");
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("project");
-        }
-
-        [TestMethod]
-        [DataRow(null)]
-        [DataRow("")]
-        [DataRow("\t\n")]
-        public void ProjectSystemHelper_AddFileToProject_FileArgCheck(string file)
-        {
-            Action act = () => this.testSubject.AddFileToProject(new ProjectMock("project"), file);
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("file");
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_AddFileToProject()
-        {
-            // Arrange
-            ProjectMock project = this.solutionMock.AddOrGetProject("project1");
-            const string fileToAdd = @"x:\myFile.txt";
-
-            // Case 1: file not in project
-            // Act
-            this.testSubject.AddFileToProject(project, fileToAdd);
-
-            // Assert
-            project.Files.ContainsKey(fileToAdd).Should().BeTrue();
-
-            // Case 2: file already in project
-            // Act
-            this.testSubject.AddFileToProject(project, fileToAdd);
-
-            // Assert
-            project.Files.ContainsKey(fileToAdd).Should().BeTrue();
-        }
-
-        [TestMethod]
-        public void RemoveFileFromProject_WhenFileExists_ExpectsFileToBeRemoved()
-        {
-            // Arrange
-            ProjectMock project = this.solutionMock.AddOrGetProject("project1");
-            const string file = @"x:\myFile.txt";
-            this.testSubject.AddFileToProject(project, file);
-            project.Files.ContainsKey(file).Should().BeTrue();
-
-            // Act
-            this.testSubject.RemoveFileFromProject(project, file);
-
-            // Assert
-            project.Files.ContainsKey(file).Should().BeFalse("file should no longer be in the project");
-        }
-
-        [TestMethod]
-        public void RemoveFileFromProject_WhenFileDoesntExist_ExpectsNothingToChange()
-        {
-            // Arrange
-            ProjectMock project = this.solutionMock.AddOrGetProject("project1");
-            const string file = @"x:\myFile.txt";
-            this.testSubject.AddFileToProject(project, file);
-            project.Files.ContainsKey(file).Should().BeTrue();
-            var oldCount = project.Files.Count;
-
-            // Act
-            this.testSubject.RemoveFileFromProject(project, "foo");
-
-            // Assert
-            project.Files.ContainsKey(file).Should().BeTrue("file should still be in the project");
-            project.Files.Should().HaveCount(oldCount, "file count should not have changed");
-        }
-
-        [TestMethod]
-        public void RemoveFileFromProject_WhenFileExistsAndProjectIsNotSolutionFolder_ExpectsFileToBeRemovedAndProjectNotRemoved()
-        {
-            // Arrange
-            ProjectMock project = this.solutionMock.AddOrGetProject("project1");
-            const string file = @"x:\myFile.txt";
-            this.testSubject.AddFileToProject(project, file);
-            project.Files.ContainsKey(file).Should().BeTrue();
-
-            // Act
-            this.testSubject.RemoveFileFromProject(project, file);
-
-            // Assert
-            project.Files.ContainsKey(file).Should().BeFalse("file should no longer be in project");
-            project.Files.Should().BeEmpty("project should have no files");
-            this.solutionMock.Projects.Contains(project).Should().BeTrue("project should still be in solution");
-        }
-
-        [TestMethod]
-        public void RemoveFileFromProject_WhenFileExistsAndProjectIsSolutionFolder_ExpectsFileToBeRemovedAndProjectRemoved()
-        {
-            // Arrange
-            DTEMock dte = new DTEMock();
-            this.serviceProvider.RegisterService(typeof(SDTE), dte);
-            dte.Solution = this.solutionMock;
-            var project = this.testSubject.GetSolutionFolderProject("foo", true);
-            const string file = @"x:\myFile.txt";
-            this.testSubject.AddFileToProject(project, file);
-            this.testSubject.IsFileInProject(project, file).Should().BeTrue();
-
-            // Act
-            this.testSubject.RemoveFileFromProject(project, file);
-
-            // Assert
-            project.ProjectItems.Should().BeEmpty("project should have no files");
-            this.solutionMock.Projects.Contains(project).Should().BeFalse("project should no longer be in solution");
+            CollectionAssert.AreEqual(new[] { csProject, vbProject, otherProject }, actual);
         }
 
         [TestMethod]
@@ -666,71 +330,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         [TestMethod]
-        public void ProjectSystemHelper_IsSolutionFullyLoaded_PropertyIsTrue_ReturnsTrue()
-        {
-            // Arrange
-            this.solutionMock.IsFullyLoaded = true;
-
-            // Act
-            bool result = this.testSubject.IsSolutionFullyOpened();
-
-            // Assert
-            result.Should().BeTrue();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsSolutionFullyLoaded_PropertyIsFalse_ReturnsFalse()
-        {
-            // Arrange
-            this.solutionMock.IsFullyLoaded = false;
-
-            // Act
-            bool result = this.testSubject.IsSolutionFullyOpened();
-
-            // Assert
-            result.Should().BeFalse();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsSolutionFullyLoaded_PropertyIsNotBoolean_ReturnsFalse()
-        {
-            // Arrange
-            this.solutionMock.IsFullyLoaded = "not a boolean";
-
-            // Act
-            bool result = this.testSubject.IsSolutionFullyOpened();
-
-            // Assert
-            result.Should().BeFalse();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsLegacyProject_NotLegacy_ReturnsFalse()
-        {
-            // Arrange
-            var mockProject = this.solutionMock.AddOrGetProject("dummy.proj", isLegacy: false);
-
-            // Act
-            var result = this.testSubject.IsLegacyProjectSystem(mockProject);
-
-            // Assert
-            result.Should().BeFalse();
-        }
-
-        [TestMethod]
-        public void ProjectSystemHelper_IsLegacyProject_Legacy_ReturnsTrue()
-        {
-            // Arrange
-            var mockProject  = this.solutionMock.AddOrGetProject("dummy.proj", isLegacy: true);
-
-            // Act
-            var result = this.testSubject.IsLegacyProjectSystem(mockProject);
-
-            // Assert
-            result.Should().BeTrue();
-        }
-
-        [TestMethod]
         public void GetVsHierarchyForFile_NoOpenSolution_Null()
         {
             var dte = SetupDteMock(solution: null);
@@ -739,7 +338,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             var result = testSubject.GetVsHierarchyForFile("some file");
 
             result.Should().BeNull();
-            dte.Verify(x=> x.Solution, Times.Once);
+            dte.Verify(x => x.Solution, Times.Once);
         }
 
         [TestMethod]
@@ -752,7 +351,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             var result = testSubject.GetVsHierarchyForFile("some file");
 
             result.Should().BeNull();
-            solution.Verify(x=> x.FindProjectItem("some file"), Times.Once);
+            solution.Verify(x => x.FindProjectItem("some file"), Times.Once);
         }
 
         [TestMethod]
@@ -766,7 +365,7 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             var result = testSubject.GetVsHierarchyForFile("some file");
 
             result.Should().BeNull();
-            projectItem.Verify(x=> x.ContainingProject, Times.Once);
+            projectItem.Verify(x => x.ContainingProject, Times.Once);
         }
 
         [TestMethod]
@@ -872,23 +471,13 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
 
             int IVsShell.LoadPackageString(ref Guid guidPackage, uint resid, out string pbstrOut)
             {
-                guidPackage.Should().Be(VSConstants.CLSID.VsEnvironmentPackage_guid, "Unexpected package");
-                resid.Should().Be(ProjectSystemHelper.SolutionItemResourceId, "Unexpected resource id");
-                pbstrOut = this.LoadPackageStringResult;
-                return VSConstants.S_OK;
+                throw new NotImplementedException();
             }
 
-#if VS2022
             int IVsShell.LoadUILibrary(ref Guid guidPackage, uint dwExFlags, out IntPtr phinstOut)
             {
                 throw new NotImplementedException();
             }
-#else
-            int IVsShell.LoadUILibrary(ref Guid guidPackage, uint dwExFlags, out uint phinstOut)
-            {
-                throw new NotImplementedException();
-            }
-#endif
 
             int IVsShell.SetProperty(int propid, object var)
             {

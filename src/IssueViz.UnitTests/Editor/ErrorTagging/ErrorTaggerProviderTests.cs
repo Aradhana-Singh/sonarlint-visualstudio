@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,14 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
-using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.ErrorTagging
 {
@@ -33,24 +32,20 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.ErrorTaggin
     public class ErrorTaggerProviderTests : CommonTaggerProviderTestsBase
     {
         [TestMethod]
-        public void MefCtor_CheckIsExported()
-        {
-            MefTestHelpers.CheckTypeCanBeImported<ErrorTaggerProvider, ITaggerProvider>(null,
-                new[]
-                {
-                    MefTestHelpers.CreateExport<ITaggableBufferIndicator>(Mock.Of<ITaggableBufferIndicator>()),
-                    MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(Mock.Of<IBufferTagAggregatorFactoryService>()),
-                    MefTestHelpers.CreateExport<IErrorTagTooltipProvider>(Mock.Of<IErrorTagTooltipProvider>())
-                });
-        }
+        public void MefCtor_CheckIsExported() =>
+            MefTestHelpers.CheckTypeCanBeImported<ErrorTaggerProvider, ITaggerProvider>(
+                MefTestHelpers.CreateExport<ITaggableBufferIndicator>(),
+                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(),
+                MefTestHelpers.CreateExport<IErrorTagTooltipProvider>(),
+                MefTestHelpers.CreateExport<IFocusOnNewCodeService>());
 
         internal override ITaggerProvider CreateTestSubject(ITaggableBufferIndicator taggableBufferIndicator)
         {
-            var aggregatorMock = new Mock<IBufferTagAggregatorFactoryService>();
-            aggregatorMock.Setup(x => x.CreateTagAggregator<IIssueLocationTag>(It.IsAny<ITextBuffer>()))
-                .Returns(Mock.Of<ITagAggregator<IIssueLocationTag>>());
+            var bufferTagAggregatorFactoryService = Substitute.For<IBufferTagAggregatorFactoryService>();
+            bufferTagAggregatorFactoryService.CreateTagAggregator<IIssueLocationTag>(Arg.Any<ITextBuffer>())
+                .Returns(Substitute.For<ITagAggregator<IIssueLocationTag>>());
 
-            return new ErrorTaggerProvider(aggregatorMock.Object, taggableBufferIndicator, Mock.Of<IErrorTagTooltipProvider>());
+            return new ErrorTaggerProvider(bufferTagAggregatorFactoryService, taggableBufferIndicator, Substitute.For<IErrorTagTooltipProvider>(), Substitute.For<IFocusOnNewCodeService>());
         }
     }
 }

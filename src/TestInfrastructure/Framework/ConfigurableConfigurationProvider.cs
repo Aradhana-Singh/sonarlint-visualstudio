@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,18 +19,16 @@
  */
 
 using System;
-using FluentAssertions;
 using SonarLint.VisualStudio.Core.Binding;
-using SonarLint.VisualStudio.Integration.NewConnectedMode;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     /// <summary>
     /// Configurable service provider used for testing
     /// </summary>
-    internal class ConfigurableConfigurationProvider : IConfigurationProviderService, IConfigurationPersister
+    public class ConfigurableConfigurationProvider : IConfigurationProvider
     {
-        public BindingConfiguration GetConfiguration()
+        public virtual BindingConfiguration GetConfiguration()
         {
             GetConfigurationAction?.Invoke();
 
@@ -39,18 +37,9 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
                 : BindingConfiguration.CreateBoundConfiguration(ProjectToReturn, ModeToReturn, FolderPathToReturn);
         }
 
-        public BindingConfiguration Persist(BoundSonarQubeProject project, SonarLintMode bindingMode)
-        {
-            project.Should().NotBeNull();
-            SavedProject = project;
-            SavedMode = bindingMode;
-
-            return GetConfiguration();
-        }
-
         #region Test helpers
 
-        public BoundSonarQubeProject ProjectToReturn { get; set; }
+        public BoundServerProject ProjectToReturn { get; set; }
         public SonarLintMode ModeToReturn { get; set; }
         public string FolderPathToReturn { get; set; }
 
@@ -58,7 +47,6 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
 
         public bool WriteResultToReturn { get; set; }
         public BoundSonarQubeProject SavedProject { get; set; }
-        public SonarLintMode SavedMode { get; set; }
 
         #endregion Test helpers
     }

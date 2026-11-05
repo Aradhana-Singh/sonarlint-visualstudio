@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using System;
 using System.Threading.Tasks;
 using SonarLint.VisualStudio.Core;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     /// <summary>
     /// Dummy implementation of IThreadHandling
@@ -31,24 +31,30 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
     /// No thread switches take place.</remarks>
     public class NoOpThreadHandler : IThreadHandling
     {
-        public bool CheckAccess() => true;
+        public virtual bool CheckAccess() => true;
 
-        public T Run<T>(Func<Task<T>> asyncMethod) => asyncMethod().Result;
-        public Task RunAsync(Func<Task> asyncMethod) => asyncMethod();
+        public virtual T Run<T>(Func<Task<T>> asyncMethod) => asyncMethod().Result;
+        public virtual Task RunAsync(Func<Task> asyncMethod) => asyncMethod();
 
-        public Task RunAsync<T>(Func<Task<T>> asyncMethod) => asyncMethod();
+        public virtual Task RunAsync<T>(Func<Task<T>> asyncMethod) => asyncMethod();
 
-        public Task RunOnUIThread(Action op)
+        public virtual Task RunOnUIThreadAsync(Action op)
         {
             op();
             return Task.CompletedTask;
         }
 
-        public IAwaitableWrapper SwitchToBackgroundThread() => new NoOpAwaitable();
+        public virtual void RunOnUIThread(Action op) => op();
 
-        public void ThrowIfNotOnUIThread() { /* no-op */ }
+        public virtual Task<T> RunOnBackgroundThread<T>(Func<Task<T>> asyncMethod) => asyncMethod();
 
-        public void ThrowIfOnUIThread() { /* no-op */ }
+        public virtual IAwaitableWrapper SwitchToBackgroundThread() => new NoOpAwaitable();
+
+        public virtual Task SwitchToMainThreadAsync() => Task.CompletedTask;
+
+        public virtual void ThrowIfNotOnUIThread() { /* no-op */ }
+
+        public virtual void ThrowIfOnUIThread() { /* no-op */ }
 
         #region No-op awaiter/awaitable
 

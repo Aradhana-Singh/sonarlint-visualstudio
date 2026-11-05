@@ -1,0 +1,245 @@
+﻿<Window x:Class="SonarLint.VisualStudio.ConnectedMode.UI.ManageBinding.ManageBindingDialog"
+                         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:vsShell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+                         xmlns:res="clr-namespace:SonarLint.VisualStudio.ConnectedMode.UI.Resources"
+                         xmlns:ui="clr-namespace:SonarLint.VisualStudio.ConnectedMode.UI"
+                         xmlns:wpf="clr-namespace:SonarLint.VisualStudio.Core.WPF;assembly=SonarLint.VisualStudio.Core"
+                         xmlns:links="clr-namespace:SonarLint.VisualStudio.Core;assembly=SonarLint.VisualStudio.Core"
+                         xmlns:connectionDisplay="clr-namespace:SonarLint.VisualStudio.ConnectedMode.UI.ConnectionDisplay"
+                         Title="{x:Static res:UiResources.ManageBindingDialogTitle}" 
+                         WindowStartupLocation="CenterOwner"
+                         Initialized="ManageBindingDialog_OnInitialized"
+                         x:Name="This"
+                         x:ClassModifier="internal">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/SonarLint.VisualStudio.ConnectedMode;component/UI/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/SonarLint.VisualStudio.ConnectedMode;component/UI/Resources/CheckImage.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/SonarLint.VisualStudio.ConnectedMode;component/UI/Resources/WarningImage.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <wpf:BoolToVisibilityConverter x:Key="TrueToVisibleConverter" FalseValue="Collapsed" TrueValue="Visible"/>
+            <wpf:BoolToVisibilityConverter x:Key="TrueToCollapsedConverter" FalseValue="Visible" TrueValue="Collapsed"/>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Window.Style>
+        <Style TargetType="Window" BasedOn="{StaticResource ConnectedModeWindow}"></Style>
+    </Window.Style>
+
+    <Grid DataContext="{Binding ElementName=This, Path=ViewModel}" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <GroupBox Grid.Row="0" Header="{x:Static res:UiResources.BindingStatusLabel}">
+            <Grid>
+                <Grid VerticalAlignment="Center" >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Alternatives -->
+                        <!-- Alternative: Bound -->
+                        <Image Grid.Column="0" 
+                               Width="20" 
+                               Height="20" 
+                               VerticalAlignment="Center" 
+                               Margin="10, 0,10,0" 
+                               Visibility="{Binding  Path=IsOpenSolutionBound, Converter={StaticResource TrueToVisibleConverter}}">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Path=IsOpenSolutionBound}" Value="True" />
+                                                <Condition Binding="{Binding Path=BindingSucceeded}" Value="True" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Source" Value="{StaticResource CheckDrawingImage}" />
+                                        </MultiDataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Path=IsOpenSolutionBound}" Value="True" />
+                                                <Condition Binding="{Binding Path=BindingSucceeded}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Source" Value="{StaticResource WarningDrawingImage}" />
+                                            <Setter Property="ToolTip" Value="{x:Static res:UiResources.BindingErrorTooltip}" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                        <TextBlock Grid.Column="1" 
+                                   Margin="5,0" 
+                                   FontSize="{DynamicResource {x:Static vsShell:VsFonts.Environment155PercentFontSizeKey}}" 
+                                   Visibility="{Binding  Path=IsOpenSolutionBound, Converter={StaticResource TrueToVisibleConverter}}">
+                           <Run Text="{Binding Path=SolutionInfo.SolutionType, StringFormat='{}{0} '}"/>
+                           <Run Text="{Binding Path=SolutionInfo.Name, StringFormat='{}&quot;{0}&quot; '}" FontWeight="DemiBold"/>
+                           <Run Text="{x:Static res:UiResources.ManageBindingDialog_IsBoundToText}"/> 
+                           <Run Text="{Binding Path=BoundProject.Name, StringFormat='{}&quot;{0}&quot; '}" FontWeight="DemiBold"/>
+                        </TextBlock>
+                        <!-- Alternative: Standalone -->
+                        <TextBlock Grid.Column="1"
+                                   Margin="5,0"
+                                   FontSize="{DynamicResource {x:Static vsShell:VsFonts.Environment155PercentFontSizeKey}}" 
+                                   Visibility="{Binding  Path=IsOpenSolutionStandalone, Converter={StaticResource TrueToVisibleConverter}}">
+                            <Run Text="{Binding Path=SolutionInfo.SolutionType, StringFormat='{}{0} '}"/>
+                            <Run Text="{Binding Path=SolutionInfo.Name, StringFormat='{}&quot;{0}&quot; '}" FontWeight="DemiBold"/>
+                            <Run Text="{x:Static res:UiResources.ManageBindingDialog_IsNotBoundText}"/>
+                        </TextBlock>
+                        <!-- Alternative: NoSolution -->
+                        <TextBlock Grid.Column="1"
+                                   Margin="5,0"
+                                   FontSize="{DynamicResource {x:Static vsShell:VsFonts.Environment155PercentFontSizeKey}}" 
+                                   Visibility="{Binding  Path=IsSolutionOpen, Converter={StaticResource TrueToCollapsedConverter}}">
+                            <Run Text="{x:Static res:UiResources.ManageBindingDialog_NothingToBindText}"/>
+                        </TextBlock>
+                        <!-- End alternatives -->
+                    </Grid>
+
+                    
+                    <!-- Alternatives -->
+                    <!-- Alternative: Bound -->
+                    <Grid Grid.Column="1"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center" 
+                          Margin="10,0" 
+                          Visibility="{Binding  Path=IsOpenSolutionBound, Converter={StaticResource TrueToVisibleConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" 
+                                Content="{x:Static res:UiResources.UnbindButton}" 
+                                IsEnabled="{Binding Path=IsUnbindButtonEnabled}" 
+                                VerticalAlignment="Center"
+                                Click="Unbind_OnClick"/>
+                        <Button Grid.Column="1"
+                                Content="{x:Static res:UiResources.ShareConfigurationButton}" 
+                                ToolTip="{x:Static res:UiResources.ExportBindingConfigurationTooltip}"
+                                IsEnabled="{Binding Path=IsExportButtonEnabled}" 
+                                VerticalAlignment="Center"
+                                Click="ExportBindingConfigurationButton_OnClick"/>
+                    </Grid>
+                    <!-- Alternative: Standalone -->
+                    <Button Grid.Column="1" 
+                            Margin="10,0" 
+                            HorizontalAlignment="Right" 
+                            Content="{x:Static res:UiResources.UseSharedConfiguration}" 
+                            IsEnabled="{Binding Path=IsUseSharedBindingButtonEnabled}"
+                            Visibility="{Binding Path=IsUseSharedBindingButtonVisible, Converter={StaticResource TrueToVisibleConverter}}"
+                            Click="UseSharedBinding_OnClick" />
+                    <!-- Alternative: NoSolution -->
+                    <!-- no buttons -->
+                    <!-- End alternatives -->
+                </Grid>
+            </Grid>
+        </GroupBox>
+
+        <Grid Grid.Row="1" Margin="0, 15" Grid.IsSharedSizeScope="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="ButtonColumn"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="{x:Static res:UiResources.ConnectionToBindLabel}" Margin="0,15,0,5"/>
+                <ComboBox x:Name="ConnectionsComboBox" Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Path=Connections}" 
+                          SelectedItem="{Binding Path=SelectedConnectionInfo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnSourceUpdated=True}" 
+                          IsEnabled="{Binding Path=IsConnectionSelectionEnabled}" SourceUpdated="ConnectionsComboBox_OnSourceUpdated">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <connectionDisplay:ConnectionInfoComponent ConnectionInfo="{Binding Path=.}" ConnectionNameFontWeight="Normal" TextAndIconVerticalAlignment="Center"
+                                                        MaxWidth="{Binding ElementName=ConnectionsComboBox, Path=ActualWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Padding="5,0" Text="{Binding Path=ConnectionSelectionCaptionText}"
+                           Style="{StaticResource CaptionTextBlock}"
+                           Visibility="{Binding  Path=IsConnectionSelected, Converter={StaticResource TrueToCollapsedConverter}}"/>
+                <Button Grid.Row="1" Grid.Column="1" Content="{x:Static res:UiResources.ManageConnectionsButton}" HorizontalAlignment="Right"
+                        IsEnabled="{Binding Path=IsManageConnectionsButtonEnabled}" Click="ManageConnections_OnClick"/>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="ButtonColumn"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="{x:Static res:UiResources.ProjectToBindLabel}" Margin="0,15,0,5"/>
+                <Border Grid.Row="1" Grid.Column="0" BorderBrush="{DynamicResource {x:Static vsShell:VsBrushes.ActiveBorderKey}}" BorderThickness="1" Height="30"
+                        Background="{Binding ElementName=ConnectionsComboBox, Path=Background}">
+                    <TextBlock VerticalAlignment="Center" Padding="5,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Path=IsProjectSelected}" Value="False">
+                                        <Setter Property="Text" Value="{x:Static res:UiResources.SelectProjectToBindDescription}"/>
+                                        <Setter Property="FontStyle" Value="Italic"/>
+                                        <Setter Property="Foreground" Value="{StaticResource DisabledText}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Path=IsProjectSelected}" Value="True">
+                                        <Setter Property="Text" Value="{Binding Path=SelectedProject.Name}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+
+                <Button Grid.Row="1" Grid.Column="1" Content="{x:Static res:UiResources.SelectProjectButton}" Click="SelectProject_OnClick" 
+                        IsEnabled="{Binding  Path=IsSelectProjectButtonEnabled}"/>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="2" >
+            <ui:ProgressAndErrorHandlerComponent ProgressReporterViewModel="{Binding Path=ProgressReporter}" />
+        </Grid>
+
+        <TextBlock Grid.Row="3" Text="{x:Static res:UiResources.LearnMoreAboutText}" Margin="0,20">
+            <Hyperlink NavigateUri="{x:Static links:DocumentationLinks.ConnectedModeUri}" RequestNavigate="ViewWebsite">Connected Mode</Hyperlink>
+        </TextBlock>
+
+        <!-- Alternatives -->
+        <!-- Alternative: Standalone -->
+        <Grid Grid.Row="4" HorizontalAlignment="Right" Visibility="{Binding  Path=IsOpenSolutionStandalone, Converter={StaticResource TrueToVisibleConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Content="{x:Static res:UiResources.BindButton}" IsDefault="True" IsEnabled="{Binding Path=IsBindButtonEnabled}" Click="Binding_OnClick"/>
+            <Button Grid.Column="1" Content="{x:Static res:UiResources.CloseButton}" IsCancel="True"/> 
+        </Grid>
+        <!-- Alternative: Bound or NoSolution -->
+        <Grid Grid.Row="4" HorizontalAlignment="Right" Visibility="{Binding  Path=IsOpenSolutionStandalone, Converter={StaticResource TrueToCollapsedConverter}}">
+            <Button Grid.Column="0" Content="{x:Static res:UiResources.OkButton}" IsDefault="True" IsCancel="True"/>
+        </Grid>
+        <!-- End alternatives -->
+    </Grid>
+</Window>

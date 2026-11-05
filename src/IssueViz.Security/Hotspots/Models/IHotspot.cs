@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,56 +18,43 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using SonarLint.VisualStudio.Core.Analysis;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Security.Hotspots.Models
 {
     internal interface IHotspot : IAnalysisIssueBase
     {
-        string HotspotKey { get; }
-
         IHotspotRule Rule { get; }
 
         /// <summary>
         /// File path as received from SQ server
         /// </summary>
         string ServerFilePath { get; }
-
-        DateTimeOffset CreationTimestamp { get; }
-
-        DateTimeOffset LastUpdateTimestamp { get; }
     }
 
-    internal class Hotspot : IHotspot
+    internal class Hotspot(
+        Guid id,
+        string issueServerKey,
+        bool isResolved,
+        bool isOnNewCode,
+        string serverFilePath,
+        IAnalysisIssueLocation primaryLocation,
+        IHotspotRule rule,
+        IReadOnlyList<IAnalysisIssueFlow> flows,
+        string context = null)
+        : IHotspot
     {
         private static readonly IReadOnlyList<IAnalysisIssueFlow> EmptyFlows = Array.Empty<IAnalysisIssueFlow>();
 
-        public Hotspot(string hotspotKey,
-            string serverFilePath,
-            IAnalysisIssueLocation primaryLocation,
-            IHotspotRule rule,
-            DateTimeOffset createTimestamp,
-            DateTimeOffset lastUpdateTimestamp,
-            IReadOnlyList<IAnalysisIssueFlow> flows)
-        {
-            HotspotKey = hotspotKey;
-            ServerFilePath = serverFilePath;
-            PrimaryLocation = primaryLocation ?? throw new ArgumentNullException(nameof(primaryLocation));
-            Rule = rule;
-            CreationTimestamp = createTimestamp;
-            LastUpdateTimestamp = lastUpdateTimestamp;
-            Flows = flows ?? EmptyFlows;
-        }
-
-        public string HotspotKey { get; }
+        public Guid Id { get; } = id;
         public string RuleKey => Rule.RuleKey;
-        public IHotspotRule Rule { get; }
-        public IReadOnlyList<IAnalysisIssueFlow> Flows { get; }
-        public IAnalysisIssueLocation PrimaryLocation { get; }
-        public string ServerFilePath { get;  }
-        public DateTimeOffset CreationTimestamp { get; }
-        public DateTimeOffset LastUpdateTimestamp { get; }
+        public IHotspotRule Rule { get; } = rule;
+        public IReadOnlyList<IAnalysisIssueFlow> Flows { get; } = flows ?? EmptyFlows;
+        public IAnalysisIssueLocation PrimaryLocation { get; } = primaryLocation ?? throw new ArgumentNullException(nameof(primaryLocation));
+        public bool IsResolved { get; } = isResolved;
+        public bool IsOnNewCode { get; } = isOnNewCode;
+        public string IssueServerKey { get; } = issueServerKey;
+        public string ServerFilePath { get; } = serverFilePath;
+        public string RuleDescriptionContextKey { get; } = context;
     }
 }

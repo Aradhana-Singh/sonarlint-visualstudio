@@ -54,6 +54,9 @@ UnitTestResults.html
 # Visual Studio temp directories
 .vs/
 
+# Rider temp directories
+.idea/
+
 # Visual C++ cache files
 ipch/
 *.aps
@@ -165,5 +168,11 @@ $RECYCLE.BIN/
 /src/Integration.Vsix/.CFamilyEmbedded
 /src/Integration.Vsix/lib
 /build/DownloadCFamilyPlugin/ManualTestOutput
-/src/EmbeddedVsix/ts
 /build/DownloadSonarPlugin/ManualTestOutput
+/build/DownloadDependencies/tmp
+/**/launchSettings.json
+/src/Rules/Embedded
+/src/Integration.Vsix/DownloadedJars
+/src/Integration.Vsix/Sloop
+/src/Integration.Vsix/EmbeddedDotnetAnalyzerDLLs
+/src/Integration.Vsix/EmbeddedEsLintBridge

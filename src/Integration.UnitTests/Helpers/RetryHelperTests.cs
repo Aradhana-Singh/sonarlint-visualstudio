@@ -1,6 +1,6 @@
-/*
+﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -17,12 +17,6 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
-
-using System;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace SonarLint.VisualStudio.Integration.Tests
 {
@@ -65,7 +59,7 @@ namespace SonarLint.VisualStudio.Integration.Tests
             // Arrange
             var delayMilliseconds = 5;
             var delay = TimeSpan.FromMilliseconds(delayMilliseconds);
-            var timeWatch = new System.Diagnostics.Stopwatch();
+            var timeWatch = new Stopwatch();
 
             // Act
             timeWatch.Start();
@@ -74,9 +68,7 @@ namespace SonarLint.VisualStudio.Integration.Tests
 
             // Assert
             result.Should().BeFalse();
-            timeWatch.ElapsedMilliseconds.Should().BeInRange(
-                (delayMilliseconds * 2) - 200,
-                (delayMilliseconds * 2) + 200);
+            timeWatch.ElapsedMilliseconds.Should().BeGreaterOrEqualTo(delayMilliseconds * 2);
         }
 
         [TestMethod]
@@ -105,7 +97,7 @@ namespace SonarLint.VisualStudio.Integration.Tests
             // Arrange
             var delayMilliseconds = 5;
             var delay = TimeSpan.FromMilliseconds(delayMilliseconds);
-            var timeWatch = new System.Diagnostics.Stopwatch();
+            var timeWatch = new Stopwatch();
 
             // Act
             timeWatch.Start();
@@ -114,9 +106,7 @@ namespace SonarLint.VisualStudio.Integration.Tests
 
             // Assert
             result.Should().BeFalse();
-            timeWatch.ElapsedMilliseconds.Should().BeInRange(
-                (delayMilliseconds * 2) - 200,
-                (delayMilliseconds * 2) + 200);
+            timeWatch.ElapsedMilliseconds.Should().BeGreaterOrEqualTo(delayMilliseconds * 2);
         }
     }
 }

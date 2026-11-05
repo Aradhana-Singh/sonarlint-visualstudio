@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,66 +18,72 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.ComponentModel.Composition;
 using System.IO;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.Integration.Vsix.Helpers;
+using SonarLint.VisualStudio.Core.Notifications;
 
 namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
 {
-    [Export(typeof(IAnalysisStatusNotifier))]
-    [PartCreationPolicy(CreationPolicy.Shared)]
-    internal class AnalysisStatusNotifier : IAnalysisStatusNotifier
+    internal class AnalysisStatusNotifier(
+        string[] filePaths,
+        IStatusBarNotifier statusBarNotifier,
+        ILogger logger)
+        : IAnalysisStatusNotifier
     {
-        private readonly IStatusBarNotifier statusBarNotifier;
-        private readonly ILogger logger;
+        private readonly string formattedFileNames = string.Join(", ", filePaths.Select(Path.GetFileName));
+        private readonly ILogger logger = logger.ForContext(AnalysisStrings.AnalysisLogContext);
 
-        [ImportingConstructor]
-        public AnalysisStatusNotifier(IStatusBarNotifier statusBarNotifier, ILogger logger)
+        public void AnalysisStarted()
         {
-            this.statusBarNotifier = statusBarNotifier;
-            this.logger = logger;
+            Log(AnalysisStrings.MSG_AnalysisStarted, formattedFileNames);
+
+            Notify(AnalysisStrings.Notifier_AnalysisStarted, true);
         }
 
-        public void AnalysisStarted(string filePath)
-        {
-            logger.WriteLine(AnalysisStrings.MSG_AnalysisStarted, filePath);
+        public void AnalysisProgressed(
+            Guid? analysisId,
+            int issueCount,
+            string findingType,
+            bool isIntermediate) =>
+            Log(AnalysisStrings.MSG_FoundIssues, analysisId, issueCount, findingType, formattedFileNames, !isIntermediate);
 
-            Notify(AnalysisStrings.Notifier_AnalysisStarted, filePath, true);
+        public void AnalysisFinished(Guid? analysisId, TimeSpan analysisTime)
+        {
+            Log(AnalysisStrings.MSG_AnalysisComplete, analysisId, formattedFileNames, Math.Round(analysisTime.TotalSeconds, 3));
+
+            Notify(AnalysisStrings.Notifier_AnalysisFinished, false);
         }
 
-        public void AnalysisFinished(string filePath, int issueCount, TimeSpan analysisTime)
+        public void AnalysisCancelled(Guid? analysisId)
         {
-            logger.WriteLine(AnalysisStrings.MSG_AnalysisComplete, filePath, Math.Round(analysisTime.TotalSeconds, 3));
-            logger.WriteLine(AnalysisStrings.MSG_FoundIssues, issueCount, filePath);
+            Log(AnalysisStrings.MSG_AnalysisAborted, analysisId, formattedFileNames);
 
-            Notify(AnalysisStrings.Notifier_AnalysisFinished, filePath, false);
+            Notify("", false);
         }
 
-        public void AnalysisCancelled(string filePath)
+        public void AnalysisFailed(Guid? analysisId, Exception ex) => AnalysisFailed(analysisId, ex.ToString());
+
+        public void AnalysisFailed(Guid? analysisId, string failureMessage)
         {
-            logger.WriteLine(AnalysisStrings.MSG_AnalysisAborted, filePath);
-            
-            Notify("", "", false);
+            Log(AnalysisStrings.MSG_AnalysisFailed, analysisId, formattedFileNames, failureMessage);
+
+            Notify(AnalysisStrings.Notifier_AnalysisFailed, false);
         }
 
-        public void AnalysisFailed(string filePath, Exception ex)
+        public void AnalysisNotReady(Guid? analysisId, string reason)
         {
-            AnalysisFailed(filePath, ex.ToString());
+            Log(AnalysisStrings.MSG_AnalysisNotReady, analysisId, formattedFileNames, reason);
+
+            Notify("", false);
         }
 
-        public void AnalysisFailed(string filePath, string failureMessage)
-        {
-            logger.WriteLine(AnalysisStrings.MSG_AnalysisFailed, filePath, failureMessage);
+        private void Log(string messageFormat, params object[] args) => logger.WriteLine(messageFormat, args);
 
-            Notify(AnalysisStrings.Notifier_AnalysisFailed, filePath, false);
-        }
-
-        private void Notify(string messageFormat, string filePath, bool showSpinner)
+        private void Notify(string messageFormat, bool showSpinner)
         {
-            var fileName = Path.GetFileName(filePath);
-            var message = string.Format(messageFormat, fileName);
+            var fileNames = formattedFileNames;
+            var message = string.Format(messageFormat, fileNames);
             statusBarNotifier.Notify(message, showSpinner);
         }
     }

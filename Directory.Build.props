@@ -1,21 +1,10 @@
 <Project>
 
   <!-- SonarLint connected mode settings i.e. ruleset and additional files.
-  
-       Applies to every project in the repo, including those in the sonarqube-webclient submodule
-       and the utility projects under "build" directory. -->
+
+       Applies to every project in the repo, including the utility projects under "build" directory. -->
 
   <Import Condition=" $(VsTargetVersionPropsImported) != 'true'" Project="SonarLint.VsTargetVersion.props" />
-
-  <PropertyGroup>
-    <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory).sonarlint\sonarlint-visualstudioCsharp.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-
-  <ItemGroup Label="Common items">
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory).sonarlint\sonarlint-visualstudio\CSharp\SonarLint.xml">
-      <Link>Properties\SonarLint.xml</Link>
-    </AdditionalFiles>
-  </ItemGroup>
 
   <PropertyGroup Condition=" $(SignArtifacts) == 'true' ">
     <!-- Turn on strong-naming. -->
@@ -23,35 +12,41 @@
     <DefineConstants>$(DefineConstants);SignAssembly</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Label="Package locking">
+  <PropertyGroup Label="Global properties">
+    <LangVersion>latest</LangVersion>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <!-- On non-Windows hosts (e.g. Renovate on Linux) the .NET SDK adds Microsoft.NETFramework.ReferenceAssemblies to .NET Framework projects,
+       which Windows restores don't, so the generated packages.lock.json files would fail the locked-mode restore on CI. -->
+  <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' ">
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
   </PropertyGroup>
 
 
   <!-- ******************************************************************************* -->
   <!-- Newtonsoft -->
   <!-- ******************************************************************************* -->
-  <!-- NOTE: we are referencing a version that is installed with VS2017 RTM. Newer versions  of VS ship with newer versions
-         of the Newtonsoft assembly and have binding redirects. This means that we don't need to ship the Newtonsoft dll
-         ourselves. 
-         However, the SonarAnalyzers from v4.25+ also depend on a different version of the Newtonsoft assembly which is
-         newer version than the one that ships in VS. This means the VSIX needs to contain that version of the Newtonsoft
-         assembly so that some of the analyzer rules can work (Integration.Vsix.csproj handles this).
-         
-         See #2474 for more info.
+  <!-- NOTE: We're specifying the version we want to use and are embedding it in the VSIX.
+         However, VS ships with multiple verions of NewtonSoft.Json.dll and has binding redirects
+         in devenv.exe.config that can change the version is loaded at runtime. However, this
+         should not cause a problem as we will end up with a compatible version.
+
+         Finally, NewtonSoft.Json v12 has vulnerabilities reported against it which Mend
+         will complain about. By referencing v13.x we avoid those warnings.
+
+         See #3098 for more info.
    -->
-  <PropertyGroup>
-    <NewtonsoftVersion>8.0.3</NewtonsoftVersion>
-    <NewtonsoftVersion Condition=" $(VsTargetVersion) == '2022' " >13.0.1</NewtonsoftVersion>
-  </PropertyGroup>
 
   <!-- ******************************************************************************* -->
   <!-- Additional external NuGet packages used by multiple projects. -->
   <!-- They are defined here to make sure we reference the same version everywhere. -->
   <!-- ******************************************************************************* -->
   <ItemGroup Label="NuGet packages">
-    <PackageReference Include="Newtonsoft.Json" Condition=" $(RequiresNewtonsoft)=='true'" Version="$(NewtonsoftVersion)" />
-    <PackageReference Include="System.IO.Abstractions" Condition=" $(RequiresSystemIOAbstractions)=='true'" Version="9.0.4" />
+    <PackageReference Include="Newtonsoft.Json" Condition=" $(RequiresNewtonsoft)=='true'" Version="13.0.3" />
+    <PackageReference Include="System.IO.Abstractions" Condition=" $(RequiresSystemIOAbstractions)=='true'" Version="9.0.6" />
+    <PackageReference Include="System.Threading.Channels" Condition=" $(RequiresChannels)=='true'" Version="7.0.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.32.0" Condition="$(RequiresLibGit)=='true'" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,13 +19,15 @@
  */
 
 using System.ComponentModel.Composition;
+using System.Globalization;
+using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.VisualStudio.PlatformUI;
-using SonarLint.VisualStudio.IssueVisualization.Helpers;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.ViewModels.Commands
 {
-    internal interface INavigateToRuleDescriptionCommand : ICommand
+    public interface INavigateToRuleDescriptionCommand : ICommand
     {
     }
 
@@ -34,14 +36,54 @@ namespace SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.Vi
     internal class NavigateToRuleDescriptionCommand : DelegateCommand, INavigateToRuleDescriptionCommand
     {
         [ImportingConstructor]
-        public NavigateToRuleDescriptionCommand(IShowInBrowserService showInBrowserService)
+        public NavigateToRuleDescriptionCommand(IEducation educationService)
             : base(parameter =>
                 {
-                    var ruleKey = (string) parameter;
-                    showInBrowserService.ShowRuleDescription(ruleKey);
+                    var paramObject = parameter as NavigateToRuleDescriptionCommandParam;
+                    if (SonarCompositeRuleId.TryParse(paramObject?.FullRuleKey, out var ruleId))
+                    {
+                        educationService.ShowRuleHelp(ruleId, paramObject?.IssueId);
+                    }
                 },
-                parameter => parameter is string s && !string.IsNullOrEmpty(s))
+                parameter => parameter is NavigateToRuleDescriptionCommandParam s &&
+                             !string.IsNullOrEmpty(s.FullRuleKey) &&
+                             SonarCompositeRuleId.TryParse(s.FullRuleKey, out var _))
         {
+        }
+    }
+
+    public class NavigateToRuleDescriptionCommandParam
+    {
+        /// <summary>
+        /// The id of the issue that comes from SlCore
+        /// </summary>
+        public Guid? IssueId { get; init; }
+        public string FullRuleKey { get; init; }
+    }
+
+    public class NavigateToRuleDescriptionCommandConverter : IMultiValueConverter
+    {
+        public object Convert(
+            object[] values,
+            Type targetType,
+            object parameter,
+            CultureInfo culture)
+        {
+            if (values.Length == 2 && values[0] is string && (values[1] is Guid || values[1] == null))
+            {
+                return new NavigateToRuleDescriptionCommandParam { FullRuleKey = (string)values[0], IssueId = (Guid?)values[1] };
+            }
+            return null;
+        }
+
+        public object[] ConvertBack(
+            object value,
+            Type[] targetTypes,
+            object parameter,
+            CultureInfo culture)
+        {
+            Debug.Fail("We should not hit here");
+            return null;
         }
     }
 }

@@ -19,7 +19,7 @@ namespace SonarLint.VisualStudio.Integration.Binding {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class BindingStrings {
@@ -83,12 +83,48 @@ namespace SonarLint.VisualStudio.Integration.Binding {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to [ProjectLanguageIndicator] Failed to identify languages files in project &apos;{0}&apos;: {1}.
+        /// </summary>
+        internal static string FailedToIdentifyLanguage {
+            get {
+                return ResourceManager.GetString("FailedToIdentifyLanguage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Failed to bind project &apos;{0}&apos;.
         ///A conflicting version of {1} has been found. Please delete the file &apos;{2}&apos; and remove references to it from your projects, then re-open the solution and try again..
         /// </summary>
         internal static string FoundConflictingAdditionalFile {
             get {
                 return ResourceManager.GetString("FoundConflictingAdditionalFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Configure Binding.
+        /// </summary>
+        internal static string NoBindingSuggestionNotification_ConfigureBindingAction {
+            get {
+                return ResourceManager.GetString("NoBindingSuggestionNotification_ConfigureBindingAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Learn more.
+        /// </summary>
+        internal static string NoBindingSuggestionNotification_LearnMoreAction {
+            get {
+                return ResourceManager.GetString("NoBindingSuggestionNotification_LearnMoreAction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ConnectedMode: SonarQube for Visual Studio couldn&apos;t match the {0} project &apos;{1}&apos; to the currently opened solution. Please make sure the correct solution is open or try configuring the binding manually..
+        /// </summary>
+        internal static string NoBindingSuggestionNotification_Message {
+            get {
+                return ResourceManager.GetString("NoBindingSuggestionNotification_Message", resourceCulture);
             }
         }
     }

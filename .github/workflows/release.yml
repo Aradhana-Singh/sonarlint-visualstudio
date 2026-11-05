@@ -1,0 +1,126 @@
+name: sonar-release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Full version including build number, e.g. 8.3.0.10161'
+        required: true
+        type: string
+      dryRun:
+        description: 'Flag to enable the dry-run execution'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHONUNBUFFERED: 1
+
+jobs:
+  attach-artifacts-to-draft:
+    if: ${{ !(inputs.dryRun == true) }}
+    permissions:
+      id-token: write
+      contents: write
+    runs-on: github-ubuntu-latest-s
+    name: Attach VSIX and SBOM to draft release
+    env:
+      RELEASE_TAG: ${{ inputs.version }}
+      ARTIFACTORY_URL: https://repox.jfrog.io/artifactory/sonarsource/org/sonarsource/sonarlint/visualstudio/sonarlint-visualstudio
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get vault secrets
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+
+      - name: Download VSIX and SBOM from Artifactory
+        env:
+          ARTIFACTORY_ACCESS_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        run: |
+          for file in \
+            "SonarLint.VSIX-${RELEASE_TAG}-2022.vsix" \
+            "SonarLint.visualstudio.sbom-${RELEASE_TAG}-2022.json" \
+            "SonarLint.visualstudio.sbom-${RELEASE_TAG}-2022.json.asc"; do
+            curl -sSf -o "$file" -H "Authorization: Bearer ${ARTIFACTORY_ACCESS_TOKEN}" "${ARTIFACTORY_URL}/${RELEASE_TAG}/${file}"
+          done
+
+      - name: Upload artifacts to draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${RELEASE_TAG}" \
+            "SonarLint.VSIX-${RELEASE_TAG}-2022.vsix" \
+            "SonarLint.visualstudio.sbom-${RELEASE_TAG}-2022.json" \
+            "SonarLint.visualstudio.sbom-${RELEASE_TAG}-2022.json.asc" \
+            --clobber
+
+  release:
+    needs: attach-artifacts-to-draft
+    if: ${{ always() && (needs.attach-artifacts-to-draft.result == 'success' || needs.attach-artifacts-to-draft.result == 'skipped') }}
+    permissions:
+      id-token: write
+      contents: write
+    uses: SonarSource/gh-action_release/.github/workflows/main.yaml@95ca260926950eedcc8c69437f9f12b6f0584de4 # 7.0.1
+    with:
+      version: ${{ inputs.version }}
+      publishToBinaries: false
+      mavenCentralSync: false
+      dryRun: ${{ inputs.dryRun }}
+      slackChannel: C02E6L5C01H # squad-devex-private
+
+  deploy_to_microsoft_marketplace:
+    permissions:
+      id-token: write
+      contents: write
+    runs-on: github-windows-latest-s
+    name: Deploy to Visual Studio marketplace
+    needs: release
+    # Dry-run safety: never push to the VS marketplace during a sandbox test
+    if: ${{ !(inputs.dryRun == true) }}
+    env:
+      RELEASE_TAG: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get vault secrets
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+            development/kv/data/visualstudio VSCE_TOKEN | VCSE_TOKEN
+
+      - name: Setup JFrog
+        uses: SonarSource/jfrog-setup-wrapper@907e87c3d2081a98d2ab8cb03284ee6711f1ee83 # tag=3.2.3
+        with:
+          jfrogAccessToken: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+
+      - name: Create local directory
+        id: local_repo
+        shell: bash
+        run: echo "dir=$(mktemp -d repo.XXXXXXXX)" >> $GITHUB_OUTPUT
+
+      - name: Get the version
+        id: get_version
+        shell: bash
+        run: |
+          IFS=. read -r major minor patch build <<< "$RELEASE_TAG"
+          echo "build=${build}" >> $GITHUB_OUTPUT
+          echo "version=${major}.${minor}.${patch}" >> $GITHUB_OUTPUT
+
+      - name: Download Artifacts
+        uses: SonarSource/gh-action_release/download-build@master
+        with:
+          build-number: ${{ steps.get_version.outputs.build }}
+          local-repo-dir: ${{ steps.local_repo.outputs.dir }}
+          remote-repo: sonarsource-public-releases
+          flat-download: true
+          download-checksums: false
+
+      - name: Publish extension to Marketplace
+        uses: cezarypiatek/VsixPublisherAction@1.1
+        with:
+          extension-file: ${{ steps.local_repo.outputs.dir }}\SonarLint.VSIX-${{env.RELEASE_TAG}}-2022.vsix
+          publish-manifest-file: MarketPlaceFiles\VS2022\manifest-2022.json
+          personal-access-code: ${{ fromJSON(steps.secrets.outputs.vault).VCSE_TOKEN }}

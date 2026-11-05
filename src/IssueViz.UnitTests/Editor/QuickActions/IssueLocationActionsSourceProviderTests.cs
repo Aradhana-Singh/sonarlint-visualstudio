@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,17 +21,18 @@
 using System;
 using FluentAssertions;
 using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions;
 using SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
+using SonarLint.VisualStudio.TestInfrastructure;
 using static SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.Common.TaggerTestHelper;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickActions
@@ -42,13 +43,30 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickAction
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<IssueLocationActionsSourceProvider, ISuggestedActionsSourceProvider>(null, new[]
-            {
-                MefTestHelpers.CreateExport<SVsServiceProvider>(Mock.Of<IServiceProvider>()),
-                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(Mock.Of<IBufferTagAggregatorFactoryService>()),
-                MefTestHelpers.CreateExport<IIssueSelectionService>(Mock.Of<IIssueSelectionService>()),
-                MefTestHelpers.CreateExport<ILightBulbBroker>(Mock.Of<ILightBulbBroker>())
-            });
+            MefTestHelpers.CheckTypeCanBeImported<IssueLocationActionsSourceProvider, ISuggestedActionsSourceProvider>(
+                MefTestHelpers.CreateExport<IVsUIServiceOperation>(),
+                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(),
+                MefTestHelpers.CreateExport<IIssueSelectionService>(),
+                MefTestHelpers.CreateExport<ILightBulbBroker>());
+        }
+
+        [TestMethod]
+        public void MefCtor_DoesNotCallAnyServices()
+        {
+            var serviceOp = new Mock<IVsUIServiceOperation>();
+            var bufferTagAggregatorFactoryService = new Mock<IBufferTagAggregatorFactoryService>();
+            var issueSelectionService = new Mock<IIssueSelectionService>();
+            var lightBulbBroker = new Mock<ILightBulbBroker>();
+
+            _ = new IssueLocationActionsSourceProvider(serviceOp.Object, bufferTagAggregatorFactoryService.Object,
+                issueSelectionService.Object, lightBulbBroker.Object);
+
+            // The MEF constructor should be free-threaded, which it will be if
+            // it doesn't make any external calls.
+            serviceOp.Invocations.Should().BeEmpty();
+            bufferTagAggregatorFactoryService.Invocations.Should().BeEmpty();
+            issueSelectionService.Invocations.Should().BeEmpty();
+            lightBulbBroker.Invocations.Should().BeEmpty();
         }
 
         [TestMethod]
@@ -82,6 +100,18 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickAction
             actionsSource.Should().BeOfType<IssueLocationActionsSource>();
         }
 
+        private static IVsUIServiceOperation CreateServiceOperation(IVsUIShell svcToPassToCallback)
+        {
+            var serviceOp = new Mock<IVsUIServiceOperation>();
+
+
+            // Set up the mock to invoke the operation with the supplied VS service
+            serviceOp.Setup(x => x.Execute<SVsUIShell, IVsUIShell, ISuggestedActionsSource>(It.IsAny<Func<IVsUIShell, ISuggestedActionsSource>>()))
+               .Returns<Func<IVsUIShell, ISuggestedActionsSource>>(op => op(svcToPassToCallback));
+
+            return serviceOp.Object;
+        }
+
         private static IssueLocationActionsSourceProvider CreateTestSubject(ITextBuffer buffer)
         {
             var bufferTagAggregatorFactoryService = new Mock<IBufferTagAggregatorFactoryService>();
@@ -95,10 +125,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.QuickAction
                 .Returns(Mock.Of<ITagAggregator<IIssueLocationTag>>());
 
             var selectionService = Mock.Of<IIssueSelectionService>();
-            var serviceProvider = Mock.Of<IServiceProvider>();
+            var serviceOp = CreateServiceOperation(Mock.Of<IVsUIShell>());
             var lightBulbBroker = Mock.Of<ILightBulbBroker>();
 
-            return new IssueLocationActionsSourceProvider(serviceProvider, bufferTagAggregatorFactoryService.Object, selectionService, lightBulbBroker);
+            return new IssueLocationActionsSourceProvider(serviceOp, bufferTagAggregatorFactoryService.Object, selectionService, lightBulbBroker);
         }
     }
 }

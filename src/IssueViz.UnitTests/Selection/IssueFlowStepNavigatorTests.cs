@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Moq;
 using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
@@ -49,14 +49,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            var selectionServiceExport = MefTestHelpers.CreateExport<IAnalysisIssueSelectionService>(Mock.Of<IAnalysisIssueSelectionService>());
-            var locationNavigatorExport = MefTestHelpers.CreateExport<ILocationNavigator>(Mock.Of<ILocationNavigator>());
-
-            MefTestHelpers.CheckTypeCanBeImported<IssueFlowStepNavigator, IIssueFlowStepNavigator>(null, new[]
-            {
-                selectionServiceExport,
-                locationNavigatorExport
-            });
+            MefTestHelpers.CheckTypeCanBeImported<IssueFlowStepNavigator, IIssueFlowStepNavigator>(
+                MefTestHelpers.CreateExport<IAnalysisIssueSelectionService>(),
+                MefTestHelpers.CreateExport<ILocationNavigator>());
         }
 
         [TestMethod]
@@ -206,7 +201,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
             {
                 CreateLocation(1, isMarkedAsNavigable:true),
                 CreateLocation(2, isMarkedAsNavigable:true), // current
-                CreateLocation(3, isMarkedAsNavigable:false), 
+                CreateLocation(3, isMarkedAsNavigable:false),
                 CreateLocation(4, isMarkedAsNavigable:true, isTrulyNavigable:false),
                 CreateLocation(5, isMarkedAsNavigable:true), // expected
                 CreateLocation(6, isMarkedAsNavigable:true)
@@ -280,7 +275,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
                 locationViz.Setup(x => x.Span).Returns(new SnapshotSpan());
             }
 
-            locationNavigatorMock.Setup(x => x.TryNavigate(locationViz.Object)).Returns(isTrulyNavigable);
+            locationNavigatorMock.Setup(x => x.TryNavigatePartial(locationViz.Object)).Returns(isTrulyNavigable ? NavigationResult.OpenedLocation : NavigationResult.Failed);
 
             return locationViz.Object;
         }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,8 +21,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.Helpers;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.CFamily.CMake
 {
@@ -51,7 +50,9 @@ namespace SonarLint.VisualStudio.CFamily.CMake
                                      // The word chars are captured in a group called "prefix".
             "?" +                    // Match the previous group 0 or 1 times i.e. the prefix is optional.
             "(?<name>\\w+)" +        // Capture one or more word consecutive word chars in a group called "name".
-            "}");                    // Match the closing literal.
+            "}",                     // Match the closing literal.
+            RegexOptions.Compiled,
+            Core.RegexConstants.DefaultTimeout);
 
         public MacroEvaluationService(ILogger logger)
             :this(logger, new MacroEvaluator()) {}
@@ -88,13 +89,13 @@ namespace SonarLint.VisualStudio.CFamily.CMake
                 LogDebug($"{prefix}.{name} = {evaluatedProperty}");
                 sb.Replace(match.Value, evaluatedProperty);
             }
-            
+
             return sb.ToString();
         }
 
         private void LogDebug(string message)
         {
-            logger.LogDebug($"[CMake:MacroEval] [Thread id: {Thread.CurrentThread.ManagedThreadId}] {message}");
+            logger.LogVerbose($"[CMake:MacroEval] [Thread id: {Thread.CurrentThread.ManagedThreadId}] {message}");
         }
     }
 }

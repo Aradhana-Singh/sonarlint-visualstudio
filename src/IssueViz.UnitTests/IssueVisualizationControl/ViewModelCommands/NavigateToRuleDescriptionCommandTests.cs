@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,10 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.IssueVisualization.Helpers;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.ViewModels.Commands;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualizationControl.ViewModelCommands
@@ -31,10 +29,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
     {
         [TestMethod]
         [DataRow(null)]
-        [DataRow("")]
+        [DataRow("cpp:S111")]
         [DataRow(1)]
         [DataRow(true)]
-        public void CanExecute_InvalidRuleKey_False(object parameter)
+        public void CanExecute_InvalidObjectType_False(object parameter)
         {
             var testSubject = CreateTestSubject();
 
@@ -44,30 +42,83 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.IssueVisualization
         }
 
         [TestMethod]
-        public void CanExecute_ValidRuleKey_True()
+        [DataRow("c:S000", true)]
+        [DataRow("cpp:S111", true)]
+        [DataRow("csharpsquid:S222", true)]
+        [DataRow("vbnet:S333", true)]
+        [DataRow("javascript:S444", true)]
+        [DataRow("typescript:555", true)]
+        [DataRow("rule key in invalid format", false)]
+        [DataRow(":xxx", false)]
+        [DataRow(":123:", false)]
+        [DataRow("xxx:123:asd", false)]
+        [DataRow("", false)]
+        public void CanExecute_ValidObjectType_CheckRuleKey(string fullRuleKey, bool expectedResult)
         {
             var testSubject = CreateTestSubject();
 
-            var result = testSubject.CanExecute("some key");
+            var executeParam = new NavigateToRuleDescriptionCommandParam { FullRuleKey = fullRuleKey };
 
-            result.Should().BeTrue();
+            var result = testSubject.CanExecute(executeParam);
+
+            result.Should().Be(expectedResult);
         }
 
         [TestMethod]
-        public void Execute_RuleDocumentationShown()
+        [DataRow("c:S000")]
+        [DataRow("cpp:S111")]
+        [DataRow("csharpsquid:S222")]
+        [DataRow("vbnet:S333")]
+        [DataRow("javascript:S444")]
+        [DataRow("typescript:555")]
+        public void Execute_RuleDocumentationShown(string fullRuleKey)
         {
-            var browserService = new Mock<IShowInBrowserService>();
-            var testSubject = CreateTestSubject(browserService.Object);
+            var educationService = new Mock<IEducation>();
+            var testSubject = CreateTestSubject(educationService.Object);
 
-            testSubject.Execute("some key");
+            var executeParam = new NavigateToRuleDescriptionCommandParam { FullRuleKey = fullRuleKey };
 
-            browserService.Verify(x => x.ShowRuleDescription("some key"), Times.Once);
-            browserService.VerifyNoOtherCalls();
+            testSubject.Execute(executeParam);
+
+            educationService.Verify(x => x.ShowRuleHelp(It.IsAny<SonarCompositeRuleId>(),null), Times.Once);
+            educationService.VerifyNoOtherCalls();
+
+            var actualRuleId = (SonarCompositeRuleId)educationService.Invocations[0].Arguments[0];
+            SonarCompositeRuleId.TryParse(fullRuleKey, out var expectedId);
+
+            actualRuleId.RepoKey.Should().Be(expectedId.RepoKey);
+            actualRuleId.RuleKey.Should().Be(expectedId.RuleKey);
         }
 
-        private NavigateToRuleDescriptionCommand CreateTestSubject(IShowInBrowserService browserService = null)
+        [TestMethod]
+        public void Execute_WrongTypeParameter_DoesNotCrash()
         {
-            return new NavigateToRuleDescriptionCommand(browserService);
+            var educationService = new Mock<IEducation>();
+            var testSubject = CreateTestSubject(educationService.Object);
+
+            testSubject.Execute("wrong param");
+
+            educationService.VerifyNoOtherCalls();
+        }
+
+        [TestMethod]
+        public void Execute_IssueIdProvided_RuleDocumentationShownForIssue()
+        {
+            var issueId = Guid.NewGuid();
+            var educationService = new Mock<IEducation>();
+            var testSubject = CreateTestSubject(educationService.Object);
+            var executeParam = new NavigateToRuleDescriptionCommandParam { FullRuleKey = "csharp:S100", IssueId = issueId};
+
+            testSubject.Execute(executeParam);
+
+            educationService.Verify(x => x.ShowRuleHelp(It.IsAny<SonarCompositeRuleId>(), issueId), Times.Once);
+            educationService.VerifyNoOtherCalls();
+        }
+
+        private NavigateToRuleDescriptionCommand CreateTestSubject(IEducation educationService = null)
+        {
+            educationService ??= Mock.Of<IEducation>();
+            return new NavigateToRuleDescriptionCommand(educationService);
         }
     }
 }

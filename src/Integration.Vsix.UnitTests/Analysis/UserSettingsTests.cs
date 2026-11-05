@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,31 +18,33 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.UserRuleSettings;
 
-namespace SonarLint.VisualStudio.Integration.Vsix.Analysis.UnitTests
+namespace SonarLint.VisualStudio.Integration.Vsix.Analysis.UnitTests;
+
+[TestClass]
+public class UserSettingsTests
 {
-    [TestClass]
-    public class UserSettingsTests
+    [TestMethod]
+    public void Ctor_NullArg_Throws()
     {
-        [TestMethod]
-        public void Ctor_NullArg_Throws()
-        {
-            Action act = () => new UserSettings(null);
+        Action analysisSettingsNull = () => new UserSettings(null, "any");
+        Action baseDirectoryNullAction = () => new UserSettings(new AnalysisSettings(), null);
 
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("rulesSettings");
-        }
+        analysisSettingsNull.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("analysisSettings");
+        baseDirectoryNullAction.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("baseDirectory");
+    }
 
 
-        [TestMethod]
-        public void Ctor_NonNullSettings_PropertyReturnsExpectedSettings()
-        {
-            var settings = new RulesSettings();
+    [TestMethod]
+    public void Ctor_NonNullSettings_PropertyReturnsExpectedSettings()
+    {
+        var settings = new AnalysisSettings();
+        var baseDirectory = "base dir";
 
-            new UserSettings(settings).RulesSettings.Should().BeSameAs(settings);
-        }
+        var testSubject = new UserSettings(settings, baseDirectory);
+
+        testSubject.AnalysisSettings.Should().BeSameAs(settings);
+        testSubject.BaseDirectory.Should().Be(baseDirectory);
     }
 }

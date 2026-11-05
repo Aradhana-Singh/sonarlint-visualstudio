@@ -1,0 +1,259 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+      - dogfood-on-*
+      - branch-*
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: write
+  checks: write
+
+jobs:
+  build:
+    runs-on: warp-custom-sonarlint-visualstudio
+    name: Build
+    environment: ${{ (github.ref_name == 'master' || startsWith(github.ref_name, 'branch-')) && 'release-ready-build' || '' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: "0"
+
+      - name: Fetch vault secrets
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets: |
+            development/kv/data/repox url | ARTIFACTORY_URL;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader username | ARTIFACTORY_USER;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-qa-deployer access_token | ARTIFACTORY_DEPLOY_TOKEN;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-promoter access_token | ARTIFACTORY_PROMOTE_ACCESS_TOKEN;
+            development/kv/data/sign key | SIGN_KEY;
+            development/kv/data/sign passphrase | SIGN_PASSPHRASE;
+            development/team/languages/kv/data/strong_named_key SonarSourceSecret_snk | SONARSOURCE_SNK;
+            development/kv/data/sonarcloud url | SONAR_URL;
+            development/kv/data/sonarcloud token | SONAR_TOKEN;
+            development/aws/sts/downloads access_key | AWS_ACCESS_KEY_ID;
+            development/aws/sts/downloads secret_key | AWS_SECRET_ACCESS_KEY;
+            development/aws/sts/downloads security_token | AWS_SESSION_TOKEN;
+            development/github/token/{REPO_OWNER_NAME_DASH}-promotion token | GITHUB_PROMOTION_TOKEN;
+
+      - name: Configure signing parameters
+        id: signing-config
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == branch-* ]]; then
+            echo "account=codesigning-release" >> "$GITHUB_OUTPUT"
+            echo "profile=sonarsource-release" >> "$GITHUB_OUTPUT"
+            echo "client-id=3562cc05-016f-405e-b123-1622451a2cee" >> "$GITHUB_OUTPUT"
+            echo "is-test-env=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "account=codesigning-test" >> "$GITHUB_OUTPUT"
+            echo "profile=sonarsource-test" >> "$GITHUB_OUTPUT"
+            echo "client-id=6b33b753-44e5-4afe-8da5-d7f849bd7909" >> "$GITHUB_OUTPUT"
+            echo "is-test-env=true" >> "$GITHUB_OUTPUT"
+            echo
+          fi
+          echo "signing-endpoint=https://weu.codesigning.azure.net/" >> "$GITHUB_OUTPUT"
+
+      - name: Azure login
+        shell: powershell
+        env:
+          AZURE_CLIENT_ID: ${{ steps.signing-config.outputs.client-id }}
+          AZURE_SUBSCRIPTION_ID: "05011d2a-e478-46bd-b842-09c8693acccb"
+          AZURE_TENANT_ID: "75622d57-788f-4dd3-b33c-739f625e6311"
+        run: .\.github\scripts\azure-login.ps1
+
+      - name: Configure test Artifact Signing access token
+        if: ${{ steps.signing-config.outputs.is-test-env == 'true' }}
+        uses: SonarSource/gh-action_azure-artifact-signing@v1
+        with:
+          mode: setup
+          signing-profile: test
+
+      - name: Import test Artifact Signing certificate chain
+        if: ${{ steps.signing-config.outputs.is-test-env == 'true' }}
+        shell: powershell
+        env:
+          SIGNING_ACCOUNT: ${{ steps.signing-config.outputs.account }}
+          SIGNING_CERTIFICATE_PROFILE: ${{ steps.signing-config.outputs.profile }}
+          SIGNING_ENDPOINT: ${{ steps.signing-config.outputs.signing-endpoint }}
+        run: .\.github\scripts\import-test-signing-certificate-chain.ps1
+
+      - name: Install Sign CLI
+        shell: bash
+        env:
+          ARTIFACTORY_USER: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        run: dotnet tool install --global sign --version 0.9.1-beta.26127.1
+      - uses: SonarSource/ci-github-actions/get-build-number@v1
+
+      - name: Get branch name
+        shell: bash
+        id: branch-name
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "BRANCH_NAME=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare Build
+        shell: bash
+        env:
+          ARTIFACTORY_USER: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
+        run: |
+          versionProps=$(cat build/Version.props)
+          sonarProjectVersion=$(echo "$versionProps" | sed -n 's:.*<MainVersion>\(.*\)</MainVersion>.*:\1:p')
+          PROJECT_VERSION="${sonarProjectVersion}.${BUILD_NUMBER}"
+          PROJECT_VERSION_WITHOUT_BUILD_NUMBER="${sonarProjectVersion}"
+          echo "PROJECT_VERSION=${PROJECT_VERSION}" >> $GITHUB_ENV
+          echo "PROJECT_VERSION_WITHOUT_BUILD_NUMBER=${PROJECT_VERSION_WITHOUT_BUILD_NUMBER}" >> $GITHUB_ENV
+          echo "PROJECT_VERSION: ${PROJECT_VERSION}"
+          echo "PROJECT_VERSION_WITHOUT_BUILD_NUMBER: $PROJECT_VERSION_WITHOUT_BUILD_NUMBER"
+          msbuild.exe build/ChangeVersion.proj -p:Sha1=${GITHUB_SHA} -p:BranchName=${BRANCH_NAME} -p:BuildNumber=${BUILD_NUMBER} -p:BuildConfiguration=Release
+          msbuild.exe build/DownloadDependencies -p:VsVersion=17.0 -p:VsTargetVersion=2022
+          dotnet restore "SonarQube.VisualStudio.sln" --locked-mode
+
+      - name: Update GitHub Actions Summary
+        shell: bash
+        run: |
+          echo "## 📦 Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Project Version** | \`${PROJECT_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Number** | \`${BUILD_NUMBER}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ steps.branch-name.outputs.BRANCH_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Prepare Analysis
+        shell: bash
+        env:
+          SONAR_PROJECT_KEY: ${{ github.event.repository.name }}
+          SONAR_URL: ${{ fromJSON(steps.secrets.outputs.vault).SONAR_URL }}
+          SONAR_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).SONAR_TOKEN }}
+          COVERAGE_FILE: ${{ github.workspace }}/coverage.xml
+        run: .github/scripts/sonarqube-analysis.sh
+
+      - name: Build Signed
+        shell: bash
+        env:
+          SONARSOURCE_SNK: ${{ fromJSON(steps.secrets.outputs.vault).SONARSOURCE_SNK }}
+          SIGNING_ACCOUNT: ${{ steps.signing-config.outputs.account }}
+          SIGNING_CERTIFICATE_PROFILE: ${{ steps.signing-config.outputs.profile }}
+          SIGNING_ENDPOINT: ${{ steps.signing-config.outputs.signing-endpoint }}
+        run: |
+          echo "${SONARSOURCE_SNK}" | base64 -d > "/tmp/SonarSource.snk"
+          msbuild.exe "SonarQube.VisualStudio.sln" -p:VsVersion=17.0 -p:VsTargetVersion=2022 -p:SignArtifacts=true -p:AssemblyOriginatorKeyFile="/tmp/SonarSource.snk" -p:DeployExtension=false -p:Sha1="${GITHUB_SHA}" -p:BuildNumber="${BUILD_NUMBER}" -p:Configuration=Release
+
+      - name: Verify signature
+        shell: powershell
+        run: .\.github\scripts\verify-signature.ps1
+
+      - name: Generate and sign SBOM
+        shell: bash
+        env:
+          SIGN_KEY: ${{ fromJSON(steps.secrets.outputs.vault).SIGN_KEY }}
+          SIGN_PASSPHRASE: ${{ fromJSON(steps.secrets.outputs.vault).SIGN_PASSPHRASE }}
+        run: |
+          sbomname="SonarLint.visualstudio.sbom-${PROJECT_VERSION}-2022.json"
+          echo "${SIGN_KEY}" | gpg --batch --passphrase "${SIGN_PASSPHRASE}" --allow-secret-key-import --import
+          gpg --list-secret-keys
+          dotnet CycloneDX "SonarQube.VisualStudio.sln" -t -F Json -o binaries
+          cd binaries
+          mv bom.json $sbomname
+          gpg --pinentry-mode loopback --passphrase "${SIGN_PASSPHRASE}" --armor --detach-sig --default-key infra@sonarsource.com "$sbomname"
+          echo "signed $sbomname"
+
+      - name: Test with Coverage
+        shell: bash
+        env:
+          MSVC: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64\cl.exe # Required for CFamily integration tests
+          VSTEST_TESTHOST_SHUTDOWN_TIMEOUT: 30000
+        run: |
+          vstest.console.exe --EnableCodeCoverage --Settings:test.runsettings --Logger:trx --ResultsDirectory:"TestResults" src/**/bin/**/Sonar*.*Tests.dll
+          dotnet-coverage merge -o "coverage.xml" -f xml "**/*.coverage"
+
+      - name: Report Test Results
+        uses: dorny/test-reporter@v2
+        if: success() || failure()
+        with:
+          name: Test Results
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+          list-tests: failed
+
+      - name: Analyze on SonarQubeCloudEU
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner end -d:sonar.token="${SONAR_TOKEN}"
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: binaries/*
+
+      - name: Publish to Repox
+        shell: bash
+        env:
+          ARTIFACTORY_URL: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_URL }}
+          ARTIFACTORY_DEPLOY_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_DEPLOY_TOKEN }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          jf config add repox --artifactory-url ${ARTIFACTORY_URL} --access-token "${ARTIFACTORY_DEPLOY_TOKEN}"
+          jf rt upload "binaries/*" sonarsource-public-qa/org/sonarsource/sonarlint/visualstudio/${REPO_NAME}/${PROJECT_VERSION}/ --flat --build-name ${REPO_NAME} --build-number ${BUILD_NUMBER} --module="org.sonarsource.sonarlint.visualstudio:${REPO_NAME}:${PROJECT_VERSION}"
+          jf rt bp ${REPO_NAME} ${BUILD_NUMBER}
+
+      - name: Promote Build
+        if: ${{ github.ref_name == 'master' || startsWith(github.ref_name, 'branch-') }}
+        shell: bash
+        env:
+          ARTIFACTORY_URL: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_URL }}
+          ARTIFACTORY_PROMOTE_ACCESS_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_PROMOTE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_PROMOTION_TOKEN }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          jf config remove repox
+          jf config add repox --artifactory-url ${ARTIFACTORY_URL} --access-token "${ARTIFACTORY_PROMOTE_ACCESS_TOKEN}"
+          jf rt bpr --status "it-passed" "${REPO_NAME}" "${BUILD_NUMBER}" "sonarsource-public-builds"
+          # Post promotion status to GitHub
+          longDescription="Latest promoted build of '${PROJECT_VERSION}' from branch '${GITHUB_REF}'"
+          shortDescription=${longDescription:0:140}
+          buildUrl="${ARTIFACTORY_URL%/*}/ui/builds/${REPO_NAME}/${BUILD_NUMBER}/"
+          githubApiUrl="https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+          gh api -X POST -H "X-GitHub-Api-Version: 2022-11-28" "$githubApiUrl" -H "Content-Type: application/json" --input - <<EOF
+          {
+            "state": "success",
+            "target_url": "$buildUrl",
+            "description": "$shortDescription",
+            "context": "repox-${GITHUB_REF_NAME}"
+          }
+          EOF
+
+      - name: Publish to Dogfood
+        if: ${{ github.ref_name == 'master' || startsWith(github.ref_name, 'branch-') || startsWith(github.ref_name, 'dogfood-on-') }}
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ fromJSON(steps.secrets.outputs.vault).AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ fromJSON(steps.secrets.outputs.vault).AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).AWS_SESSION_TOKEN }}
+          AWS_DEFAULT_REGION: eu-central-1
+        run: |
+          mkdir -p /tmp/dogfood/${PROJECT_VERSION}
+          PrivateGalleryCreator.exe --input=binaries --terminate --source="https://binaries.sonarsource.com/SonarLint-for-VisualStudio/dogfood/${PROJECT_VERSION}/" --output=/tmp/dogfood/feed.xml
+          cp binaries/SonarLint.VSIX-${PROJECT_VERSION}-2022.vsix /tmp/dogfood/${PROJECT_VERSION}/
+          .github/scripts/publish-dogfood-site.sh /tmp/dogfood

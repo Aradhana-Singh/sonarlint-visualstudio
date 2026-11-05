@@ -1,0 +1,87 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.Diagnostics.CodeAnalysis;
+using System.Windows;
+using Microsoft.VisualStudio;
+using SonarLint.VisualStudio.ConnectedMode.UI.Credentials;
+using SonarLint.VisualStudio.ConnectedMode.UI.Resources;
+using SonarLint.VisualStudio.Core.Binding;
+
+namespace SonarLint.VisualStudio.ConnectedMode.UI.OrganizationSelection;
+
+[ExcludeFromCodeCoverage]
+public partial class OrganizationSelectionDialog : Window
+{
+    private readonly IConnectedModeServices connectedModeServices;
+
+    public OrganizationSelectionDialog(IConnectedModeServices connectedModeServices, CloudServerRegion cloudServerRegion, ICredentialsModel credentialsModel)
+    {
+        this.connectedModeServices = connectedModeServices;
+        ViewModel = new OrganizationSelectionViewModel(cloudServerRegion,
+            credentialsModel,
+            connectedModeServices.SlCoreConnectionAdapter,
+            new ProgressReporterViewModel(connectedModeServices.Logger));
+        InitializeComponent();
+    }
+
+    public OrganizationSelectionViewModel ViewModel { get; }
+
+    private async void OkButton_OnClick(object sender, RoutedEventArgs e) => await UpdateFinalConnectionInfoAsync(ViewModel.SelectedOrganization.Key, ViewModel.CloudServerRegion);
+
+    private async void ChooseAnotherOrganizationButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SelectedOrganization = null;
+        var manualOrganizationSelectionDialog = new ManualOrganizationSelectionDialog();
+        var manualSelectionDialogSucceeded = manualOrganizationSelectionDialog.ShowDialog(this);
+        if (manualSelectionDialogSucceeded is not true)
+        {
+            return;
+        }
+
+        await UpdateFinalConnectionInfoAsync(manualOrganizationSelectionDialog.ViewModel.OrganizationKey, ViewModel.CloudServerRegion);
+    }
+
+    private async Task<bool> ValidateConnectionForSelectedOrganizationAsync(string selectedOrganizationKey)
+    {
+        try
+        {
+            var organizationSelectionInvalidMsg = string.Format(UiResources.ValidatingOrganziationSelectionFailedText, selectedOrganizationKey);
+            return await ViewModel.ValidateConnectionForOrganizationAsync(selectedOrganizationKey, ViewModel.CloudServerRegion, organizationSelectionInvalidMsg);
+        }
+        catch (Exception e) when (!ErrorHandler.IsCriticalException(e))
+        {
+            connectedModeServices.Logger.WriteLine(e.ToString());
+            return false;
+        }
+    }
+
+    private async void OrganizationSelectionDialog_OnLoaded(object sender, RoutedEventArgs e) => await ViewModel.LoadOrganizationsAsync();
+
+    private async Task UpdateFinalConnectionInfoAsync(string organizationKey, CloudServerRegion serverRegion)
+    {
+        var isConnectionValid = await ValidateConnectionForSelectedOrganizationAsync(organizationKey);
+        if (isConnectionValid)
+        {
+            ViewModel.UpdateFinalConnectionInfo(organizationKey, serverRegion);
+            DialogResult = true;
+        }
+    }
+}

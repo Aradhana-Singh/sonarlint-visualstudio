@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,11 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using System.Runtime.CompilerServices;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 {
@@ -30,13 +27,19 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
     public class ThreadHandlingTests
     {
         [TestMethod]
+        public void MefCtor_CheckIsExported()
+        {
+            MefTestHelpers.CheckTypeCanBeImported<ThreadHandling, IThreadHandling>();
+        }
+
+        [TestMethod]
         public async Task CheckAccess_IsUIThread_ReturnsTrue()
         {
             bool actual = false;
 
             await RunOnUIThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = testSubject.CheckAccess();
             });
 
@@ -44,13 +47,13 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
         }
 
         [TestMethod]
-        public async Task CheckAccess_NotUIThread_ReturnsFlase()
+        public async Task CheckAccess_NotUIThread_ReturnsFalse()
         {
             bool actual = false;
 
             await RunOnBackgroundThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = testSubject.CheckAccess();
             });
 
@@ -64,7 +67,7 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 
             await RunOnUIThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = Throws(testSubject.ThrowIfOnUIThread);
             });
 
@@ -78,7 +81,7 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 
             await RunOnBackgroundThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = Throws(testSubject.ThrowIfOnUIThread);
             });
 
@@ -92,7 +95,7 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 
             await RunOnUIThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = Throws(testSubject.ThrowIfNotOnUIThread);
             });
 
@@ -106,23 +109,37 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
 
             await RunOnBackgroundThread(() =>
             {
-                var testSubject = new ThreadHandling();
+                var testSubject = ThreadHandling.Instance;
                 actual = Throws(testSubject.ThrowIfNotOnUIThread);
             });
 
             actual.Should().BeTrue();
         }
 
-        private static async Task RunOnUIThread(Action op)
+        [TestMethod]
+        [Ignore] // Can't test this case because it requires mocking ThreadHelper.JoinableTaskFactory.RunAsync which
+                 // is broken. See https://github.com/SonarSource/sonarlint-visualstudio/issues/3144
+        public async Task RunOnBackgroundThread_StartsOnBackgroundThread_NoSwitch()
         {
-            await Task.Run(() =>
+            // TODO
+        }
+
+        [TestMethod]
+        [Ignore] // Can't test this case because it requires mocking SwitchToMainThreadAsync which
+                 // is broken. See https://github.com/SonarSource/sonarlint-visualstudio/issues/3144
+        public async Task RunOnBackgroundThread_StartsOnUIThread_WorksInBackground_ReturnsOnUIThread()
+        {
+            // TODO
+        }
+
+        private static ConfiguredTaskAwaitable RunOnUIThread(Action op) =>
+            Task.Run(() =>
             {
                 ThreadHelper.SetCurrentThreadAsUIThread();
                 op();
-            });
-        }
+            }).ConfigureAwait(false);
 
-        private static async Task RunOnBackgroundThread(Action op)
+        private static ConfiguredTaskAwaitable RunOnBackgroundThread(Action op)
         {
             // Other tests could have called ThreadHelper.SetCurrentThreadAsUIThread(), so
             // we have no idea which thread is currently considered to be the UI thread.
@@ -130,10 +147,10 @@ namespace SonarLint.VisualStudio.Infrastructure.VS.UnitTests
             // To make this test reliable, we set this current thread to the UIThread,
             // then run the check on another thread.
             ThreadHelper.SetCurrentThreadAsUIThread();
-            await Task.Run(() =>
+            return Task.Run(() =>
             {
                 op();
-            });
+            }).ConfigureAwait(false);
         }
 
         private static bool Throws(Action op)

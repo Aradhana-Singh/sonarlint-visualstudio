@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using FluentAssertions;
 using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
 using SonarLint.VisualStudio.IssueVisualization.TableControls;
 
@@ -34,12 +34,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.TableControls
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            // Arrange
-            var monitor = Mock.Of<IIssueSelectionService>();
-            var monitorExport = MefTestHelpers.CreateExport<IIssueSelectionService>(monitor);
-
-            // Act & Assert
-            MefTestHelpers.CheckTypeCanBeImported<VSTableEventProcessorProvider, ITableControlEventProcessorProvider>(null, new[] { monitorExport });
+            MefTestHelpers.CheckTypeCanBeImported<VSTableEventProcessorProvider, ITableControlEventProcessorProvider>(
+                MefTestHelpers.CreateExport<IIssueSelectionService>());
         }
 
         [TestMethod]

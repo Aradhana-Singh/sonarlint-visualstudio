@@ -1,0 +1,101 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.ComponentModel.Composition;
+using System.IO;
+using SonarLint.VisualStudio.Core.Analysis;
+using SonarLint.VisualStudio.IssueVisualization.Security.Hotspots.Models;
+using SonarLint.VisualStudio.SLCore.Common.Helpers;
+using SonarLint.VisualStudio.SLCore.Listener.Visualization.Models;
+
+namespace SonarLint.VisualStudio.IssueVisualization.Security.OpenInIdeHotspots;
+
+[Export(typeof(IHotspotDetailsDtoToHotspotConverter))]
+[PartCreationPolicy(CreationPolicy.Shared)]
+internal class HotspotDetailsDtoToHotspotConverter : IHotspotDetailsDtoToHotspotConverter
+{
+    private readonly IChecksumCalculator checksumCalculator;
+
+    [ImportingConstructor]
+    public HotspotDetailsDtoToHotspotConverter() : this(new ChecksumCalculator())
+    {
+    }
+
+    public HotspotDetailsDtoToHotspotConverter(IChecksumCalculator checksumCalculator)
+    {
+        this.checksumCalculator = checksumCalculator;
+    }
+
+    public IAnalysisIssueBase Convert(HotspotDetailsDto hotspotDetailsDto, string rootPath)
+    {
+        return new Hotspot(id: Guid.Empty,
+            hotspotDetailsDto.key,
+            isResolved: false,
+            isOnNewCode: true,
+            hotspotDetailsDto.ideFilePath,
+            new AnalysisIssueLocation(hotspotDetailsDto.message,
+                Path.Combine(rootPath, hotspotDetailsDto.ideFilePath),
+                GetTextRange(hotspotDetailsDto)),
+            GetHotspotRule(hotspotDetailsDto),
+            null);
+    }
+
+    private TextRange GetTextRange(HotspotDetailsDto hotspotDetailsDto)
+    {
+        return new TextRange(hotspotDetailsDto.textRange.startLine,
+            hotspotDetailsDto.textRange.endLine,
+            hotspotDetailsDto.textRange.startLineOffset,
+            hotspotDetailsDto.textRange.endLineOffset,
+            CalculateLineHash(hotspotDetailsDto));
+    }
+
+    /// <summary>
+    /// The <see cref="HotspotDetailsDto.codeSnippet"/> is nullable, see https://sonarsource.atlassian.net/browse/SLVS-1886
+    /// </summary>
+    private string CalculateLineHash(HotspotDetailsDto hotspotDetailsDto) => hotspotDetailsDto.codeSnippet == null ? null : checksumCalculator.Calculate(hotspotDetailsDto.codeSnippet);
+
+    private static HotspotRule GetHotspotRule(HotspotDetailsDto hotspotDetailsDto)
+    {
+        return new HotspotRule(hotspotDetailsDto.rule.key,
+            hotspotDetailsDto.rule.name,
+            hotspotDetailsDto.rule.securityCategory,
+            GetPriority(hotspotDetailsDto.rule.vulnerabilityProbability),
+            hotspotDetailsDto.rule.riskDescription,
+            hotspotDetailsDto.rule.vulnerabilityDescription,
+            hotspotDetailsDto.rule.fixRecommendations);
+    }
+
+    private static HotspotPriority GetPriority(string vulnerabilityProbability)
+    {
+        if (vulnerabilityProbability == null)
+        {
+            throw new ArgumentNullException(nameof(vulnerabilityProbability));
+        }
+
+        return vulnerabilityProbability.ToLowerInvariant() switch
+        {
+            "high" => HotspotPriority.High,
+            "medium" => HotspotPriority.Medium,
+            "low" => HotspotPriority.Low,
+            _ => throw new ArgumentOutOfRangeException(nameof(vulnerabilityProbability), vulnerabilityProbability,
+                "Invalid hotspot probability")
+        };
+    }
+}

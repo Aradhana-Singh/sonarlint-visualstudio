@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -45,9 +45,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions
         private readonly ITagAggregator<IIssueLocationTag> issueLocationsTagAggregator;
         private readonly ITagAggregator<ISelectedIssueLocationTag> selectedIssueLocationsTagAggregator;
 
-        public IssueLocationActionsSource(ILightBulbBroker lightBulbBroker, 
-            IVsUIShell vsUiShell, 
-            IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService, 
+        public IssueLocationActionsSource(
+            ILightBulbBroker lightBulbBroker,
+            IVsUIShell vsUiShell,
+            IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService,
             ITextView textView,
             IIssueSelectionService selectionService)
         {
@@ -61,6 +62,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions
 
             selectedIssueLocationsTagAggregator = bufferTagAggregatorFactoryService.CreateTagAggregator<ISelectedIssueLocationTag>(textView.TextBuffer);
             selectedIssueLocationsTagAggregator.TagsChanged += TagAggregator_TagsChanged;
+
+            selectionService.SelectedIssueChanged += SelectionService_SelectedIssueChanged;
         }
 
         public event EventHandler<EventArgs> SuggestedActionsChanged;
@@ -75,18 +78,18 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions
 
             if (IsOnIssueWithSecondaryLocations(range, out var issueVisualizations))
             {
-                var actions = issueVisualizations.Select(x => new SelectIssueVisualizationAction(vsUiShell, selectionService, x));
+                var actions = issueVisualizations.Select(x => new SelectIssueVisualizationAction(vsUiShell, selectionService, x, lightBulbBroker, textView));
                 allActions.AddRange(actions);
-            } 
+            }
 
             if (IsOnSelectedVisualizationWithSecondaries(range))
             {
-                allActions.Add(new DeselectIssueVisualizationAction(selectionService));
+                allActions.Add(new DeselectIssueVisualizationAction(selectionService, lightBulbBroker, textView));
             }
 
             if (allActions.Any())
             {
-                return new[] {new SuggestedActionSet(allActions)};
+                return new[] { new SuggestedActionSet(allActions) };
             }
 
             return Enumerable.Empty<SuggestedActionSet>();
@@ -136,9 +139,22 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.QuickActions
 
             selectedIssueLocationsTagAggregator.TagsChanged -= TagAggregator_TagsChanged;
             selectedIssueLocationsTagAggregator.Dispose();
+
+            selectionService.SelectedIssueChanged -= SelectionService_SelectedIssueChanged;
         }
 
         private void TagAggregator_TagsChanged(object sender, TagsChangedEventArgs e)
+        {
+            SuggestedActionsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Unlike <see cref="TagAggregator_TagsChanged"/>, this fires only when the selected issue actually
+        /// changes (e.g. selection is cleared in the background because the issue no longer exists after
+        /// re-analysis) - never on ordinary re-analysis of unrelated issues - so it's safe to dismiss the
+        /// lightbulb here without reintroducing the disruptive dismiss-on-every-tag-change behaviour.
+        /// </summary>
+        private void SelectionService_SelectedIssueChanged(object sender, EventArgs e)
         {
             RunOnUIThread.Run(() => lightBulbBroker.DismissSession(textView));
 

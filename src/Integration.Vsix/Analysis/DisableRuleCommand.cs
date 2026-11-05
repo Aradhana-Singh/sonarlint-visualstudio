@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,16 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Shell.TableControl;
-using Microsoft.VisualStudio.Shell.TableManager;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Binding;
+using SonarLint.VisualStudio.Core.UserRuleSettings;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using Task = System.Threading.Tasks.Task;
 
 namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
@@ -42,29 +39,35 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
         public const int CommandId = 0x0200;
 
         private readonly OleMenuCommand menuItem;
-        private readonly IErrorList errorList;
-        private readonly IUserSettingsProvider userSettingsProvider;
+        private readonly IGlobalRawSettingsService globalUserSettingsUpdater;
         private readonly IActiveSolutionBoundTracker activeSolutionBoundTracker;
         private readonly ILogger logger;
+        private readonly IErrorListHelper errorListHelper;
+        // Strictly speaking we are allowing rules from known repos to be disabled,
+        // not "all rules for language X".  However, since we are in control of the
+        // rules/repos that are installed in  VSIX, checking the repo key is good
+        // enough.
+
+        internal IReadOnlyList<string> SupportedRepos { get; }
 
         /// <summary>
         /// Initializes the singleton instance of the command.
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
+        [ExcludeFromCodeCoverage]
         public static async Task InitializeAsync(AsyncPackage package, ILogger logger)
         {
             // Switch to the main thread - the call to AddCommand in Command1's constructor requires
             // the UI thread.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
-            var vsErrorList = (IVsErrorList)await package.GetServiceAsync(typeof(SVsErrorList));
-            var eList = vsErrorList as IErrorList;
-
-            var settingsProvider = await package.GetMefServiceAsync<IUserSettingsProvider>();
+            var settingsProvider = await package.GetMefServiceAsync<IGlobalRawSettingsService>();
             var tracker = await package.GetMefServiceAsync<IActiveSolutionBoundTracker>();
+            var errListHelper = await package.GetMefServiceAsync<IErrorListHelper>();
+            var languageProvider = await package.GetMefServiceAsync<ILanguageProvider>();
 
             IMenuCommandService commandService = (IMenuCommandService)await package.GetServiceAsync(typeof(IMenuCommandService));
-            Instance = new DisableRuleCommand(commandService, eList, settingsProvider, tracker, logger);
+            Instance = new DisableRuleCommand(commandService, settingsProvider, tracker, logger, errListHelper, languageProvider);
         }
 
         /// <summary>
@@ -73,18 +76,29 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
         /// <param name="menuCommandService">Command service to add command to, not null.</param>
-        internal /* for testing */ DisableRuleCommand(IMenuCommandService menuCommandService, IErrorList errorList,
-            IUserSettingsProvider userSettingsProvider, IActiveSolutionBoundTracker activeSolutionBoundTracker, ILogger logger)
+        internal DisableRuleCommand(
+            IMenuCommandService menuCommandService,
+            IGlobalRawSettingsService globalUserSettingsUpdater,
+            IActiveSolutionBoundTracker activeSolutionBoundTracker,
+            ILogger logger,
+            IErrorListHelper errorListHelper,
+            ILanguageProvider languageProvider)
         {
             if (menuCommandService == null)
             {
                 throw new ArgumentNullException(nameof(menuCommandService));
             }
-            this.errorList = errorList ?? throw new ArgumentNullException(nameof(errorList));
-            this.userSettingsProvider = userSettingsProvider ?? throw new ArgumentNullException(nameof(userSettingsProvider));
+            if (languageProvider == null)
+            {
+                throw new ArgumentNullException(nameof(languageProvider));
+            }
+
+            this.globalUserSettingsUpdater = globalUserSettingsUpdater ?? throw new ArgumentNullException(nameof(globalUserSettingsUpdater));
             this.activeSolutionBoundTracker = activeSolutionBoundTracker ?? throw new ArgumentNullException(nameof(activeSolutionBoundTracker));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.errorListHelper = errorListHelper ?? throw new ArgumentNullException(nameof(errorListHelper));
 
+            SupportedRepos = languageProvider.LanguagesInStandaloneMode.Select(x => x.RepoKey).ToList();
             var menuCommandID = new CommandID(CommandSet, CommandId);
             menuItem = new OleMenuCommand(Execute, null, QueryStatus, menuCommandID);
             menuCommandService.AddCommand(menuItem);
@@ -96,9 +110,10 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
             {
                 var isVisible = false;
                 var isEnabled = false;
-                if(TryGetRuleId(errorList, out var ruleId))
+                if (errorListHelper.TryGetRuleIdFromSelectedRow(out var ruleId))
                 {
-                    CalculateStatuses(ruleId, activeSolutionBoundTracker.CurrentConfiguration.Mode, out isVisible, out isEnabled);
+                    isVisible = IsSonarRule(ruleId);
+                    isEnabled = isVisible && IsDisablingRuleAllowed();
                 }
 
                 menuItem.Visible = isVisible;
@@ -131,87 +146,25 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
             SonarCompositeRuleId ruleId = null;
             try
             {
-                if (TryGetRuleId(errorList, out ruleId))
+                if (errorListHelper.TryGetRuleIdFromSelectedRow(out ruleId))
                 {
-                    userSettingsProvider.DisableRule(ruleId.ErrorListErrorCode);
-                    logger.WriteLine(AnalysisStrings.DisableRule_DisabledRule, ruleId.ErrorListErrorCode);
+                    globalUserSettingsUpdater.DisableRule(ruleId.Id);
+                    logger.WriteLine(AnalysisStrings.DisableRule_DisabledRule, ruleId.Id);
                 }
-
                 Debug.Assert(ruleId != null, "Not expecting Execute to be called if the SonarLint error code cannot be determined");
             }
             catch (Exception ex) when (!Microsoft.VisualStudio.ErrorHandler.IsCriticalException(ex))
             {
-                logger.WriteLine(AnalysisStrings.DisableRule_ErrorDisablingRule, ruleId?.ErrorListErrorCode ?? AnalysisStrings.DisableRule_UnknownErrorCode, ex.Message);
+                logger.WriteLine(AnalysisStrings.DisableRule_ErrorDisablingRule, ruleId?.Id ?? AnalysisStrings.DisableRule_UnknownErrorCode, ex.Message);
             }
         }
 
-        /// <summary>
-        /// Returns the error code if:
-        /// 1) there is only one selected error in the error list and
-        /// 2) it is a SonarLint error
-        /// </summary>
-        internal /* for testing */ static bool TryGetRuleId(IErrorList errorList, out SonarCompositeRuleId ruleId)
+        private bool IsSonarRule(SonarCompositeRuleId rule) => SupportedRepos.Contains(rule.RepoKey);
+
+        private bool IsDisablingRuleAllowed()
         {
-            ruleId = null;
-            var selectedItems = errorList?.TableControl?.SelectedEntries;
-            if (selectedItems?.Count() == 1)
-            {
-                var handle = selectedItems.First();
-                var errorCode = FindErrorCodeForEntry(handle);
-                SonarCompositeRuleId.TryParse(errorCode, out ruleId);
-            }
-
-            return ruleId != null;
-        }
-
-        private static string FindErrorCodeForEntry(ITableEntryHandle handle)
-        {
-            if (handle.TryGetSnapshot(out var snapshot, out int index) &&
-                    snapshot.TryGetValue(index, StandardTableKeyNames.BuildTool, out var buildToolObj) &&
-                    buildToolObj is string buildTool &&
-                    buildTool.Equals("SonarLint", StringComparison.OrdinalIgnoreCase) &&
-                    snapshot.TryGetValue(index, StandardTableKeyNames.ErrorCode, out var errorCode))
-            {
-                return errorCode as string;
-            }
-
-            return null;
-        }
-
-        // Strictly speaking we are allowing rules from known repos to be disabled,
-        // not "all rules for language X".  However, since we are in control of the
-        // rules/repos that are installed in  VSIX, checking the repo key is good
-        // enough.
-        private static readonly string[] supportedRepos = new[]
-        {
-            SonarRuleRepoKeys.C,
-            SonarRuleRepoKeys.Cpp
-        };
-
-        private static void CalculateStatuses(SonarCompositeRuleId rule, SonarLintMode mode, out bool isVisible, out bool isEnabled)
-        {
-            // Special case: JavaScript / TypeScript / Secrets
-            // We don't support connected mode for JS/TS/Secrets at the moment so we allow disabling
-            // in connected mode for now. See #770 for JS/TS.
-            if (SonarRuleRepoKeys.AreEqual(SonarRuleRepoKeys.JavaScript, rule.RepoKey) ||
-                SonarRuleRepoKeys.AreEqual(SonarRuleRepoKeys.TypeScript, rule.RepoKey) ||
-                SonarRuleRepoKeys.AreEqual(SonarRuleRepoKeys.Secrets, rule.RepoKey))
-            {
-                isVisible = true;
-                isEnabled = true;
-                return;
-            }
-
-            // We don't currently support disabling rules for all repos
-            if (supportedRepos.Contains(rule.RepoKey, SonarRuleRepoKeys.RepoKeyComparer))
-            {
-                isVisible = true;
-                isEnabled = mode == SonarLintMode.Standalone;
-                return;
-            }
-
-            isVisible = false;
-            isEnabled = false;
+            // Otherwise, can only disable rules in standalone mode
+            return activeSolutionBoundTracker.CurrentConfiguration.Mode == SonarLintMode.Standalone;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -72,7 +72,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Models
         public SnapshotSpan? Span
         {
             get => span;
-            set 
+            set
             {
                 span = value;
                 NotifyPropertyChanged();
@@ -114,17 +114,17 @@ namespace SonarLint.VisualStudio.IssueVisualization.Models
             return locationVisualization.Span.IsNavigable();
         }
 
+        public static bool IsNavigable(this SnapshotSpan? span)
+        {
+            return !span.HasValue || !span.Value.IsEmpty;
+        }
+
         /// <summary>
         /// Sets <see cref="IAnalysisIssueLocationVisualization.Span"/> to an empty span.
         /// </summary>
         public static void InvalidateSpan(this IAnalysisIssueLocationVisualization locationVisualization)
         {
             locationVisualization.Span = new SnapshotSpan();
-        }
-
-        public static bool IsNavigable(this SnapshotSpan? span)
-        {
-            return !span.HasValue || !span.Value.IsEmpty;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,28 +18,36 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using FluentAssertions;
+using System.Collections.Concurrent;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Logging;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
-    public class TestLogger : ILogger
+    public class TestLogger : ILogger, ILoggerWriter, ILoggerSettingsProvider
     {
-        public IList<string> OutputStrings { get; } = new List<string>();
+        public BlockingCollection<string> OutputStrings { get; private set; } = new();
+
+        public event EventHandler LogMessageAdded;
 
         private readonly bool logToConsole;
         private readonly bool logThreadId;
+        private readonly bool logVerbose;
+        private readonly ILogger logger;
 
-        public TestLogger(bool logToConsole = false, bool logThreadId = false)
+        public TestLogger() : this(false, false, true)
+        {
+        }
+
+        public TestLogger(bool logToConsole = false, bool logThreadId = false, bool logVerbose = true)
         {
             // When executing tests in VS, the console output will automatically be captured by
             // the test runner. The Properties window for the test result will have an "Output"
             // link to show the output.
             this.logToConsole = logToConsole;
-
+            this.logVerbose = logVerbose;
             this.logThreadId = logThreadId;
+            logger = LoggerFactory.Default.Create(this, this);
         }
 
         public void AssertOutputStrings(int expectedOutputMessages)
@@ -90,31 +98,37 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
 
         public void Reset()
         {
-            OutputStrings.Clear();
+            OutputStrings = new BlockingCollection<string>();
         }
 
         #region ILogger methods
 
-        public void WriteLine(string message)
+        public virtual void WriteLine(string messageFormat, params object[] args) => logger.WriteLine(messageFormat, args);
+
+        public virtual void WriteLine(MessageLevelContext context, string messageFormat, params object[] args) => logger.WriteLine(context, messageFormat, args);
+
+        public virtual void LogVerbose(string message, params object[] args) => logger.LogVerbose(message, args);
+
+        public virtual void LogVerbose(MessageLevelContext context, string messageFormat, params object[] args) => logger.WriteLine(context, messageFormat, args);
+
+        public virtual ILogger ForContext(params string[] context) => logger.ForContext(context);
+
+        public virtual ILogger ForVerboseContext(params string[] context) => logger.ForVerboseContext();
+
+        #endregion
+
+        void ILoggerWriter.WriteLine(string message)
         {
             var messageToLog = message + Environment.NewLine;
-            if (logThreadId)
-            {
-                messageToLog = $"[Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] {messageToLog}";
-            }
-
             OutputStrings.Add(messageToLog);
             if (logToConsole)
             {
                 Console.WriteLine(messageToLog);
             }
-        }
 
-        public void WriteLine(string messageFormat, params object[] args)
-        {
-            WriteLine(string.Format(System.Globalization.CultureInfo.CurrentCulture, messageFormat, args));
+            LogMessageAdded?.Invoke(this, EventArgs.Empty);
         }
-
-        #endregion
+        bool ILoggerSettingsProvider.IsVerboseEnabled => logVerbose;
+        bool ILoggerSettingsProvider.IsThreadIdEnabled => logThreadId;
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,12 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Binding;
-using SonarLint.VisualStudio.Infrastructure.VS;
-using SonarQube.Client;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Helpers
 {
@@ -33,35 +30,23 @@ namespace SonarLint.VisualStudio.IssueVisualization.Helpers
 
         void ShowDocumentation();
 
-        void ShowRuleDescription(string ruleKey);
+        void ShowCommunityPage();
     }
 
     [Export(typeof(IShowInBrowserService))]
     [PartCreationPolicy(CreationPolicy.Shared)]
     internal class ShowInBrowserService : IShowInBrowserService
     {
-        private readonly ISonarQubeService sonarQubeService;
         private readonly IConfigurationProvider configurationProvider;
-        private readonly IVsBrowserService vsBrowserService;
-        private readonly IRuleHelpLinkProvider ruleHelpLinkProvider;
+        private readonly IBrowserService vsBrowserService;
 
         [ImportingConstructor]
-        public ShowInBrowserService(ISonarQubeService sonarQubeService,
+        public ShowInBrowserService(
             IConfigurationProvider configurationProvider,
-            IVsBrowserService vsBrowserService)
-            : this(sonarQubeService, configurationProvider, vsBrowserService, new RuleHelpLinkProvider())
+            IBrowserService vsBrowserService)
         {
-        }
-
-        internal ShowInBrowserService(ISonarQubeService sonarQubeService,
-            IConfigurationProvider configurationProvider,
-            IVsBrowserService vsBrowserService,
-            IRuleHelpLinkProvider ruleHelpLinkProvider)
-        {
-            this.sonarQubeService = sonarQubeService;
             this.configurationProvider = configurationProvider;
             this.vsBrowserService = vsBrowserService;
-            this.ruleHelpLinkProvider = ruleHelpLinkProvider;
         }
 
         public void ShowIssue(string issueKey)
@@ -78,22 +63,20 @@ namespace SonarLint.VisualStudio.IssueVisualization.Helpers
                 return;
             }
 
-            var projectKey = bindingConfiguration.Project.ProjectKey;
-            var viewIssueUrl = sonarQubeService.GetViewIssueUrl(projectKey, issueKey);
+            var project = bindingConfiguration.Project;
+            var viewIssueUrl = IssueUrlHelper.GetViewIssueUrl(project, issueKey);
 
             vsBrowserService.Navigate(viewIssueUrl.ToString());
         }
 
         public void ShowDocumentation()
         {
-            vsBrowserService.Navigate("https://github.com/SonarSource/sonarlint-visualstudio/wiki");
+            vsBrowserService.Navigate(DocumentationLinks.HomePage);
         }
 
-        public void ShowRuleDescription(string ruleKey)
+        public void ShowCommunityPage()
         {
-            var helpLink = ruleHelpLinkProvider.GetHelpLink(ruleKey);
-
-            vsBrowserService.Navigate(helpLink);
+            vsBrowserService.Navigate(CommunityLinks.SqvsCommunityTopic);
         }
     }
 }

@@ -4,22 +4,10 @@
   <Import Project="..\SonarLint.VsPkgRefs.props" />
 
   <PropertyGroup>
-    <!-- Conditional compilation constant for VS2019-specific code.
-         We'd prefer to set this the shared SonarLint.VSSpecificAssemblies.props file, but
-         the IDE isn't picking up the setting if we do that. -->
-    <DefineConstants Condition="($(VisualStudioVersion)=='17.0' AND $(BuildingInsideVisualStudio)=='true') OR $(VSTargetVersion)=='2022'">$(DefineConstants);VS2022</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <ProjectGuid>{9CBAB074-AB53-4AC5-85E0-FD064D71B170}</ProjectGuid>
     <RootNamespace>SonarLint.VisualStudio.Infrastructure.VS</RootNamespace>
     <AssemblyName>SonarLint.VisualStudio.Infrastructure.VS</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup Label="Package references">
-    <!-- The VS.Setup.Config.Interop package is not in the v17 SDK meta-package, but it is in the v15.0.1 meta-package -->
-    <PackageReference Include="Microsoft.VisualStudio.Setup.Configuration.Interop" Version="1.16.30" PrivateAssets="all" />
-  </ItemGroup>
 
   <ItemGroup Label="Framework references">
     <Reference Include="System.ComponentModel.Composition" />
@@ -28,7 +16,17 @@
   <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="3.11.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="3.11.0" PrivateAssets="all" />
+  </ItemGroup>
 
+  <PropertyGroup Label="Specify which external/VS-specific refs are required">
+    <RequiresLanguageServices>true</RequiresLanguageServices>
+  </PropertyGroup>
+  <Import Project="..\SonarLint.VSSpecificAssemblies.props" />
+  
   <ItemGroup>
     <Compile Update="Resources.Designer.cs">
       <DesignTime>True</DesignTime>

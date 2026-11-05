@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,55 +19,36 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
+using System.IO;
+using System.IO.Abstractions;
+using System.Linq;
+using SonarLint.VisualStudio.Core;
 
 namespace SonarLint.VisualStudio.Infrastructure.VS
 {
-    public interface IFolderWorkspaceService
-    {
-        /// <summary>
-        /// Returns true/false if the workspace is in Open-As-Folder mode
-        /// </summary>
-        /// <remarks>Will always return false in VS2015 as that mode is not supported in 2015.</remarks>
-        bool IsFolderWorkspace();
-
-        /// <summary>
-        /// Returns the root directory for Open-As-Folder projects.
-        /// Will return null if the root directory could not be retrieved,
-        /// or if the workspace is not in Open-As-Folder mode.
-        /// </summary>
-        string FindRootDirectory();
-    }
-
     [Export(typeof(IFolderWorkspaceService))]
     [PartCreationPolicy(CreationPolicy.Shared)]
     internal class FolderWorkspaceService : IFolderWorkspaceService
     {
-        /// <summary>
-        /// See https://docs.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.shell.interop.__vspropid7?view=visualstudiosdk-2019
-        /// The enum is not available in VS 2015 API.
-        /// </summary>
-        internal const int VSPROPID_IsInOpenFolderMode = -8044;
-
-        private readonly IVsSolution vsSolution;
+        private readonly ISolutionInfoProvider solutionInfoProvider;
+        private readonly IFileSystem fileSystem;
 
         [ImportingConstructor]
-        public FolderWorkspaceService([Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider)
+        public FolderWorkspaceService(ISolutionInfoProvider solutionInfoProvider) : this(solutionInfoProvider, new FileSystem())
         {
-            vsSolution = serviceProvider.GetService(typeof(SVsSolution)) as IVsSolution;
+        }
+
+        public FolderWorkspaceService(ISolutionInfoProvider solutionInfoProvider, IFileSystem fileSystem)
+        {
+            this.solutionInfoProvider = solutionInfoProvider;
+            this.fileSystem = fileSystem;
         }
 
         public bool IsFolderWorkspace()
         {
-            // "Open as Folder" was introduced in VS2017, so in VS2015 the hr result will be `E_NOTIMPL` and `isOpenAsFolder` will be null.
-            var hr = vsSolution.GetProperty(VSPROPID_IsInOpenFolderMode, out var isOpenAsFolder);
-            Debug.Assert(hr == VSConstants.S_OK || hr == VSConstants.E_NOTIMPL, "Failed to retrieve VSPROPID_IsInOpenFolderMode");
-
-            return isOpenAsFolder != null && (bool)isOpenAsFolder;
+            return solutionInfoProvider.IsFolderWorkspace();
         }
 
         public string FindRootDirectory()
@@ -79,12 +60,16 @@ namespace SonarLint.VisualStudio.Infrastructure.VS
 
             // For projects that are opened as folder, the root IVsHierarchy is the "Miscellaneous Files" folder.
             // This folder doesn't have a directory path so we need to take the directory path from IVsSolution.
-            var hr = vsSolution.GetProperty((int)__VSPROPID.VSPROPID_SolutionDirectory, out var solutionDirectory);
+            return solutionInfoProvider.GetSolutionDirectory();
+        }
 
-            Debug.Assert(hr == VSConstants.S_OK || hr == VSConstants.E_NOTIMPL,
-                "Failed to retrieve VSPROPID_SolutionDirectory");
+        public IReadOnlyCollection<string> ListFiles()
+        {
+            var root = FindRootDirectory();
 
-            return (string)solutionDirectory;
+            return root is not null
+                ? fileSystem.Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Where(x => !x.Contains("\\node_modules\\")).ToList()
+                : [];
         }
     }
 }

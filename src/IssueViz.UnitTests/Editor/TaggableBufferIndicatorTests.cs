@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,11 +18,10 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using FluentAssertions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.VisualStudio.Utilities;
+using System.IO;
+using System.IO.Abstractions;
+using Microsoft.VisualStudio.Text.Projection;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.Common;
 
@@ -31,14 +30,13 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
     [TestClass]
     public class TaggableBufferIndicatorTests
     {
-        private const string FilePath = "test.cpp";
-
-        private TaggableBufferIndicator testSubject;
-
-        [TestInitialize]
-        public void TestInitialize()
+        [TestMethod]
+        public void IsTaggable_ProjectionBuffer_False()
         {
-            testSubject = new TaggableBufferIndicator();
+            var projectionBufferMock = new Mock<IProjectionBuffer>();
+            var testSubject = CreateTestSubject("a", true);
+
+            testSubject.IsTaggable(projectionBufferMock.Object).Should().BeFalse();
         }
 
         [TestMethod]
@@ -46,37 +44,68 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor
         {
             var buffer = TaggerTestHelper.CreateBufferMock(filePath: null);
 
-            using (new AssertIgnoreScope())
-            {
-                var result = testSubject.IsTaggable(buffer.Object);
-                result.Should().BeFalse();
-            }
+            var fileSystem = new Mock<IFileSystem>();
+            var testSubject = new TaggableBufferIndicator(fileSystem.Object);
+
+            var result = testSubject.IsTaggable(buffer.Object);
+            result.Should().BeFalse();
+
+            fileSystem.Invocations.Count.Should().Be(0);
         }
 
         [TestMethod]
-        public void IsTaggable_ContentTypeIsOutput_False()
+        public void IsTaggable_FileDoesNotExist_False()
         {
-            var contentType = new Mock<IContentType>();
-            contentType.Setup(x => x.IsOfType("Output")).Returns(true);
-
-            var buffer = TaggerTestHelper.CreateBufferMock(filePath: FilePath);
-            buffer.Setup(x => x.ContentType).Returns(contentType.Object);
+            const string filePath = "test.cpp";
+            var buffer = TaggerTestHelper.CreateBufferMock(filePath: filePath);
+            var testSubject = CreateTestSubject(filePath, fileExists: false);
 
             var result = testSubject.IsTaggable(buffer.Object);
             result.Should().BeFalse();
         }
 
         [TestMethod]
-        public void IsTaggable_ContentTypeIsNotOutput_True()
+        public void IsTaggable_FileExists_InTemp_False()
         {
-            var contentType = new Mock<IContentType>();
-            contentType.Setup(x => x.IsOfType("Output")).Returns(false);
+            var filePath = Path.GetTempFileName().ToUpper(); // should ignore casing
+            var buffer = TaggerTestHelper.CreateBufferMock(filePath: filePath);
+            var testSubject = CreateTestSubject(filePath, fileExists: true);
 
-            var buffer = TaggerTestHelper.CreateBufferMock(filePath: FilePath);
-            buffer.Setup(x => x.ContentType).Returns(contentType.Object);
+            var result = testSubject.IsTaggable(buffer.Object);
+            result.Should().BeFalse();
+        }
+
+        [TestMethod]
+        public void IsTaggable_FileExists_InTempSubFolder_False()
+        {
+            var directory = new DirectoryInfo(Path.GetTempPath()).FullName;
+            var filePath = Path.Combine(directory, "sub\\test.cpp");
+            var buffer = TaggerTestHelper.CreateBufferMock(filePath: filePath);
+            var testSubject = CreateTestSubject(filePath, fileExists: true);
+
+            var result = testSubject.IsTaggable(buffer.Object);
+            result.Should().BeFalse();
+        }
+
+        [TestMethod]
+        public void IsTaggable_FileExists_NotInTemp_True()
+        {
+            var directory = new DirectoryInfo(Path.GetTempPath()).Parent.FullName;
+            var filePath = Path.Combine(directory, "test.cpp");
+
+            var buffer = TaggerTestHelper.CreateBufferMock(filePath: filePath);
+            var testSubject = CreateTestSubject(filePath, fileExists: true);
 
             var result = testSubject.IsTaggable(buffer.Object);
             result.Should().BeTrue();
+        }
+
+        private TaggableBufferIndicator CreateTestSubject(string filePath, bool fileExists)
+        {
+            var fileSystem = new Mock<IFileSystem>();
+            fileSystem.Setup(x => x.File.Exists(filePath)).Returns(fileExists);
+
+            return new TaggableBufferIndicator(fileSystem.Object);
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,10 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+using SonarLint.VisualStudio.Core.Notifications;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.Integration.Vsix.Helpers;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
@@ -29,22 +28,26 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
     [TestClass]
     public class StatusBarNotifierTests
     {
-        private Mock<IVsStatusbar> statusBarMock;
-        private StatusBarNotifier testSubject;
-        private object statusIcon;
+        private object statusIcon = (short)Microsoft.VisualStudio.Shell.Interop.Constants.SBAI_General;
 
-        [TestInitialize]
-        public void TestInitialize()
+        [TestMethod]
+        public void MefCtor_CheckIsExported() =>
+            MefTestHelpers.CheckTypeCanBeImported<StatusBarNotifier, IStatusBarNotifier>(
+                MefTestHelpers.CreateExport<IVsUIServiceOperation>());
+
+        [TestMethod]
+        public void MefCtor_CheckIsSingleton() => MefTestHelpers.CheckIsSingletonMefComponent<StatusBarNotifier>();
+
+        [TestMethod]
+        public void MefCtor_DoesNotCallAnyServices()
         {
-            statusIcon = (short)Microsoft.VisualStudio.Shell.Interop.Constants.SBAI_General;
-            statusBarMock = new Mock<IVsStatusbar>();
+            var serviceOp = new Mock<IVsUIServiceOperation>();
 
-            var serviceProviderMock = new Mock<IServiceProvider>();
-            serviceProviderMock.Setup(x => x.GetService(typeof(IVsStatusbar))).Returns(statusBarMock.Object);
+            _ = CreateTestSubject(serviceOp.Object);
 
-            testSubject = new StatusBarNotifier(serviceProviderMock.Object);
-
-            ThreadHelper.SetCurrentThreadAsUIThread();
+            // The MEF constructor should be free-threaded, which it will be if
+            // it doesn't make any external calls.
+            serviceOp.Invocations.Should().BeEmpty();
         }
 
         [TestMethod]
@@ -54,11 +57,35 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
         {
             var expectedMessage = Guid.NewGuid().ToString();
 
+            var statusBar = new Mock<IVsStatusbar>();
+            var serviceOp = CreateServiceOperation(statusBar.Object);
+            var testSubject = CreateTestSubject(serviceOp);
             testSubject.Notify(expectedMessage, showSpinner);
 
-            statusBarMock.Verify(x => x.SetText(expectedMessage), Times.Once);
-            statusBarMock.Verify(x => x.Animation(showSpinner ? 1 : 0, ref statusIcon), Times.Once);
-            statusBarMock.VerifyNoOtherCalls();
+            statusBar.Verify(x => x.SetText(expectedMessage), Times.Once);
+            statusBar.Verify(x => x.Animation(showSpinner ? 1 : 0, ref statusIcon), Times.Once);
+            statusBar.VerifyNoOtherCalls();
+        }
+
+        private IVsUIServiceOperation CreateServiceOperation(IVsStatusbar svcToPassToCallback, Action callback = null)
+        {
+            var serviceOp = new Mock<IVsUIServiceOperation>();
+
+            // Set up the mock to invoke the operation with the supplied VS service
+            serviceOp.Setup(x => x.Execute<IVsStatusbar, IVsStatusbar>(It.IsAny<Action<IVsStatusbar>>()))
+                .Callback<Action<IVsStatusbar>>(op =>
+                {
+                    callback?.Invoke();
+                    op(svcToPassToCallback);
+                });
+
+            return serviceOp.Object;
+        }
+
+        private static StatusBarNotifier CreateTestSubject(IVsUIServiceOperation vsUIServiceOperation)
+        {
+            var testSubject = new StatusBarNotifier(vsUIServiceOperation);
+            return testSubject;
         }
     }
 }

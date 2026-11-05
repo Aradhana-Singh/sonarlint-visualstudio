@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,21 +18,32 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System.Collections.Generic;
-
 namespace SonarLint.VisualStudio.Core.Analysis
 {
     public interface IAnalysisIssue : IAnalysisIssueBase
     {
-        AnalysisIssueSeverity Severity { get; }
+        AnalysisIssueSeverity? Severity { get; }
 
-        AnalysisIssueType Type { get; }
+        AnalysisIssueType? Type { get; }
 
-        IReadOnlyList<IQuickFix> Fixes { get; }
+        IReadOnlyList<IQuickFixBase> Fixes { get; }
+
+        Impact HighestImpact { get; }
+    }
+
+    public interface IAnalysisHotspotIssue : IAnalysisIssue
+    {
+        HotspotPriority? HotspotPriority { get; }
+        HotspotStatus HotspotStatus { get; }
     }
 
     public interface IAnalysisIssueBase
     {
+        /// <summary>
+        /// The id of the issue that comes from SlCore
+        /// </summary>
+        Guid Id { get; }
+
         string RuleKey { get; }
 
         IReadOnlyList<IAnalysisIssueFlow> Flows { get; }
@@ -41,6 +52,18 @@ namespace SonarLint.VisualStudio.Core.Analysis
         /// Should never be null
         /// </summary>
         IAnalysisIssueLocation PrimaryLocation { get; }
+
+        /// <summary>
+        /// If the issue has been resolved/accepted on the server
+        /// </summary>
+        bool IsResolved { get; }
+
+        bool IsOnNewCode { get; }
+
+        /// <summary>
+        /// The key of the issue on the server
+        /// </summary>
+        string IssueServerKey { get; }
     }
 
     public interface IAnalysisIssueFlow
@@ -98,7 +121,57 @@ namespace SonarLint.VisualStudio.Core.Analysis
     {
         CodeSmell,
         Bug,
-        Vulnerability
+        Vulnerability,
+        SecurityHotspot
+    }
+
+    public enum HotspotPriority
+    {
+        High,
+        Medium,
+        Low
+    }
+
+    public enum HotspotStatus
+    {
+        ToReview,
+        Acknowledged,
+        Fixed,
+        Safe,
+    }
+
+    public enum DependencyRiskImpactSeverity
+    {
+        Info,
+        Low,
+        Medium,
+        High,
+        Blocker
+    }
+
+    public enum DependencyRiskType
+    {
+        Vulnerability,
+        ProhibitedLicense,
+        Malware
+    }
+
+    public enum DependencyRiskStatus
+    {
+        Fixed,
+        Open,
+        Confirmed,
+        Accepted,
+        Safe
+    }
+
+    public enum DependencyRiskTransition
+    {
+        Confirm,
+        Reopen,
+        Safe,
+        Fixed,
+        Accept
     }
 
     public static class IAnalysisIssueExtensions

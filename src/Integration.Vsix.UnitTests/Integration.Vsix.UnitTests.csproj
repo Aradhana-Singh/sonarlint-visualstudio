@@ -15,26 +15,8 @@
     <AssemblyName>SonarLint.VisualStudio.Integration.Vsix.UnitTests</AssemblyName>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-
-    <!-- Conditional compilation constant for VS2022-specific code.
-         We'd prefer to set this the shared SonarLint.VSSpecificAssemblies.props file, but
-         the IDE isn't picking up the setting if we do that. -->
-    <DefineConstants Condition="$(VSTargetVersion)=='2022'">$(DefineConstants);VS2022</DefineConstants>
-
   </PropertyGroup>
-  
-  <ItemGroup Label="HACK to make the C++ rule loader tests work">
-    <!-- We need all of the json files in the lib subfolder to be copied under the test assembly folder.
-         The files are marked as content files in the Integration project, but since this project was
-         converted to be an SDK-style project the files are being deleted when before the tests are run,
-         causing them to fail. 
-    -->
-    <Content Include="..\Integration.Vsix\lib\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>lib\%(Filename)%(Extension)</Link>
-    </Content>
-  </ItemGroup>
-  
+
   <ItemGroup Label="Framework references">
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -45,74 +27,17 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="3.11.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="NuGet.Core" Version="2.12.0" />
-    <PackageReference Include="NuGet.VisualStudio" Version="3.3.0" />
+    <PackageReference Include="NuGet.Core" Version="2.14.0" />
+    <PackageReference Include="NuGet.VisualStudio" Version="17.14.0" />
   </ItemGroup>
-
-  <!-- Only need to reference the analyzer common assembly for testing. -->
-  <Import Project="..\EmbeddedSonarAnalyzer.props" />
-  <ItemGroup Label="Embedded SonarLint analyzers">
-    <!-- Reference the packages we want to import, but we don't want to include them as analyzers for project -->
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="$(EmbeddedSonarAnalyzerVersion)" ExcludeAssets="all" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup Label="Test framework">
-    <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
-
-    <PackageReference Include="Moq" Version="4.16.1" /> <!-- Needs to use the same version as the MS.VS.SDK.TestFramework -->
-    <PackageReference Include="FluentAssertions" Version="5.9.0" />
-  </ItemGroup>
-
-  <ItemGroup Label="VSSDK Test framework">
-    <!-- see https://github.com/SonarSource/sonarlint-visualstudio/issues/2760 -->
-    <!--<PackageReference Condition="$(VsTargetVersion) != '2022'" Include="Microsoft.VisualStudio.Sdk.TestFramework" Version="16.5.22-beta" />-->
-
-    <!-- NOTE: the "17.0.8.alpha" package is not available from Microsoft in the public NuGet
-         feed. It was created by building and packaging the MS source code at the following
-         commit: https://github.com/microsoft/vssdktestfx/commit/bb86ac65c2195e81e8131865acbbc51f448d9ce8-->
-    <PackageReference Condition="$(VsTargetVersion) == '2022'" Include="Microsoft.VisualStudio.Sdk.TestFramework" Version="17.0.8-alpha" />
-  </ItemGroup>
-
+  
   <ItemGroup>
-    <ProjectReference Include="..\..\sonarqube-webclient\SonarQube.Client\SonarQube.Client.csproj" />
     <ProjectReference Include="..\Integration.Vsix\Integration.Vsix.csproj" />
     <ProjectReference Include="..\Integration\Integration.csproj" />
     <ProjectReference Include="..\TestInfrastructure\TestInfrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_NoIssues_EmptyFile.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_NoIssues_EmptyFile_response.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_OneIssue.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_OneIssue_HasSecondaryLocations_response.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_OneIssue_HasSecondaryLocations.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_OneIssue_response.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_TwoIssues.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="CFamily\IntegrationTests\CLangAnalyzerTestFile_TwoIssues_response.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

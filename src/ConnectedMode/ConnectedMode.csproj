@@ -1,0 +1,173 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\SonarLint.Product.props" />
+  <Import Project="..\SonarLint.VsPkgRefs.props" />
+
+  <!-- The VSSDK targets need to be imported after the Net.Sdk targets which means we  have to import the
+       .NET.Sdk targets using Import rather than specifying it as the Sdk in the Project element. -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+
+    <RequiresLibGit>true</RequiresLibGit>
+    <RequiresNewtonsoft>true</RequiresNewtonsoft>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Specify which external/VS-specific refs are required">
+    <RequiresAlmAuthentication>true</RequiresAlmAuthentication>
+    <RequiresLanguageServices>true</RequiresLanguageServices>
+  </PropertyGroup>
+  <Import Project="..\SonarLint.VSSpecificAssemblies.props" />
+
+  <PropertyGroup>
+    <ProjectGuid>0BE551DB-3C46-42A5-BB38-DA80E83F8ABD</ProjectGuid>
+    <AssemblyName>SonarLint.VisualStudio.ConnectedMode</AssemblyName>
+    <RootNamespace>SonarLint.VisualStudio.ConnectedMode</RootNamespace>
+
+    <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
+
+    <!-- Vsix -->
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <CreateVsixContainer>false</CreateVsixContainer>
+    <CopyVsixManifestToOutput>false</CopyVsixManifestToOutput>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Migration\Wizard\MigrationWizardWindow.xaml" />
+    <None Remove="UI\Credentials\CredentialsWnd.xaml" />
+    <None Remove="UI\ManageBinding\ManageBindingDialog.xaml" />
+    <None Remove="UI\Credentials\CredentialsDialog.xaml" />
+    <None Remove="UI\ProgressAndErrorReporterComponent.xaml" />
+    <None Remove="UI\Resources\CheckImage.xaml" />
+    <None Remove="UI\Resources\LogoImages.xaml" />
+    <None Remove="UI\Resources\Pencil.xaml" />
+    <None Remove="UI\Resources\sonarqube_for_ide_logo_16px.png" />
+    <None Remove="UI\Resources\Styles.xaml" />
+    <None Remove="UI\Resources\TrashCanImage.xaml" />
+    <None Remove="UI\ServerSelection\ServerSelectionDialog.xaml" />
+    <Resource Include="UI\Resources\sonarqube_for_ide_logo_16px.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Include="Migration\Wizard\MigrationWizardWindow.xaml" />
+    <Page Include="UI\ConnectionDisplay\ConnectionIconComponent.xaml" />
+    <Page Include="UI\ConnectionDisplay\ConnectionInfoComponent.xaml" />
+    <Page Include="UI\ConnectionDisplay\ConnectionNameComponent.xaml" />
+    <Page Include="UI\ProgressAndErrorReporterComponent.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Credentials\CredentialsDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\ManageBinding\ManageBindingDialog.xaml" />
+    <Page Include="UI\DeleteConnection\DeleteConnectionDialog.xaml" />
+    <Page Include="UI\Resources\Browse.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Resources\WarningImage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+
+    <Page Include="UI\ProjectSelection\ManualProjectSelectionDialog.xaml" />
+    <Page Include="UI\Resources\CheckImage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Resources\Pencil.xaml" />
+    <Page Include="UI\Resources\Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\Resources\LogoImages.xaml" />
+    <Page Include="UI\Resources\TrashCanImage.xaml" />
+    <Page Include="UI\TrustConnection\TrustConnectionDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\WarningMessage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\SuccessMessage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UI\ServerSelection\ServerSelectionDialog.xaml" />
+    <Page Include="UI\ManageConnections\ManageConnectionsDialog.xaml" />
+    <Page Include="UI\OrganizationSelection\ManualOrganizationSelectionDialog.xaml" />
+    <Page Include="UI\OrganizationSelection\OrganizationSelectionDialog.xaml" />
+    <Page Include="UI\ProjectSelection\ProjectSelectionDialog.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\IssueViz\IssueViz.csproj" />
+    <ProjectReference Include="..\SLCore\SLCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Framework references">
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Binding\BindingStrings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>BindingStrings.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Migration\MigrationStrings.Designer.cs">
+      <DependentUpon>MigrationStrings.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+    <Compile Update="Persistence\PersistenceStrings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>PersistenceStrings.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="UI\Resources\UiResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>UiResources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Binding\BindingStrings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>BindingStrings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Migration\MigrationStrings.resx">
+      <LastGenOutput>MigrationStrings.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Persistence\PersistenceStrings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>PersistenceStrings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="UI\Resources\UiResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>UiResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+</Project>

@@ -1,0 +1,117 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Threading;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Education.Rule;
+using SonarLint.VisualStudio.Education.XamlGenerator;
+using SonarLint.VisualStudio.Infrastructure.VS;
+
+namespace SonarLint.VisualStudio.Education;
+
+[Export(typeof(IEducation))]
+[PartCreationPolicy(CreationPolicy.Shared)]
+internal class Education : IEducation
+{
+    private readonly ILogger logger;
+    private readonly IRuleHelpXamlBuilder ruleHelpXamlBuilder;
+    private readonly IRuleMetaDataProvider ruleMetadataProvider;
+    private readonly IShowRuleInBrowser showRuleInBrowser;
+    private readonly IThreadHandling threadHandling;
+    private readonly IToolWindowService toolWindowService;
+
+    private IRuleHelpToolWindow ruleHelpToolWindow;
+
+    [ImportingConstructor]
+    public Education(
+        IToolWindowService toolWindowService,
+        IRuleMetaDataProvider ruleMetadataProvider,
+        IShowRuleInBrowser showRuleInBrowser,
+        ILogger logger,
+        IRuleHelpXamlBuilder ruleHelpXamlBuilder)
+        : this(toolWindowService,
+            ruleMetadataProvider,
+            showRuleInBrowser,
+            logger,
+            ruleHelpXamlBuilder,
+            ThreadHandling.Instance)
+    {
+    }
+
+    internal /* for testing */ Education(
+        IToolWindowService toolWindowService,
+        IRuleMetaDataProvider ruleMetadataProvider,
+        IShowRuleInBrowser showRuleInBrowser,
+        ILogger logger,
+        IRuleHelpXamlBuilder ruleHelpXamlBuilder,
+        IThreadHandling threadHandling)
+    {
+        this.toolWindowService = toolWindowService;
+        this.ruleHelpXamlBuilder = ruleHelpXamlBuilder;
+        this.ruleMetadataProvider = ruleMetadataProvider;
+        this.showRuleInBrowser = showRuleInBrowser;
+        this.logger = logger;
+        this.threadHandling = threadHandling;
+    }
+
+    public void ShowRuleHelp(SonarCompositeRuleId ruleId, Guid? issueId) => ShowRuleHelpAsync(ruleId, issueId).Forget();
+
+    private async Task ShowRuleHelpAsync(SonarCompositeRuleId ruleId, Guid? issueId)
+    {
+        IRuleInfo fullRuleInfo = null;
+        await threadHandling.RunOnBackgroundThread(async () =>
+        {
+            fullRuleInfo = await ruleMetadataProvider.GetRuleInfoAsync(ruleId, issueId);
+
+        });
+
+        await threadHandling.RunOnUIThreadAsync(() =>
+        {
+            ruleHelpToolWindow ??= toolWindowService.GetToolWindow<RuleHelpToolWindow, IRuleHelpToolWindow>();
+            if (fullRuleInfo == null || !ShowInIde(fullRuleInfo))
+            {
+                if (showRuleInBrowser.ShowRuleDescription(ruleId))
+                {
+                    ruleHelpToolWindow.ShowRuleDescriptionInBrowser(ruleId);
+                }
+                else
+                {
+                    ruleHelpToolWindow.ShowCannotShowRuleDescription(ruleId);
+                }
+            }
+            toolWindowService.Show(RuleHelpToolWindow.ToolWindowId);
+        });
+    }
+
+    private bool ShowInIde(IRuleInfo ruleInfo)
+    {
+        try
+        {
+            ruleHelpToolWindow.UpdateContent(ruleHelpXamlBuilder.Create(ruleInfo));
+            return true;
+        }
+        catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
+        {
+            logger.WriteLine(string.Format(Resources.ERR_RuleHelpToolWindow_Exception, ex));
+            return false;
+        }
+    }
+}

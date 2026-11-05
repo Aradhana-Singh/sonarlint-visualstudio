@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,32 +23,33 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using FluentAssertions;
+using Moq;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     public static class MefTestHelpers
     {
+        [DebuggerStepThrough]
+        public static Export CreateExport<T>() where T: class
+        {
+            return CreateExport<T>(Substitute.For<T>());
+        }
+
+        [DebuggerStepThrough]
         public static Export CreateExport<T>(object exportInstance, string contractName = null)
         {
-            return CreateExport<T>(exportInstance, new Dictionary<string, object>(), contractName);
-        }
-
-        public static Export CreateExportWithMetadata<T>(object exportInstance, string metadataKey, string metadataValue)
-        {
-            Dictionary<string, object> metadata = new Dictionary<string, object>();
-            metadata[metadataKey] = metadataValue;
-
-            return CreateExport<T>(exportInstance, metadata);
-        }
-
-        public static Export CreateExport<T>(object exportInstance, IDictionary<string, object> metadata, string contractName = null)
-        {
             // Add the required export ID so that MEF knows which contract it exports.
-            metadata.Add("ExportTypeIdentity", AttributedModelServices.GetTypeIdentity(typeof(T)));
+            var metadata = new Dictionary<string, object>()
+            {
+                {  "ExportTypeIdentity", AttributedModelServices.GetTypeIdentity(typeof(T)) }
+            };
 
             contractName ??= AttributedModelServices.GetContractName(typeof(T));
-            Export export = new Export(contractName, metadata, () => exportInstance);
+            var export = new Export(contractName, metadata, () => exportInstance);
 
             return export;
         }
@@ -61,14 +62,13 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         /// If it does use an explicit contract name you will need to call the other overload and supply an
         /// importer with a property with the appropriate [Import("MyContractName")] attribute.</remarks>
         public static SingleObjectImporter<TImportType> CheckTypeCanBeImported<TTypeToCheck, TImportType>(
-            IEnumerable<Export> optionalExports,
-            IEnumerable<Export> requiredExports)
+            params Export[] requiredExports)
             where TImportType : class
             where TTypeToCheck : class
         {
-            SingleObjectImporter<TImportType> importer = new SingleObjectImporter<TImportType>();
+            var importer = new SingleObjectImporter<TImportType>();
 
-            CheckTypeCanBeImported<TTypeToCheck, TImportType>(importer, optionalExports, requiredExports);
+            CheckTypeCanBeImported<TTypeToCheck>(importer, requiredExports);
 
             importer.AssertImportIsNotNull();
             importer.AssertImportIsInstanceOf<TTypeToCheck>();
@@ -76,64 +76,189 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         }
 
         /// <summary>
-        /// Tests that the <typeparamref name="TTypeToCheck"/> can be imported using MEF as an
-        /// instance of <typeparamref name="TImportType"/>.
+        /// Tests that the <typeparamref name="TTypeToCheck"/> can be imported using MEF.
         /// If required exports are supplied then the test also checks that the type cannot be
         /// imported without them.
         /// </summary>
         /// <typeparam name="TTypeToCheck">The type to check</typeparam>
-        /// <typeparam name="TImportType">The import contract type</typeparam>
         /// <param name="importer">The instance that is importing values</param>
-        /// <param name="optionalExports">Any optional exports to include in the composition.</param>
         /// <param name="requiredExports">Any exports required by TTypeToCheck. Optional.</param>
-        public static void CheckTypeCanBeImported<TTypeToCheck, TImportType>(
+        private static void CheckTypeCanBeImported<TTypeToCheck>(
             object importer,
-            IEnumerable<Export> optionalExports,
-            IEnumerable<Export> requiredExports)
-            where TImportType : class
+            Export[] requiredExports)
             where TTypeToCheck : class
         {
+            if (importer == null)
+            {
+                throw new ArgumentNullException(nameof(importer));
+            }
+
             if (requiredExports == null)
             {
-                requiredExports = Enumerable.Empty<Export>();
+                requiredExports = Array.Empty<Export>();
             }
-            if (optionalExports == null)
-            {
-                optionalExports = Enumerable.Empty<Export>();
-            }
-            // Create a type catalog that only contains the type to be checked to
-            // make sure we don't pick up any other types
-            TypeCatalog catalog = new TypeCatalog(typeof(TTypeToCheck));
 
             for (int i = 0; i < requiredExports.Count(); i++)
             {
                 // Try importing when not all of the required exports are available -> exception
-                Exceptions.Expect<Exception>(
-                    null,
-                    () => TryCompose(importer, catalog, requiredExports.Take(i)),
-                    checkDerived: true);
+                var subsetOfRequiredExports = new List<Export>(requiredExports);
+                var exportToRemove = subsetOfRequiredExports[i];
+                Console.WriteLine($"Removing export: {exportToRemove.Definition.ContractName}");
+                subsetOfRequiredExports.RemoveAt(i);
+
+                Action act = () => Compose(importer, typeof(TTypeToCheck), subsetOfRequiredExports.ToArray());
+                act.Should().Throw<CompositionException>();
             }
-            for (int i = 0; i < optionalExports.Count(); i++)
-            {
-                // Try importing when all of the required and not all of the optional exports are available -> success
-                TryCompose(importer, catalog, requiredExports.Concat(optionalExports.Take(i)));
-            }
-            // Finally try importing when all of the required and optional exports are available -> success
-            TryCompose(importer, catalog, requiredExports.Concat(optionalExports));
+
+            // Finally try importing when all of the required exports are available -> success
+            Compose(importer, typeof(TTypeToCheck), requiredExports);
         }
 
-        private static void TryCompose(object importer, TypeCatalog catalog, IEnumerable<Export> exports)
+        /// <summary>
+        /// Performs a MEF compose with the supplied objects
+        /// </summary>
+        /// <param name="importer">The instance that is importing the exported type</param>
+        /// <param name="typeToExport">The type to of export being tested</param>
+        /// <param name="additionalExports">Any other exports that are required. Can be empty.</param>
+        public static void Compose(object importer, Type typeToExport, params Export[] additionalExports)
+            => Compose(
+                new object[]{ importer },
+                new Type[]{ typeToExport },
+                additionalExports);
+
+        /// <summary>
+        /// Performs a MEF compose with the supplied objects
+        /// </summary>
+        /// <param name="importers">The instance that is importing the exported type</param>
+        /// <param name="typesToExport">The types of export being tested</param>
+        /// <param name="additionalExports">Any other exports that are required. Can be empty.</param>
+        /// <remarks>Note: this overload is useful for testing types that have multiple exports
+        /// i.e. that export multiple types.</remarks>
+        public static void Compose(object[] importers, Type[] typesToExport, params Export[] additionalExports)
         {
-            CompositionBatch batch = new CompositionBatch();
-            batch.AddPart(importer);
-            foreach (Export item in exports)
+            // Create a type catalog that only contains the type to be checked to
+            // make sure we don't pick up any other types
+            var catalog = new TypeCatalog(typesToExport);
+
+            var batch = new CompositionBatch();
+
+            foreach(var importer in importers)
+            {
+                batch.AddPart(importer);
+            }
+
+            foreach (Export item in additionalExports)
             {
                 batch.AddExport(item);
             }
-            using (CompositionContainer container = new CompositionContainer(catalog))
+
+            DoCompose(catalog, batch);
+        }
+
+        /// <summary>
+        /// Performs a MEF composition with the supplied objects
+        /// </summary>
+        /// <param name="exportingAssembly">The assembly containing the types being exported</param>
+        /// <param name="importers">The instance(s) that are importing types from the assembly</param>
+        public static void Compose(Assembly exportingAssembly, params object[] importers)
+        {
+            if (importers.Length == 0)
+            {
+                throw new InvalidOperationException("Test setup error: must specify at least one importer");
+            }
+
+            var batch = new CompositionBatch();
+
+            foreach (var importer in importers)
+            {
+                batch.AddPart(importer);
+            }
+
+            var catalog = new AssemblyCatalog(exportingAssembly);
+
+            DoCompose(catalog, batch);
+        }
+
+        private static void DoCompose(ComposablePartCatalog catalog, CompositionBatch batch)
+        {
+            var container = new CompositionContainer(catalog);
+
+            try
             {
                 container.Compose(batch);
+
             }
+            finally
+            {
+                SafeDispose(container);
+            }
+        }
+
+        private static void SafeDispose(CompositionContainer container)
+        {
+            // Clean up, ignoring any errors
+            try
+            {
+                Console.WriteLine("Disposing composition container...");
+                container.Dispose();
+                throw new InvalidCastException("test");
+
+            }
+            catch (Exception ex)
+            {
+                // Disposing the container will dispose the parts it created. That might cause exceptions in our
+                // code. Since we're testing whether objects can be imported here we're not interested in
+                // exceptions when disposing the objects -> dump to console and ignore
+                Console.WriteLine($"Error disposing composition container: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Check if type has creation policy non shared.
+        /// </summary>m
+        public static void CheckIsNonSharedMefComponent<T>()
+        {
+            var creationPolicy = GetCreationPolicyFromAttribute<T>();
+            creationPolicy.Should().Be(CreationPolicy.NonShared);
+        }
+
+        /// <summary>
+        /// Check if type has creation policy shared.
+        /// </summary>
+        public static void CheckIsSingletonMefComponent<T>()
+        {
+            var creationPolicy = GetCreationPolicyFromAttribute<T>();
+            creationPolicy.Should().Be(CreationPolicy.Shared);
+        }
+
+        /// <summary>
+        /// Checks that a type supports two exports, and that importing either exported
+        /// type returns the same instance
+        /// </summary>
+        /// <param name="exportingType">The type being tested</param>
+        /// <param name="additionalExports">Any other exports that are required. Can be empty.</param>
+        public static void CheckMultipleExportsReturnSameInstance<TTypeToCheck, TExport1, TExport2>(params Export[] additionalExports)
+            where TExport1 : class // the first expected MEF export
+            where TExport2 : class // the second expected MEF export
+        {
+            var importer1 = new SingleObjectImporter<TExport1>();
+            var importer2 = new SingleObjectImporter<TExport2>();
+            var importers = new object[] { importer1, importer2 };
+
+            Compose(importers, new[] { typeof(TTypeToCheck) }, additionalExports);
+            importer1.Import.Should().NotBeNull();
+            importer2.Import.Should().NotBeNull();
+            importer1.Import.Should().BeSameAs(importer2.Import);
+        }
+
+        private static CreationPolicy GetCreationPolicyFromAttribute<T>()
+        {
+            var customAttributes = typeof(T).GetCustomAttributes(typeof(PartCreationPolicyAttribute), true);
+            customAttributes.Should().ContainSingle();
+
+            var partCreationPolicyAttribute = (PartCreationPolicyAttribute)customAttributes[0];
+
+            return partCreationPolicyAttribute.CreationPolicy;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,18 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using Microsoft.VisualStudio.Shell.TableControl;
 using Microsoft.VisualStudio.Shell.TableManager;
-using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.Core.Helpers;
-using SonarLint.VisualStudio.IssueVisualization.Helpers;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.IssueVisualization.Models;
-using SonarLint.VisualStudio.IssueVisualization.TableControls;
 
 namespace SonarLint.VisualStudio.Integration.Vsix
 {
@@ -57,7 +52,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         /// <summary>
         /// Returns all of the location visualizations (primary and secondary) that are in the specified file
         /// </summary>
-        /// <returns></returns>
         IEnumerable<IAnalysisIssueLocationVisualization> GetLocationsVizsForFile(string filePath);
 
         /// <summary>
@@ -91,8 +85,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix
     {
         private readonly string projectName;
         private readonly Guid projectGuid;
-        private readonly IAnalysisSeverityToVsSeverityConverter toVsSeverityConverter;
-        private readonly IRuleHelpLinkProvider ruleHelpLinkProvider;
 
         private readonly IList<IAnalysisIssueVisualization> issues;
         private readonly IReadOnlyCollection<IAnalysisIssueVisualization> readonlyIssues;
@@ -103,6 +95,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         // long as it increments (if two snapshots have the same number or lower, the ErrorList
         // will assume the data hasn't changed and won't update the rows).
         private static int nextVersionNumber = 0;
+
         private static int GetNextVersionNumber() => ++nextVersionNumber;
 
         #region Construction methods
@@ -119,11 +112,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix
         }
 
         private IssuesSnapshot(Guid snapshotId, string projectName, Guid projectGuid, string filePath, IEnumerable<IAnalysisIssueVisualization> issues)
-            : this(snapshotId, projectName, projectGuid, filePath, issues, new AnalysisSeverityToVsSeverityConverter(), new RuleHelpLinkProvider())
-        {
-        }
-
-        private IssuesSnapshot(Guid snapshotId, string projectName, Guid projectGuid, string filePath, IEnumerable<IAnalysisIssueVisualization> issues, IAnalysisSeverityToVsSeverityConverter toVsSeverityConverter, IRuleHelpLinkProvider ruleHelpLinkProvider)
         {
             var areAllIssuesAnalysisIssues = issues.All(x => x.Issue is IAnalysisIssue);
 
@@ -137,8 +125,6 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             this.projectName = projectName;
             this.projectGuid = projectGuid;
             this.versionNumber = GetNextVersionNumber();
-            this.toVsSeverityConverter = toVsSeverityConverter;
-            this.ruleHelpLinkProvider = ruleHelpLinkProvider;
             this.issues = new List<IAnalysisIssueVisualization>(issues);
             this.readonlyIssues = new ReadOnlyCollection<IAnalysisIssueVisualization>(this.issues);
 
@@ -188,14 +174,14 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                     else
                     {
                         content = issueViz.Span.Value.Start.GetContainingLine().LineNumber;
-                    }                    
+                    }
                     return true;
 
                 case StandardTableKeyNames.Column:
                     // Use the span, not the issue. See comment immediately above.
                     if (issueViz.IsFileLevel())
                     {
-                        content = null;                       
+                        content = null;
                     }
                     else
                     {
@@ -210,7 +196,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                     return true;
 
                 case StandardTableKeyNames.ErrorSeverity:
-                    content = toVsSeverityConverter.Convert(issue.Severity);
+                    content = issueViz.VsSeverity;
                     return true;
 
                 case StandardTableKeyNames.BuildTool:
@@ -218,7 +204,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                     return true;
 
                 case StandardTableKeyNames.ErrorCode:
-                    content = issue.RuleKey;
+                    content = issueViz.SonarRuleId.RuleKey;
                     return true;
 
                 case StandardTableKeyNames.ErrorRank:
@@ -226,16 +212,15 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                     return true;
 
                 case StandardTableKeyNames.ErrorCategory:
-                    content = $"{issue.Severity} {ToString(issue.Type)}";
+                    content = GetErrorCategory(issue);
                     return true;
 
                 case StandardTableKeyNames.ErrorCodeToolTip:
-                    content = $"Open description of rule {issue.RuleKey}";
+                    content = $"Open description of rule {issueViz.SonarRuleId.Id}";
                     return true;
 
                 case StandardTableKeyNames.HelpLink:
-                    string ruleKey = issue.RuleKey;
-                    content = ruleHelpLinkProvider.GetHelpLink(ruleKey);
+                    content = "https://sonarcloud.io/"; // null here makes the hyperlink inactive, the content is just a placeholder and is not the actual link that is opened
                     return true;
 
                 case StandardTableKeyNames.ProjectName:
@@ -246,14 +231,28 @@ namespace SonarLint.VisualStudio.Integration.Vsix
                     content = projectGuid;
                     return true;
 
+                case StandardTableKeyNames.SuppressionState:
+                    content = issueViz.IsResolved ? Boxes.SuppressionState.Suppressed : Boxes.SuppressionState.Active;
+                    return true;
+
                 // Not a visible field - returns the issue object
                 case SonarLintTableControlConstants.IssueVizColumnName:
                     content = issueViz;
                     return true;
+
                 default:
                     content = null;
                     return false;
             }
+        }
+
+        private string GetErrorCategory(IAnalysisIssue issue)
+        {
+            if (issue.HighestImpact != null)
+            {
+                return $"{issue.HighestImpact.Severity} {issue.HighestImpact.Quality}";
+            }
+            return $"{issue.Severity} {ToString(issue.Type)}";
         }
 
         /// <summary>
@@ -270,7 +269,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             return !issue.Span.HasValue || issue.Span.Value.IsEmpty;
         }
 
-        private object ToString(AnalysisIssueType type)
+        private static string ToString(AnalysisIssueType? type)
         {
             switch (type)
             {
@@ -354,7 +353,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix
             }
 
             var onlyNavigableIssues = issues.Where(x => !ShouldHideIssue(x));
-            
+
             return new IssuesSnapshot(AnalysisRunId, projectName, projectGuid, AnalyzedFilePath, onlyNavigableIssues);
         }
 

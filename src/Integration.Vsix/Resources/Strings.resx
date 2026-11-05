@@ -129,9 +129,11 @@
     <value>Cannot find tool window with the specified guid: {0}</value>
     <comment>Exception message, {0} guid</comment>
   </data>
-  <data name="Daemon_Editor_ERROR" xml:space="preserve">
-    <value>Daemon error occurred in editor integration: {0}</value>
-    <comment>Output window message</comment>
+  <data name="Analysis_ErrorUpdatingAnalysisState" xml:space="preserve">
+    <value>Error updating analysis state: {0}</value>
+  </data>
+  <data name="Analysis_ErrorOnFileAction" xml:space="preserve">
+    <value>On {0} of file {1} an error occured: {2}</value>
   </data>
   <data name="Daemon_InitializationComplete" xml:space="preserve">
     <value>Finished initializing the daemon package.</value>
@@ -176,15 +178,15 @@
     <comment>Output window message</comment>
   </data>
   <data name="SL_ERROR" xml:space="preserve">
-    <value>SonarLint package: error occurred: {0}</value>
+    <value>SonarQube for Visual Studio package: error occurred: {0}</value>
     <comment>Output window message</comment>
   </data>
   <data name="SL_InitializationComplete" xml:space="preserve">
-    <value>Finishing initializing the SonarLint package</value>
+    <value>Finishing initializing the SonarQube for Visual Studio package</value>
     <comment>Output window message</comment>
   </data>
   <data name="SL_Initializing" xml:space="preserve">
-    <value>Initializing the SonarLint package...</value>
+    <value>Initializing the SonarQube for Visual Studio package...</value>
     <comment>Output window message</comment>
   </data>
   <data name="Telemetry_ERROR" xml:space="preserve">
@@ -205,7 +207,7 @@
   </data>
   <data name="ToolsOptions_ExampleJson" xml:space="preserve">
     <value>{
-  "sonarlint_product": "SonarLint Visual Studio",
+  "sonarlint_product": "SonarQube for Visual Studio",
   "sonarlint_version": "4.12.0.0",
   "ide_version": "16.0.29123.89",
   "days_since_installation": 1,
@@ -276,5 +278,243 @@
   </data>
   <data name="TextBufferIssueTracker_ProjectGuidError" xml:space="preserve">
     <value>Failed to calculate project guid of file {0}, error occurred: {1}</value>
+  </data>
+  <data name="SlCoreLocator_UsingCustomJreLocation" xml:space="preserve">
+    <value>Using JRE location provided in the settings "{0}"</value>
+  </data>
+  <data name="SlCoreLocator_CustomJreLocationNotFound" xml:space="preserve">
+    <value>Unable to detect java installation provided in the settings "{0}". Embedded JRE will be used.</value>
+  </data>
+  <data name="JreLocationDescriptionText" xml:space="preserve">
+    <value>SonarQube for Visual Studio provides its own JRE to launch SLCORE out of process. You can provide an explicit Java installation (21 or more recent) to be used instead.
+
+E.g. C:\Program Files\Java\jdk-21</value>
+  </data>
+  <data name="JreLocationLabel" xml:space="preserve">
+    <value>Java Home</value>
+  </data>
+  <data name="RestartIdeToApplyOptionLabel" xml:space="preserve">
+    <value>Note: The IDE must be restarted for this setting to be applied.</value>
+  </data>
+  <data name="ConnectedModeEmbeddedPluginJarLocator_JarsNotFound" xml:space="preserve">
+    <value>No embedded plugins for connected mode found</value>
+  </data>
+  <data name="ConnectedModeEmbeddedPluginJarLocator_MultipleJars" xml:space="preserve">
+    <value>Multiple embedded plugins for connected mode were found for the plugin key {0}</value>
+  </data>
+  <data name="BindingButton_ConnectedText" xml:space="preserve">
+    <value>Connected Mode: Manage Binding</value>
+  </data>
+  <data name="BindingButton_StandaloneText" xml:space="preserve">
+    <value>Connected Mode: Bind to SonarQube (Server, Cloud)...</value>
+  </data>
+  <data name="EsLintBridgeLocator_PathNotFound" xml:space="preserve">
+    <value>ESlint bridge bundle not found at: {0}</value>
+  </data>
+  <data name="EditSettingsButtonText" xml:space="preserve">
+    <value>Edit Settings</value>
+  </data>
+  <data name="OpenPerUserText" xml:space="preserve">
+    <value>Open the per-user</value>
+  </data>
+  <data name="SettingsFileDescriptionText" xml:space="preserve">
+    <value>in which rules can be activated/deactivated and files can be excluded from analysis.</value>
+  </data>
+  <data name="SettingsFileIgnoredText" xml:space="preserve">
+    <value>Note: per-user settings are ignored for solutions using connected mode.</value>
+  </data>
+  <data name="SettingsFileWillBeCreatedText" xml:space="preserve">
+    <value>The file will be created if it does not exist.</value>
+  </data>
+  <data name="FileExclusionsPage_Description" xml:space="preserve">
+    <value>Configure patterns to locally exclude files from your analysis when NOT in connected mode.</value>
+  </data>
+  <data name="FileExclusionsPage_Examples" xml:space="preserve">
+    <value>Examples of</value>
+  </data>
+  <data name="FileExclusionsPage_PatternExamples" xml:space="preserve">
+    <value>Org/Sonar/**, Class?.cs, **/*Interface.cs etc.</value>
+  </data>
+  <data name="FileExclusions_AddButton" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="FileExclusions_DeleteButton" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="FileExclusions_ListTitle" xml:space="preserve">
+    <value>File exclusions:</value>
+  </data>
+  <data name="FileExclusions_EmptyErrorMessage" xml:space="preserve">
+    <value>Pattern can not be empty.</value>
+  </data>
+  <data name="FileExclusions_CommaErrorMessage" xml:space="preserve">
+    <value>Pattern can not contain comma.</value>
+  </data>
+  <data name="AddExclusionDialog_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddExclusionDialog_Description" xml:space="preserve">
+    <value>Enter new exclusion pattern</value>
+  </data>
+  <data name="AddExclusionDialog_OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="AddExclusionDialog_Title" xml:space="preserve">
+    <value>Add File Exclusion</value>
+  </data>
+  <data name="EditExclusionDialog_Description" xml:space="preserve">
+    <value>Modify exclusion pattern</value>
+  </data>
+  <data name="EditExclusionDialog_Title" xml:space="preserve">
+    <value>Edit File Exclusion</value>
+  </data>
+  <data name="FileExclusions_EditButton" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="SolutionSettingsDialog_ApplyButton" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="SolutionSettingsDialog_CloseButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="SolutionSettingsDialog_TabAnalysisProperties" xml:space="preserve">
+    <value>Analysis Properties</value>
+  </data>
+  <data name="SolutionSettingsDialog_TabFileExclusions" xml:space="preserve">
+    <value>File Exclusions</value>
+  </data>
+  <data name="SolutionSettingsDialog_Title" xml:space="preserve">
+    <value>Solution Settings</value>
+  </data>
+  <data name="SolutionSettingsDialog_Description" xml:space="preserve">
+    <value>The settings configured for the {0} "{1}" will be saved locally in the</value>
+  </data>
+  <data name="AnalysisSettingPropertyName" xml:space="preserve">
+    <value>Property Name</value>
+  </data>
+  <data name="AnalysisSettingValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="AnalysisSettingsControl_DataGridTitle" xml:space="preserve">
+    <value>Analysis parameters</value>
+  </data>
+  <data name="AnalysisSettingsControl_Description" xml:space="preserve">
+    <value>Additional properties that could be passed to the code analyzers. This is an advanced feature, learn more</value>
+  </data>
+  <data name="AddAnalysisPropertyDialog_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddAnalysisPropertyDialog_Description" xml:space="preserve">
+    <value>Configure a new analysis property</value>
+  </data>
+  <data name="AddAnalysisPropertyDialog_OkButton" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="AddAnalysisPropertyDialog_Title" xml:space="preserve">
+    <value>Add Analysis Property</value>
+  </data>
+  <data name="AddAnalysisPropertyDialog_EmptyErrorMessage" xml:space="preserve">
+    <value>All fields must be filled.</value>
+  </data>
+  <data name="SQVSVersionLog" xml:space="preserve">
+    <value>SonarQube for VisualStudio version: {0}</value>
+  </data>
+  <data name="GlobalJreProvider_JavaExecutableFound" xml:space="preserve">
+    <value>Java executable found using {0}: {1}</value>
+  </data>
+  <data name="GlobalJreProvider_CouldNotLocateJava" xml:space="preserve">
+    <value>Could not locate Java using {0}</value>
+  </data>
+  <data name="GlobalJreProvider_ErrorFindingJava" xml:space="preserve">
+    <value>Error finding Java using {0}: {1}</value>
+  </data>
+  <data name="AnalysisBehaviorHeader" xml:space="preserve">
+    <value>Analysis Behavior</value>
+  </data>
+  <data name="FocusOnNewCodeCheckbox" xml:space="preserve">
+    <value>Focus on New Code</value>
+  </data>
+  <data name="FocusOnNewCodeTooltipGeneric" xml:space="preserve">
+    <value>Use Connected Mode to benefit from an accurate New Code Definition based on your SonarQube (Server, Cloud) settings.
+Without Connected Mode, any code added or changed in the last 30 days is considered New Code.</value>
+  </data>
+  <data name="CredentialStorageLabel" xml:space="preserve">
+    <value>Credential storage (VisualStudio restart is recommended):</value>
+  </data>
+  <data name="CredentialStorageDpapiHelpText" xml:space="preserve">
+    <value>DPAPI storage may help if you're facing credential storage errors with the Default storage</value>
+  </data>
+  <data name="BuildEventNotifier_LogContext" xml:space="preserve">
+    <value>Build Event Notifier</value>
+  </data>
+  <data name="BuildEventNotifier_IssuesFoundMessage" xml:space="preserve">
+    <value>SonarQube for Visual Studio found {0} Error-level issue(s) in open files.</value>
+  </data>
+  <data name="BuildEventNotifier_ReviewInErrorList" xml:space="preserve">
+    <value>Review them in the Error List...</value>
+  </data>
+  <data name="BuildEventNotifier_Caption" xml:space="preserve">
+    <value>SonarQube for Visual Studio</value>
+  </data>
+  <data name="BuildEventNotifier_DoNotShowAgain" xml:space="preserve">
+    <value>Do not show again</value>
+  </data>
+  <data name="ShowBuildErrorNotificationCheckbox" xml:space="preserve">
+    <value>Show post-build error notification</value>
+  </data>
+  <data name="ShowBuildErrorNotificationTooltip" xml:space="preserve">
+    <value>Displays a notification after build when warnings are elevated to errors via the TreatWarningsAsErrors MSBuild property.</value>
+  </data>
+  <data name="ExperimentalGroupHeader" xml:space="preserve">
+    <value>Experimental</value>
+  </data>
+  <data name="UseAbsoluteFilePathsCheckbox" xml:space="preserve">
+    <value>Multi-drive support</value>
+  </data>
+  <data name="UseAbsoluteFilePathsTooltip" xml:space="preserve">
+    <value>When enabled, file paths sent to the analysis backend are absolute (with the drive colon stripped) instead of being made relative to the solution drive root. Reload the solution after changing this setting.</value>
+  </data>
+  <data name="PragmaAnalysisSeverityLabel" xml:space="preserve">
+    <value>C# Unused pragma suppression analysis severity:</value>
+  </data>
+  <data name="PragmaAnalysisSeverityTooltip" xml:space="preserve">
+    <value>Detects unused #pragma warning disable and restore directives that do not suppress any issues raised by Sonar analyzers. Similar to IDE0079, but applies specifically to Sonar rules.
+Set the severity level for how these findings are reported, or choose None to disable this analysis. TreatWarningsAsErrors is respected by this rule.</value>
+  </data>
+  <data name="PluginStatuses_PremiumPluginsTooltip" xml:space="preserve">
+    <value>Including: {0}</value>
+  </data>
+  <data name="PluginStatuses_BannerBindProjectButton" xml:space="preserve">
+    <value>Bind Project</value>
+  </data>
+  <data name="PluginStatuses_BannerSetUpConnectionButton" xml:space="preserve">
+    <value>Set up Connection</value>
+  </data>
+  <data name="PluginStatuses_DialogTitle" xml:space="preserve">
+    <value>Supported Languages &amp; Analyzers</value>
+  </data>
+  <data name="PluginStatuses_BannerInfoHeading" xml:space="preserve">
+    <value>Get more from your analysis</value>
+  </data>
+  <data name="PluginStatuses_ColumnLanguage" xml:space="preserve">
+    <value>LANGUAGE/ANALYZER</value>
+  </data>
+  <data name="PluginStatuses_ColumnStatus" xml:space="preserve">
+    <value>STATUS</value>
+  </data>
+  <data name="PluginStatuses_ColumnSource" xml:space="preserve">
+    <value>SOURCE</value>
+  </data>
+  <data name="PluginStatuses_StatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="PluginStatuses_StatusDownloading" xml:space="preserve">
+    <value>Downloading...</value>
+  </data>
+  <data name="PluginStatuses_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>  
+  <data name="RoslynInitializationFailed" xml:space="preserve">
+    <value>Roslyn analysis initialization failed. C# and VB.NET analysis are unavailable for this session. Make sure to install dotnet-related workloads via VisualStudio Installer</value>
   </data>
 </root>

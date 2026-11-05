@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -38,8 +38,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging.
         private readonly ITaggableBufferIndicator taggableBufferIndicator;
 
         [ImportingConstructor]
-        public SelectedIssueLocationTaggerProvider(IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService, 
-            IAnalysisIssueSelectionService issueSelectionService, 
+        public SelectedIssueLocationTaggerProvider(IBufferTagAggregatorFactoryService bufferTagAggregatorFactoryService,
+            IAnalysisIssueSelectionService issueSelectionService,
             ITaggableBufferIndicator taggableBufferIndicator)
         {
             this.bufferTagAggregatorFactoryService = bufferTagAggregatorFactoryService;

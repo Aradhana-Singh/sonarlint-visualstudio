@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,13 +20,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 
@@ -36,22 +34,28 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.LocationTag
     public class IssueLocationStoreAggregatorTests
     {
         [TestMethod]
-        public void MefCtor_CheckExports()
+        public void MefCtor_CheckIsExported()
         {
-            var batch = new CompositionBatch();
+            // IIssueLocationStores are ImportMany -> optional
+            MefTestHelpers.CheckTypeCanBeImported<IssueLocationStoreAggregator, IIssueLocationStoreAggregator>();
+        }
 
-            batch.AddExport(MefTestHelpers.CreateExport<IIssueLocationStore>(Mock.Of<IIssueLocationStore>()));
-            batch.AddExport(MefTestHelpers.CreateExport<IIssueLocationStore>(Mock.Of<IIssueLocationStore>()));
-            batch.AddExport(MefTestHelpers.CreateExport<IIssueLocationStore>(Mock.Of<IIssueLocationStore>()));
+        [TestMethod]
+        public void MefCtor_CheckIsExported_LocationStoresAreImported()
+        {
+            var store1Export = MefTestHelpers.CreateExport<IIssueLocationStore>();
+            var store2Export = MefTestHelpers.CreateExport<IIssueLocationStore>();
+            var store3Export = MefTestHelpers.CreateExport<IIssueLocationStore>();
 
-            var issueLocationStoreAggregatorImporter = new SingleObjectImporter<IIssueLocationStoreAggregator>();
-            batch.AddPart(issueLocationStoreAggregatorImporter);
+            var importer = new SingleObjectImporter<IIssueLocationStoreAggregator>();
 
-            using var catalog = new TypeCatalog(typeof(IssueLocationStoreAggregator));
-            using var container = new CompositionContainer(catalog);
-            container.Compose(batch);
-                
-            issueLocationStoreAggregatorImporter.Import.Should().NotBeNull();
+            MefTestHelpers.Compose(importer, typeof(IssueLocationStoreAggregator), store1Export, store2Export, store3Export);
+
+            importer.Import.Should().NotBeNull();
+
+            var actual = (IssueLocationStoreAggregator)importer.Import;
+            actual.LocationStores.Count.Should().Be(3);
+            actual.LocationStores.Should().BeEquivalentTo(new[] { store1Export.Value, store2Export.Value, store3Export.Value});
         }
 
         [TestMethod]
@@ -170,7 +174,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.LocationTag
         }
 
         [TestMethod]
-        public void GetLocations_HasMatchingLocations_LocationsReturned()
+        public void GetLocations_HasMatchingLocations_AggregatedLocationsList()
         {
             const string filePath = "test.cpp";
 
@@ -232,6 +236,45 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.LocationTag
         }
 
         [TestMethod]
+        public void RefreshOnBufferChanged_NullFilePaths_ArgumentNullException()
+        {
+            var testSubject = new IssueLocationStoreAggregator(Enumerable.Empty<IIssueLocationStore>());
+
+            Action act = () => testSubject.RefreshOnBufferChanged(null);
+            act.Should().Throw<ArgumentNullException>().And.ParamName.Should().Be("affectedFilePath");
+        }
+
+        [TestMethod]
+        public void RefreshOnBufferChanged_NoStores_NoException()
+        {
+            var testSubject = new IssueLocationStoreAggregator(Enumerable.Empty<IIssueLocationStore>());
+
+            Action act = () => testSubject.RefreshOnBufferChanged("test.cpp");
+            act.Should().NotThrow();
+        }
+
+        [TestMethod]
+        public void RefreshOnBufferChanged_HasStores_AllStoresRefreshed()
+        {
+            var stores = new List<Mock<IIssueLocationStore>>
+            {
+                new Mock<IIssueLocationStore>(),
+                new Mock<IIssueLocationStore>(),
+                new Mock<IIssueLocationStore>()
+            };
+
+            var affectedFilePath = "a.cpp";
+
+            var testSubject = new IssueLocationStoreAggregator(stores.Select(x => x.Object));
+            testSubject.RefreshOnBufferChanged(affectedFilePath);
+
+            foreach (var store in stores)
+            {
+                store.Verify(x => x.RefreshOnBufferChanged(affectedFilePath), Times.Once);
+            }
+        }
+
+        [TestMethod]
         public void Contains_IssueVizIsNull_ArgumentNullException()
         {
             var testSubject = new IssueLocationStoreAggregator(Enumerable.Empty<IIssueLocationStore>());
@@ -287,6 +330,37 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.LocationTag
             var result = testSubject.Contains(issueViz);
 
             result.Should().BeTrue();
+        }
+
+        [TestMethod]
+        public void GetIssues_NoStores_EmptyList()
+        {
+            var testSubject = new IssueLocationStoreAggregator(Enumerable.Empty<IIssueLocationStore>());
+
+            var result = testSubject.GetIssues();
+
+            result.Should().BeEmpty();
+        }
+
+        [TestMethod]
+        public void GetIssues_HasStores_AggregatedIssuesList()
+        {
+            var store1 = new Mock<IIssueLocationStore>();
+            store1.Setup(x => x.GetIssues()).Returns(Enumerable.Empty<IAnalysisIssueVisualization>());
+
+            var location1 = Mock.Of<IAnalysisIssueVisualization>();
+            var store2 = new Mock<IIssueLocationStore>();
+            store2.Setup(x => x.GetIssues()).Returns(new[] { location1 });
+
+            var location2 = Mock.Of<IAnalysisIssueVisualization>();
+            var location3 = Mock.Of<IAnalysisIssueVisualization>();
+            var store3 = new Mock<IIssueLocationStore>();
+            store3.Setup(x => x.GetIssues()).Returns(new[] { location2, location3 });
+
+            var testSubject = new IssueLocationStoreAggregator(new[] { store1.Object, store2.Object, store3.Object });
+            var result = testSubject.GetIssues();
+
+            result.Should().BeEquivalentTo(location1, location2, location3);
         }
     }
 }

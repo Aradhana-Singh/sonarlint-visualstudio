@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,12 +18,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+using System;
 using System.ComponentModel.Composition;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
 using SonarLint.VisualStudio.Infrastructure.VS;
 using SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.ViewModels.Commands;
@@ -42,26 +45,43 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging
     [PartCreationPolicy(CreationPolicy.Shared)]
     internal class ErrorTagTooltipProvider : IErrorTagTooltipProvider
     {
+        private static readonly Uri dummyUri = new UriBuilder("rules", "sonarlint").Uri;
         private readonly IVsThemeColorProvider vsThemeColorProvider;
         private readonly INavigateToRuleDescriptionCommand navigateToRuleDescriptionCommand;
+        private readonly ILogger logger;
 
         [ImportingConstructor]
-        public ErrorTagTooltipProvider(IVsThemeColorProvider vsThemeColorProvider, INavigateToRuleDescriptionCommand navigateToRuleDescriptionCommand)
+        public ErrorTagTooltipProvider(IVsThemeColorProvider vsThemeColorProvider, INavigateToRuleDescriptionCommand navigateToRuleDescriptionCommand, ILogger logger)
         {
             this.vsThemeColorProvider = vsThemeColorProvider;
             this.navigateToRuleDescriptionCommand = navigateToRuleDescriptionCommand;
+            this.logger = logger;
         }
+
+        private static long instanceCount = 0;
 
         public object Create(IAnalysisIssueBase analysisIssueBase)
         {
+            // Note on click handling:
+            // Hyperlinks support two ways of handling clicks
+            // 1. normal XAML Command binding
+            // 2. Url + RequestNavigate event
+            // There is an observable difference in behaviour between the two in error tooltips.
+            // Method (1) requires the user to click twice on the link before it is actioned.
+            // Method (2) requires the user to click only once. We want the second behaviour.
+            // See bug #3650: https://github.com/SonarSource/sonarlint-visualstudio/issues/3650
+
             var hyperLink = new Hyperlink
             {
-                Inlines = {analysisIssueBase.RuleKey},
+                Inlines = { analysisIssueBase.RuleKey },
                 Foreground = GetVsThemedColor(EnvironmentColors.ControlLinkTextColorKey),
-                TextDecorations = null,
-                Command = navigateToRuleDescriptionCommand,
-                CommandParameter = analysisIssueBase.RuleKey
+
+                NavigateUri = dummyUri // must set something, otherwise the RequestNavigate event won't fire.
             };
+
+            hyperLink.RequestNavigate += (sender, args) => navigateToRuleDescriptionCommand.Execute(new NavigateToRuleDescriptionCommandParam { FullRuleKey = analysisIssueBase.RuleKey });
+
+            ApplyHyperlinkStyle(hyperLink);
 
             var content = new TextBlock
             {
@@ -74,15 +94,42 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging
                 Foreground = GetVsThemedColor(EnvironmentColors.SystemCaptionTextBrushKey)
             };
 
+            instanceCount++;
+            logger.LogVerbose($"[ErrorTagTooltipProvider] tooltip instance count: {instanceCount}");
 
             return content;
+        }
+
+        private static void ApplyHyperlinkStyle(Hyperlink hyperlink)
+        {
+            // Style the hyperlink to behave like other error tooltips i.e.
+            // link is not underlined by default; underline when the user
+            // moves the mouse over the element
+            hyperlink.Style = new Style
+            {
+                Setters =
+                {
+                    new Setter(Inline.TextDecorationsProperty, null)
+                },
+                Triggers = {
+                    new Trigger()
+                    {
+                        Property = ContentElement.IsMouseOverProperty,
+                        Value = true,
+                        Setters =
+                        {
+                            new Setter(Inline.TextDecorationsProperty, TextDecorations.Underline)
+                        }
+                    }
+                }
+            };
         }
 
         private Brush GetVsThemedColor(ThemeResourceKey resourceKey)
         {
             var textColor = vsThemeColorProvider.GetVsThemedColor(resourceKey);
             var color = Color.FromArgb(textColor.A, textColor.R, textColor.G, textColor.B);
-            
+
             return new SolidColorBrush(color);
         }
     }

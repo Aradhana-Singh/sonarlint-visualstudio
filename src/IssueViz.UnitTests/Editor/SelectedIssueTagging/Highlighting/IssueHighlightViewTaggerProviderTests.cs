@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging;
 using SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging.Highlight;
@@ -36,21 +36,15 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.SelectedIss
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            var aggregatorFactoryExport = MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(Mock.Of<IBufferTagAggregatorFactoryService>());
-            var taggableBufferIndicatorExport = MefTestHelpers.CreateExport<ITaggableBufferIndicator>(Mock.Of<ITaggableBufferIndicator>());
-
-            MefTestHelpers.CheckTypeCanBeImported<IssueHighlightViewTaggerProvider, IViewTaggerProvider>(null, 
-                new[]
-                {
-                    aggregatorFactoryExport, 
-                    taggableBufferIndicatorExport
-                });
+            MefTestHelpers.CheckTypeCanBeImported<IssueHighlightViewTaggerProvider, IViewTaggerProvider>(
+                MefTestHelpers.CreateExport<IBufferTagAggregatorFactoryService>(),
+                MefTestHelpers.CreateExport<ITaggableBufferIndicator>());
         }
 
         internal override IViewTaggerProvider CreateTestSubject(ITaggableBufferIndicator taggableBufferIndicator)
         {
             var aggregatorMock = new Mock<IBufferTagAggregatorFactoryService>();
-            
+
             aggregatorMock.Setup(x => x.CreateTagAggregator<ISelectedIssueLocationTag>(It.IsAny<ITextBuffer>()))
                 .Returns(Mock.Of<ITagAggregator<ISelectedIssueLocationTag>>());
 

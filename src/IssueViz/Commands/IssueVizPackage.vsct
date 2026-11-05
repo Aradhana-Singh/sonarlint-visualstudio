@@ -3,6 +3,7 @@
 
   <Extern href="stdidcmd.h"/>
   <Extern href="vsshlids.h"/>
+  <Extern href="KnownImageIds.vsct"/>
 
   <Commands package="guidIssueVizPackage">
 
@@ -14,21 +15,22 @@
 
     <Buttons>
 
-      <Button guid="guidIssueVizPackageCmdSet" id="IssueVisualizationToolWindowCommandId" priority="0x0100" type="Button">
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
-        <Icon guid="guidImages" id="sonarlint" />
+      <Button guid="guidIssueVizPackageCmdSet" id="IssueVisualizationToolWindowCommandId" priority="0x0102" type="Button">
+        <Parent guid="SonarLintCmdSet" id="SonarLintGroup"/>
+        <Icon guid="ImageCatalogGuid" id="TreeView" /> <!-- known VS icon ID -->
+        <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings>
-          <ButtonText>SonarLint Issue Visualization</ButtonText>
+          <ButtonText>Show Issue Visualization</ButtonText>
         </Strings>
       </Button>
 
-      <Button guid="guidIssueVizPackageCmdSet" id="IssueVisualizationToolWindowErrorListCommandId" priority="0x0200" type="Button">
+      <Button guid="guidIssueVizPackageCmdSet" id="IssueVisualizationToolWindowErrorListCommandId" priority="0x0100" type="Button">
         <Parent guid="guidDaemonCmdSet" id="grpDaemonErrorList" />
         <Icon guid="guidImages" id="sonarlint" />
         <CommandFlag>DynamicVisibility</CommandFlag>
         <CommandFlag>DefaultInvisible</CommandFlag>
         <Strings>
-          <ButtonText>Show SonarLint Issue Visualization</ButtonText>
+          <ButtonText>Show Issue Visualization</ButtonText>
         </Strings>
       </Button>
 
@@ -41,7 +43,7 @@
           <ButtonText>Go to next issue location</ButtonText>
           <CanonicalName>SonarLintGoToNextLocation</CanonicalName>
           <LocCanonicalName>SonarLintGoToNextLocation</LocCanonicalName>
-          <CommandName>SonarLint Go to next issue location</CommandName>
+          <CommandName>SonarQube: Go to next issue location</CommandName>
         </Strings>
       </Button>
 
@@ -54,14 +56,14 @@
           <ButtonText>Go to previous issue location</ButtonText>
           <CanonicalName>SonarLintGoToPreviousLocation</CanonicalName>
           <LocCanonicalName>SonarLintGoToPreviousLocation</LocCanonicalName>
-          <CommandName>SonarLint Go to previous issue location</CommandName>
+          <CommandName>SonarQube: Go to previous issue location</CommandName>
         </Strings>
       </Button>
 
     </Buttons>
 
     <Bitmaps>
-      <Bitmap guid="guidImages" href=".\Resources\sonarlint.png"/>
+      <Bitmap guid="guidImages" href=".\Resources\sonarqube_for_ide_logo_16px.png"/>
     </Bitmaps>
 
   </Commands>
@@ -115,6 +117,10 @@
 
     <GuidSymbol name="guidDaemonCmdSet" value="{1F83EA11-3B07-45B3-BF39-307FD4F42194}">
       <IDSymbol name="grpDaemonErrorList" value="0x100" />
+    </GuidSymbol>
+
+    <GuidSymbol name="SonarLintCmdSet" value="{DB0701CC-1E44-41F7-97D6-29B160A70BCB}">
+      <IDSymbol name="SonarLintGroup" value="0x1022" />
     </GuidSymbol>
 
   </Symbols>

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,8 +25,9 @@ using System.Linq;
 using EnvDTE;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
+using SonarLint.VisualStudio.Integration;
 
-namespace SonarLint.VisualStudio.Integration.UnitTests
+namespace SonarLint.VisualStudio.TestInfrastructure
 {
     // Note: this mock is for new-style project system i.e. https://github.com/dotnet/project-system
     // See the separate LegacyProjectMock class for the old-style mock.
@@ -381,6 +382,11 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
             this.ProjectKind = ProjectSystemHelper.VbProjectKind;
         }
 
+        public void SetNodeProjectKind()
+        {
+            this.ProjectKind = ProjectSystemHelper.NodeJSProjectKind;
+        }
+
         public string GetBuildProperty(string propertyName, string configuration = "")
         {
             string value;
@@ -401,8 +407,8 @@ namespace SonarLint.VisualStudio.Integration.UnitTests
         public void AddProjectItem(string filePath, string itemType)
         {
             ((EnvDTE.ProjectItems) ProjectItemsMock).AddFromFile(filePath);
-            ProjectItemsMock[filePath].PropertiesMock[Constants.ItemTypePropertyKey].Value = itemType;
-            ProjectItemsMock[filePath].PropertiesMock[Constants.FullPathPropertyKey].Value = Path.IsPathRooted(filePath) ? filePath : Path.Combine(Path.GetDirectoryName(FilePath), filePath);
+            ProjectItemsMock[filePath].PropertiesMock[Integration.Constants.ItemTypePropertyKey].Value = itemType;
+            ProjectItemsMock[filePath].PropertiesMock[Integration.Constants.FullPathPropertyKey].Value = Path.IsPathRooted(filePath) ? filePath : Path.Combine(Path.GetDirectoryName(FilePath), filePath);
         }
     }
 }

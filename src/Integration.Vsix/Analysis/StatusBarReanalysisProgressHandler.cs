@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,15 +20,17 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
+using SonarLint.VisualStudio.Core;
+
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
 {
     /// <summary>
     /// Handles displaying reanalysis progress in the VS status bar
     /// </summary>
-    internal sealed class StatusBarReanalysisProgressHandler : IProgress<CancellableJobRunner.JobRunnerProgress>, IDisposable
+    internal sealed class StatusBarReanalysisProgressHandler : IProgress<JobRunnerProgress>, IDisposable
     {
         private readonly ILogger logger;
 
@@ -46,17 +48,17 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
             this.logger = logger;
         }
 
-        public void Report(CancellableJobRunner.JobRunnerProgress value)
+        public void Report(JobRunnerProgress value)
         {
             try
             {
-                if (value.CurrentState == CancellableJobRunner.RunnerState.Running)
+                if (value.CurrentState == JobRunnerProgress.RunnerState.Running)
                 {
                     UpdateStatusBar(value.CompletedOperations, value.TotalOperations);
                 }
                 else
                 {
-                    Debug.Assert(value.CurrentState != CancellableJobRunner.RunnerState.NotStarted,
+                    Debug.Assert(value.CurrentState != JobRunnerProgress.RunnerState.NotStarted,
                         "Not expecting a progress notification until the runner has started");
                     Dispose();
                 }
@@ -66,7 +68,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
                 logger.WriteLine(AnalysisStrings.ReanalysisStatusBar_Error, ex.Message);
             }
         }
-        
+
         private void UpdateStatusBar(int completed, int total)
         {
             if (!disposedValue)

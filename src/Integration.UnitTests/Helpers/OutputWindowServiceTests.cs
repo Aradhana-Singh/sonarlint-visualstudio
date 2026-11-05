@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,15 +18,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using FluentAssertions;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Integration.Helpers;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
 {
@@ -36,11 +34,9 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<OutputWindowService, IOutputWindowService>(null, new[]
-            {
-                MefTestHelpers.CreateExport<SVsServiceProvider>(Mock.Of<IServiceProvider>()),
-                MefTestHelpers.CreateExport<IToolWindowService>(Mock.Of<IToolWindowService>())
-            });
+            MefTestHelpers.CheckTypeCanBeImported<OutputWindowService, IOutputWindowService>(
+                MefTestHelpers.CreateExport<SVsServiceProvider>(),
+                MefTestHelpers.CreateExport<IToolWindowService>());
         }
 
         [TestMethod]
@@ -49,13 +45,9 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
             var serviceProvider = new Mock<IServiceProvider>();
             SetupSonarLintPane(serviceProvider, sonarLintPane: null);
             var toolWindowServiceMock = new Mock<IToolWindowService>();
-
             var testSubject = new OutputWindowService(serviceProvider.Object, toolWindowServiceMock.Object);
 
-            using (new AssertIgnoreScope())
-            {
-                testSubject.Show();
-            }
+            testSubject.Show();
 
             serviceProvider.VerifyAll();
             serviceProvider.VerifyNoOtherCalls();
@@ -72,13 +64,9 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Helpers
             SetupSonarLintPane(serviceProvider, sonarLintPane.Object);
 
             var toolWindowServiceMock = new Mock<IToolWindowService>();
-
             var testSubject = new OutputWindowService(serviceProvider.Object, toolWindowServiceMock.Object);
 
-            using (new AssertIgnoreScope())
-            {
-                testSubject.Show();
-            }
+            testSubject.Show();
 
             serviceProvider.VerifyAll();
             serviceProvider.VerifyNoOtherCalls();

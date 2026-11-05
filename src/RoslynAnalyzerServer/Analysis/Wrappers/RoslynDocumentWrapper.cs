@@ -1,0 +1,46 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.CodeAnalysis;
+
+namespace SonarLint.VisualStudio.RoslynAnalyzerServer.Analysis.Wrappers;
+
+[ExcludeFromCodeCoverage]
+internal class RoslynDocumentWrapper(Document roslynDocument) : IRoslynDocumentWrapper
+{
+    public string? FilePath => RoslynDocument.FilePath;
+    public Document RoslynDocument { get; } = roslynDocument;
+
+    public override bool Equals(object? obj)
+    {
+        if (ReferenceEquals(this, obj))
+        {
+            return true;
+        }
+        if (obj is not RoslynDocumentWrapper otherWrapper)
+        {
+            return false;
+        }
+        return RoslynDocument.Equals(otherWrapper.RoslynDocument);
+    }
+
+    public override int GetHashCode() => RoslynDocument.GetHashCode();
+}

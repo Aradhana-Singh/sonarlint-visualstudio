@@ -2,8 +2,7 @@
 
   <Import Project="..\Directory.Build.props" />
 
-  <!-- Settings common to the SLVS product and test code.
-       This do not apply to the sonarqube-webclient submodule.  -->
+  <!-- Settings common to the SLVS product and test code. -->
   
   <PropertyGroup>
    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -14,6 +13,21 @@
     <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.Shared.cs">
       <Link>Properties\AssemblyInfo.Shared.cs</Link>
     </Compile>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)vs-threading.MainThreadAssertingMethods.txt">
+	    <Visible>false</Visible>
+    </AdditionalFiles>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)vs-threading.MainThreadSwitchingMethods.txt">
+      <Visible>false</Visible>
+    </AdditionalFiles>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Diagnostics" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,79 @@
+﻿<Project>
+
+  <Import Project="..\SonarLint.Product.props" />
+  <Import Project="..\SonarLint.VsPkgRefs.props" />
+
+  <!-- The VSSDK targets need to be imported after the Net.Sdk targets which means we  have to import the
+       .NET.Sdk targets using Import rather than specifying it as the Sdk in the Project element. -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <RootNamespace>SonarLint.VisualStudio.Education</RootNamespace>
+    <AssemblyName>SonarLint.VisualStudio.Education</AssemblyName>
+
+    <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
+
+    <!-- Vsix -->
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <CreateVsixContainer>false</CreateVsixContainer>
+    <CopyVsixManifestToOutput>false</CopyVsixManifestToOutput>
+
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Controls\RuleHelpUserControl.xaml" />
+    <Page Include="Controls\RuleHelpUserControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup Label="Images">
+    <None Remove="UI\*Images.xaml" />
+    <Page Include="UI\*Images.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DiffPlex" Version="1.7.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Framework references">
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Web" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Presentation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SLCore\SLCore.csproj" />
+    <VSCTCompile Include="Commands\EducationPackage.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+      <SubType>Designer</SubType>
+    </VSCTCompile>
+
+    <ProjectReference Include="..\Core\Core.csproj" />
+
+    <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs">
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources.resx">
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+</Project>

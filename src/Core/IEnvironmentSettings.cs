@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -40,10 +40,5 @@ namespace SonarLint.VisualStudio.Core
         /// Returns the user-specific timeout for PCH file generation, or the given default value if one has not been specified
         /// </summary>
         int PCHGenerationTimeoutInMs(int defaultValue);
-
-        /// <summary>
-        /// Returns true if debug-level messages should be logged to the output window, otherwise false
-        /// </summary>
-        bool ShouldLogDebugMessages();
     }
 }

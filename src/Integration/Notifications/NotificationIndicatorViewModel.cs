@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,181 +18,213 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 using Microsoft.VisualStudio.PlatformUI;
-using Microsoft.VisualStudio.Shell;
+using SonarLint.VisualStudio.ConnectedMode;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.Binding;
+using SonarLint.VisualStudio.Core.SmartNotification;
 using SonarLint.VisualStudio.Core.SystemAbstractions;
+using SonarLint.VisualStudio.Core.WPF;
 using SonarLint.VisualStudio.Infrastructure.VS;
-using SonarLint.VisualStudio.Integration.Telemetry;
 using SonarLint.VisualStudio.Integration.WPF;
-using SonarQube.Client.Models;
 
-namespace SonarLint.VisualStudio.Integration.Notifications
+namespace SonarLint.VisualStudio.Integration.Notifications;
+
+public sealed class NotificationIndicatorViewModel : ViewModelBase, INotificationIndicatorViewModel, IDisposable
 {
-    public class NotificationIndicatorViewModel : ViewModelBase, INotificationIndicatorViewModel
+    private readonly ISmartNotificationService smartNotificationService;
+    private readonly IActiveSolutionBoundTracker activeSolutionBoundTracker;
+    private readonly IServerConnectionsRepositoryAdapter serverConnectionsRepositoryAdapter;
+    private readonly ITimer autocloseTimer;
+    private readonly IThreadHandling threadHandling;
+    private bool areNotificationsEnabled;
+    private bool hasUnreadEvents;
+    private bool isCloud;
+    private bool isToolTipVisible;
+    private bool isVisible;
+    private string currentConnectionId;
+
+    private string text;
+
+    public ObservableCollection<SmartNotification> NotificationEvents { get; }
+
+    public ICommand ClearUnreadEventsCommand { get; }
+
+    public ICommand ClearNotificationsCommand { get; }
+
+    public NotificationIndicatorViewModel(ISmartNotificationService smartNotificationService, IBrowserService vsBrowserService, IActiveSolutionBoundTracker activeSolutionBoundTracker, IServerConnectionsRepositoryAdapter serverConnectionsRepositoryAdapter)
+        : this(smartNotificationService, vsBrowserService, activeSolutionBoundTracker, serverConnectionsRepositoryAdapter, ThreadHandling.Instance, new TimerWrapper { AutoReset = false, Interval = 3000 /* 3 sec */ })
     {
-        private readonly IServerNotificationsTelemetryManager telemetryManager;
-        private readonly ITimer autocloseTimer;
-        private readonly Action<Action> uiThreadInvoker;
+        // Nothing to do
+    }
 
-        private string text;
-        private bool hasUnreadEvents;
-        private bool isVisible;
-        private bool isToolTipVisible;
-        private bool areNotificationsEnabled;
+    // For testing
+    internal NotificationIndicatorViewModel(
+        ISmartNotificationService smartNotificationService,
+        IBrowserService vsBrowserService,
+        IActiveSolutionBoundTracker activeSolutionBoundTracker,
+        IServerConnectionsRepositoryAdapter serverConnectionsRepositoryAdapter,
+        IThreadHandling threadHandling,
+        ITimer autocloseTimer)
+    {
+        this.smartNotificationService = smartNotificationService;
+        this.activeSolutionBoundTracker = activeSolutionBoundTracker;
+        this.serverConnectionsRepositoryAdapter = serverConnectionsRepositoryAdapter;
+        this.threadHandling = threadHandling;
+        this.autocloseTimer = autocloseTimer;
 
-        public ObservableCollection<SonarQubeNotification> NotificationEvents { get; }
+        smartNotificationService.NotificationReceived += OnNotificationReceived;
+        activeSolutionBoundTracker.SolutionBindingChanged += OnSolutionBindingChanged;
+        NotificationEvents = [];
+        text = BuildToolTipText();
 
-        public ICommand NavigateToNotification { get; }
+        autocloseTimer.Elapsed += OnAutocloseTimerElapsed;
+        ClearUnreadEventsCommand = new RelayCommand(() => HasUnreadEvents = false);
+        ClearNotificationsCommand = new RelayCommand(ClearNotifications);
 
-        public NotificationIndicatorViewModel(IServerNotificationsTelemetryManager telemetryManager, IVsBrowserService vsBrowserService)
-            : this(telemetryManager, vsBrowserService, ThreadHelper.Generic.Invoke,
-                  new TimerWrapper { AutoReset = false, Interval = 3000 /* 3 sec */})
+        NavigateToNotification = new DelegateCommand(parameter =>
         {
+            var notification = (SmartNotification) parameter;
+            vsBrowserService.Navigate(notification.Link);
+            IsToolTipVisible = false;
+        });
+
+        UpdateViewModel(activeSolutionBoundTracker.CurrentConfiguration);
+    }
+
+    public void Dispose()
+    {
+        smartNotificationService.NotificationReceived -= OnNotificationReceived;
+        activeSolutionBoundTracker.SolutionBindingChanged -= OnSolutionBindingChanged;
+    }
+
+    public ICommand NavigateToNotification { get; }
+
+    public string ToolTipText
+    {
+        get => text;
+        set => SetAndRaisePropertyChanged(ref text, value);
+    }
+
+    public bool HasUnreadEvents
+    {
+        get => hasUnreadEvents;
+
+        set
+        {
+            SetAndRaisePropertyChanged(ref hasUnreadEvents, value);
+            ToolTipText = BuildToolTipText();
         }
+    }
 
-        // For testing
-        internal NotificationIndicatorViewModel(IServerNotificationsTelemetryManager telemetryManager, 
-            IVsBrowserService vsBrowserService,
-            Action<Action> uiThreadInvoker, 
-            ITimer autocloseTimer)
+    public bool IsIconVisible
+    {
+        get => isVisible;
+        set => SetAndRaisePropertyChanged(ref isVisible, value);
+    }
+
+    public bool AreNotificationsEnabled
+    {
+        get => areNotificationsEnabled;
+        set
         {
-            this.telemetryManager = telemetryManager;
-            this.uiThreadInvoker = uiThreadInvoker;
-            this.autocloseTimer = autocloseTimer;
-
-            NotificationEvents = new ObservableCollection<SonarQubeNotification>();
-            text = BuildToolTipText();
-
-            autocloseTimer.Elapsed += OnAutocloseTimerElapsed;
-            ClearUnreadEventsCommand = new RelayCommand(() => HasUnreadEvents = false);
-
-            NavigateToNotification = new DelegateCommand(parameter =>
-            {
-                var notification = (SonarQubeNotification) parameter;
-                vsBrowserService.Navigate(notification.Link.ToString());
-                IsToolTipVisible = false;
-                telemetryManager.NotificationClicked(notification.Category);
-            });
-        }
-
-        public ICommand ClearUnreadEventsCommand { get; }
-
-        public string ToolTipText
-        {
-            get
-            {
-                return text;
-            }
-            set
-            {
-                SetAndRaisePropertyChanged(ref text, value);
-            }
-        }
-
-        public bool HasUnreadEvents
-        {
-            get
-            {
-                return hasUnreadEvents;
-            }
-
-            set
-            {
-                SetAndRaisePropertyChanged(ref hasUnreadEvents, value);
-                ToolTipText = BuildToolTipText();
-            }
-        }
-
-        public bool IsIconVisible
-        {
-            get
-            {
-                return isVisible;
-            }
-            set
-            {
-                SetAndRaisePropertyChanged(ref isVisible, value);
-            }
-        }
-
-        public bool AreNotificationsEnabled
-        {
-            get
-            {
-                return areNotificationsEnabled;
-            }
-            set
-            {
-                SetAndRaisePropertyChanged(ref areNotificationsEnabled, value);
-                telemetryManager.NotificationsToggled(value);
-            }
-        }
-
-        public bool IsToolTipVisible
-        {
-            get
-            {
-                return isToolTipVisible;
-            }
-            set
-            {
-                SetAndRaisePropertyChanged(ref isToolTipVisible, value);
-
-                // If the tooltip was closed manually, stop the timer
-                if (!isToolTipVisible)
-                {
-                    autocloseTimer.Stop();
-                }
-            }
-        }
-
-        public void SetNotificationEvents(IEnumerable<SonarQubeNotification> events)
-        {
-            if (events == null ||
-                !events.Any() ||
-                !AreNotificationsEnabled ||
-                !isVisible)
+            if (areNotificationsEnabled == value)
             {
                 return;
             }
-
-            uiThreadInvoker(() =>
-                {
-                    NotificationEvents.Clear();
-
-                    foreach (var ev in events)
-                    {
-                        NotificationEvents.Add(ev);
-                        telemetryManager.NotificationReceived(ev.Category);
-                    }
-
-                    HasUnreadEvents = true;
-                    IsToolTipVisible = true;
-                    autocloseTimer.Start();
-                });
+            SetAndRaisePropertyChanged(ref areNotificationsEnabled, value);
+            UpdateSmartNotificationsSettings(value);
         }
+    }
 
-        private void OnAutocloseTimerElapsed(object sender, EventArgs e)
+    public bool IsToolTipVisible
+    {
+        get => isToolTipVisible;
+        set
         {
-            IsToolTipVisible = false;
-        }
+            SetAndRaisePropertyChanged(ref isToolTipVisible, value);
 
-        private string BuildToolTipText()
-        {
-            const string noUnreadEvents = "You have no unread events.";
-            if (!HasUnreadEvents ||
-                NotificationEvents.Count == 0)
+            // If the tooltip was closed manually, stop the timer
+            if (!isToolTipVisible)
             {
-                return noUnreadEvents;
+                autocloseTimer.Stop();
             }
+        }
+    }
 
-            return string.Format("You have {0} unread event{1}.",
-                NotificationEvents.Count, NotificationEvents.Count == 1 ? "" : "s");
+    public bool IsCloud
+    {
+        get => isCloud;
+        set => SetAndRaisePropertyChanged(ref isCloud, value);
+    }
+
+    public void ClearNotifications() =>
+        threadHandling.RunOnUIThread(() =>
+        {
+            NotificationEvents.Clear();
+            HasUnreadEvents = false;
+            IsToolTipVisible = false;
+        });
+
+    public void AddNotification(SmartNotification notification)
+    {
+        if (notification == null ||
+            !AreNotificationsEnabled ||
+            !isVisible)
+        {
+            return;
+        }
+
+        threadHandling.RunOnUIThread(() =>
+        {
+            NotificationEvents.Add(notification);
+            HasUnreadEvents = true;
+            IsToolTipVisible = true;
+            autocloseTimer.Start();
+        });
+    }
+
+    private void OnAutocloseTimerElapsed(object sender, EventArgs e) => IsToolTipVisible = false;
+
+    private string BuildToolTipText()
+    {
+        const string noUnreadEvents = "You have no unread events.";
+        if (!HasUnreadEvents || NotificationEvents.Count == 0)
+        {
+            return noUnreadEvents;
+        }
+
+        return string.Format("You have {0} unread event{1}.",
+            NotificationEvents.Count, NotificationEvents.Count == 1 ? "" : "s");
+    }
+
+    private void OnNotificationReceived(object sender, NotificationReceivedEventArgs args) => AddNotification(args.Notification);
+
+    private void OnSolutionBindingChanged(object sender, ActiveSolutionBindingEventArgs args) => UpdateViewModel(args.Configuration);
+
+    private void UpdateViewModel(BindingConfiguration configuration)
+    {
+        var newConnectionId = configuration?.Project?.ServerConnection?.Id;
+
+        if (currentConnectionId != newConnectionId)
+        {
+            ClearNotifications();
+        }
+
+        currentConnectionId = newConnectionId;
+        IsIconVisible = configuration?.Project?.ServerConnection != null;
+        IsCloud = configuration?.Project?.ServerConnection is ServerConnection.SonarCloud;
+        areNotificationsEnabled = configuration?.Project?.ServerConnection?.Settings.IsSmartNotificationsEnabled ?? false;
+        RaisePropertyChanged(nameof(AreNotificationsEnabled));
+    }
+
+    private void UpdateSmartNotificationsSettings(bool isEnabled)
+    {
+        if (currentConnectionId != null)
+        {
+            serverConnectionsRepositoryAdapter.TryUpdateSettingsById(currentConnectionId, new ServerConnectionSettings(isEnabled));
         }
     }
 }

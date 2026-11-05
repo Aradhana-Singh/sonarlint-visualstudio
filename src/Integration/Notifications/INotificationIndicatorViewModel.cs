@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,9 +18,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System.Collections.Generic;
 using System.Windows.Input;
-using SonarQube.Client.Models;
+using SonarLint.VisualStudio.Core.SmartNotification;
 
 namespace SonarLint.VisualStudio.Integration.Notifications
 {
@@ -36,7 +35,11 @@ namespace SonarLint.VisualStudio.Integration.Notifications
 
         bool IsToolTipVisible { get; set; }
 
-        void SetNotificationEvents(IEnumerable<SonarQubeNotification> events);
+        bool IsCloud { get; set; }
+
+        void ClearNotifications();
+
+        void AddNotification(SmartNotification notification);
 
         ICommand NavigateToNotification { get; }
     }

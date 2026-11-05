@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -28,13 +28,25 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
 {
     internal class CmdBuilder
     {
+        private static readonly Regex DoubleSeparatorRegEx = new Regex(@"\\+",
+            RegexOptions.Compiled,
+            Core.RegexConstants.DefaultTimeout);
+
+        // To avoid paths with spaces
+        private static readonly Regex DoubleQuotedRegEx = new Regex("\"[^\\\"]*(\\.[^\\\"]*)*\"",
+            RegexOptions.Compiled,
+            Core.RegexConstants.DefaultTimeout);
+
+        private const string False = "false";
+
+        private readonly ILanguageFlagsProvider languageFlagsProvider;
         StringBuilder Cmd { get; set; } = new StringBuilder();
         bool IsHeader { get; set; }
-        public string HeaderFileLang { get; set; } = "";
 
-        public CmdBuilder(bool isHeader)
+        public CmdBuilder(bool isHeader, ILanguageFlagsProvider languageFlagsProvider)
         {
             IsHeader = isHeader;
+            this.languageFlagsProvider = languageFlagsProvider;
         }
 
         public string GetFullCmd()
@@ -63,9 +75,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
 
         internal /* for testing */ static string AddQuote(string s)
         {
-            // To avoid paths with spaces
-            Regex doubleQuoted = new Regex("\"[^\\\"]*(\\.[^\\\"]*)*\"");
-            if (!doubleQuoted.IsMatch(s))
+            if (!DoubleQuotedRegEx.IsMatch(s))
             {
                 string quote = "\"";
                 return quote + s + quote;
@@ -76,15 +86,11 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
         internal /* for testing */ static string AdjustPath(string path)
         {
             // path cannot be empty
-            path = path.Replace("/", @"\");
+            path = path.Trim().Replace("/", @"\");
 
-            Regex doubleSeparator = new Regex(@"\\+");
-            path = doubleSeparator.Replace(path, @"\");
+            path = DoubleSeparatorRegEx.Replace(path, @"\");
 
-            if (path[path.Length - 1] == '\\')
-            {
-                path = path.Substring(0, path.Length - 1);
-            }
+            path = path.TrimEnd('\\');
             return AddQuote(path);
         }
 
@@ -125,10 +131,10 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             // binary options
             AddBinaryOption(properties, "CompileAsWinRT", "/ZW", "true");
             AddBinaryOption(properties, "OpenMPSupport", "/openmp", "true");
-            AddBinaryOption(properties, "RuntimeTypeInfo", "/GR-", "false");
+            AddBinaryOption(properties, "RuntimeTypeInfo", "/GR-", False);
             AddBinaryOption(properties, "DisableLanguageExtensions", "/Za", "true");
-            AddBinaryOption(properties, "TreatWChar_tAsBuiltInType", "/Zc:wchar_t-", "false");
-            AddBinaryOption(properties, "ForceConformanceInForLoopScope", "/Zc:forScope-", "false");
+            AddBinaryOption(properties, "TreatWChar_tAsBuiltInType", "/Zc:wchar_t-", False);
+            AddBinaryOption(properties, "ForceConformanceInForLoopScope", "/Zc:forScope-", False);
             AddBinaryOption(properties, "IgnoreStandardIncludePath", "/X", "true");
             AddBinaryOption(properties, "OmitDefaultLibName", "/Zl", "true");
             AddBinaryOption(properties, "UndefineAllPreprocessorDefinitions", "/u", "true");
@@ -136,8 +142,8 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             AddTrueFalse(properties, "ConformanceMode", "/permissive-", "/permissive");
 
             // enum options
-            var cppStandard = GetPotentiallyUnsupportedPropertyValue(properties, "LanguageStandard", "");
-            AddCmdOpt(ConvertCppStandard(cppStandard));
+
+            AddLanguageFlags(properties);
 
             var exceptionHandling = properties.GetEvaluatedPropertyValue("ExceptionHandling");
             AddCmdOpt(ConvertExceptionHandling(exceptionHandling));
@@ -157,25 +163,26 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             var structMemberAlignment = GetPotentiallyUnsupportedPropertyValue(properties, "StructMemberAlignment", "");
             AddCmdOpt(ConvertStructMemberAlignment(structMemberAlignment));
 
-            var compileAs = properties.GetEvaluatedPropertyValue("CompileAs");
-            if (IsHeader)
-            {
-                HeaderFileLang = (compileAs == "CompileAsC") ? "c" : "cpp";
-            }
-            else
-            {
-                AddCmdOpt(ConvertCompileAsAndGetLanguage(compileAs));
-            }
-
             // Additional options
             var additionalOptions = properties.GetEvaluatedPropertyValue("AdditionalOptions");
             AddCmdOpt(additionalOptions);
         }
 
+        private void AddLanguageFlags(IVCRulePropertyStorage properties)
+        {
+            var (compileAsFlag, languageStandardFlag) = languageFlagsProvider.GetLanguageConfiguration(
+                GetPotentiallyUnsupportedPropertyValue(properties, "CompileAs", string.Empty),
+                GetPotentiallyUnsupportedPropertyValue(properties, "LanguageStandard_C", string.Empty),
+                GetPotentiallyUnsupportedPropertyValue(properties, "LanguageStandard", string.Empty));
+
+            AddCmdOpt(compileAsFlag);
+            AddCmdOpt(languageStandardFlag);
+        }
+
         private void AddListOptions(IVCRulePropertyStorage ivcRulePropertyStorage, string vsOption, string compileOption, string[] separator, bool addQuote = true)
         {
-            var additionalIncludeDirectories = ivcRulePropertyStorage.GetEvaluatedPropertyValue(vsOption);
-            string[] opts = additionalIncludeDirectories.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+            var listOptions = ivcRulePropertyStorage.GetEvaluatedPropertyValue(vsOption);
+            string[] opts = listOptions.Split(separator, StringSplitOptions.RemoveEmptyEntries);
             foreach (string opt in opts)
             {
                 AddCmdOpt(addQuote ? compileOption + AddQuote(opt) : compileOption + opt);
@@ -184,8 +191,8 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
 
         private void AddPathListOptions(IVCRulePropertyStorage ivcRulePropertyStorage, string vsOption, string compileOption, string[] separator)
         {
-            var additionalIncludeDirectories = ivcRulePropertyStorage.GetEvaluatedPropertyValue(vsOption);
-            string[] opts = additionalIncludeDirectories.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+            var pathListOptions = ivcRulePropertyStorage.GetEvaluatedPropertyValue(vsOption);
+            var opts = pathListOptions.Split(separator, StringSplitOptions.RemoveEmptyEntries).Where(o => !string.IsNullOrWhiteSpace(o));
             foreach (string opt in opts)
             {
                 AddCmdOpt(compileOption + AdjustPath(opt));
@@ -207,7 +214,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             {
                 AddCmdOpt(compileOptionTrue);
             }
-            else if ("false".Equals(optVal))
+            else if (False.Equals(optVal))
             {
                 AddCmdOpt(compileOptionFalse);
             }
@@ -230,24 +237,8 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
                     return "/Zp4";
                 case "2Bytes":
                     return "/Zp2";
-                case "1Bytes":
+                case "1Byte":
                     return "/Zp1";
-            }
-        }
-
-        internal /* for testing */ static string ConvertCompileAsAndGetLanguage(string value)
-        {
-            switch (value)
-            {
-                default:
-                    throw new ArgumentException($"Unsupported CompileAs: {value}", nameof(value));
-                case "": // https://github.com/SonarSource/sonarlint-visualstudio/issues/738
-                case "Default":
-                    return "";
-                case "CompileAsC":
-                    return "/TC";
-                case "CompileAsCpp":
-                    return "/TP";
             }
         }
 
@@ -298,7 +289,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
                 default:
                     throw new ArgumentException($"Unsupported CompileAsManaged: {value}", nameof(value));
                 case "":
-                case "false":
+                case False:
                     return "";
                 case "true":
                     return "/clr";
@@ -340,7 +331,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
                 default:
                     throw new ArgumentException($"Unsupported ExceptionHandling: {value}", nameof(value));
                 case "": // https://github.com/SonarSource/sonarlint-visualstudio/issues/738
-                case "false":
+                case False:
                     return "";
                 // all options below define macro "_CPPUNWIND":
                 case "Async":
@@ -352,26 +343,8 @@ namespace SonarLint.VisualStudio.Integration.Vsix.CFamily.VcxProject
             }
         }
 
-        internal /* for testing */ static string ConvertCppStandard(string value)
-        {
-            switch (value)
-            {
-                default:
-                    throw new ArgumentException($"Unsupported LanguageStandard: {value}", nameof(value));
-                case null:
-                case "":
-                case "Default":
-                    return "";
-                case "stdcpplatest":
-                    return "/std:c++latest";
-                case "stdcpp20":
-                    return "/std:c++20";
-                case "stdcpp17":
-                    return "/std:c++17";
-                case "stdcpp14":
-                    return "/std:c++14";
-            }
-        }
+
+
         /// <summary>
         /// Returns the value of a property that might not be supported by the current version of the compiler.
         /// If the property is not supported the default value is returned.

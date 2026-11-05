@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -51,7 +51,24 @@ namespace SonarLint.VisualStudio.Core
         /// If the caller is not on the main thread then the method will switch to the main thread,
         /// then resume on the caller's thread when then the operation completes.
         /// </summary>
-        Task RunOnUIThread(Action op);
+        Task RunOnUIThreadAsync(Action op);
+
+        /// <summary>
+        /// Executes the operation asynchronously on the main thread. While synchronously blocking
+        /// synchronously the calling thread.
+        /// If the caller is on the main thread already then the operation is executed directly.
+        /// If the caller is not on the main thread then the method will switch to the main thread,
+        /// then resume on the caller's thread when then the operation completes.
+        /// </summary>
+        void RunOnUIThread(Action op);
+
+        /// <summary>
+        /// Executes the operation asynchronously on the background thread.
+        /// If the caller is on a background thread already then the operation is executed directly.
+        /// If the caller is not on a background thread then the method will switch to one,
+        /// then resume on the UI thread when then the operation completes.
+        /// </summary>
+        Task<T> RunOnBackgroundThread<T>(Func<Task<T>> asyncMethod);
 
         /// <summary>
         /// Runs the asynchronous method to completion while synchronously blocking the calling thread.
@@ -83,6 +100,12 @@ namespace SonarLint.VisualStudio.Core
         /// </summary>
         /// <remarks>Wrapper that calls <see cref="TaskScheduler.Default"/></remarks>
         IAwaitableWrapper SwitchToBackgroundThread();
+
+        /// <summary>
+        /// Switches to the main thread
+        /// </summary>
+        /// <remarks>Wrapper that calls <see cref="ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync()"/></remarks>
+        Task SwitchToMainThreadAsync();
     }
 
     // Wrappers for awaiter /awaitable to avoid VS-specific types on the interface
@@ -91,15 +114,10 @@ namespace SonarLint.VisualStudio.Core
         IAwaiterWrapper GetAwaiter();
     }
 
-    public interface IAwaiterWrapper :
-#if VS2022
-        // Earlier versions of VS don't implement ICriticalNotifyCompletion
-        ICriticalNotifyCompletion
-#else
-        INotifyCompletion
-#endif
+    public interface IAwaiterWrapper : ICriticalNotifyCompletion
     {
         bool IsCompleted { get; }
+
         void GetResult();
     }
 }

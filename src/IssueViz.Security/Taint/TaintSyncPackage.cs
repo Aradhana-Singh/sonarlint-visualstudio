@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,14 +18,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Binding;
-using SonarLint.VisualStudio.Integration;
+using SonarLint.VisualStudio.Core.ConfigurationScope;
+using SonarLint.VisualStudio.Infrastructure.VS;
 using Task = System.Threading.Tasks.Task;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Security.Taint
@@ -48,16 +48,24 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.Taint
     [Guid("EEEB81FA-D6C3-438D-B29E-9FAAC91471CC")]
     public sealed class TaintSyncPackage : AsyncPackage
     {
-        private ITaintIssuesBindingMonitor bindingMonitor;
+        private IServerIssuesConfigurationScopeMonitor serverIssuesConfigurationScopeMonitor;
 
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
+            await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+
             var componentModel = await GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
             var logger = componentModel.GetService<ILogger>();
+
             logger.WriteLine(TaintResources.SyncPackage_Initializing);
 
-            bindingMonitor = componentModel.GetService<ITaintIssuesBindingMonitor>();
-            await componentModel.GetService<ITaintIssuesSynchronizer>().SynchronizeWithServer();
+            serverIssuesConfigurationScopeMonitor = componentModel.GetService<IServerIssuesConfigurationScopeMonitor>();
+            var taintIssuesSynchronizer = componentModel.GetService<IServerIssuesSynchronizer>();
+
+            await ThreadHandling.Instance.SwitchToBackgroundThread();
+
+            await taintIssuesSynchronizer.UpdateServerIssuesAsync(componentModel.GetService<IActiveConfigScopeTracker>().Current);
+
             logger.WriteLine(TaintResources.SyncPackage_Initialized);
         }
 
@@ -65,8 +73,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.Security.Taint
         {
             if (disposing)
             {
-                bindingMonitor.Dispose();
+                serverIssuesConfigurationScopeMonitor?.Dispose();
             }
+
             base.Dispose(disposing);
         }
     }

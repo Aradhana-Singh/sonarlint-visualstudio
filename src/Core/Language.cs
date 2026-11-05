@@ -1,6 +1,6 @@
-﻿/*
+/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,12 +18,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using SonarQube.Client.Models;
 
 namespace SonarLint.VisualStudio.Core
 {
@@ -38,21 +33,39 @@ namespace SonarLint.VisualStudio.Core
     /// This class is safe for use as a key in collection classes. E.g., <seealso cref="IDictionary{TKey, TValue}"/>.
     /// </para>
     /// </remarks>
-    [DebuggerDisplay("{Name} (ID: {Id}, IsSupported: {IsSupported})")]
+    [DebuggerDisplay("{Name} (ID: {Id})")]
     [TypeConverter(typeof(LanguageConverter))]
-    public sealed class Language : IEquatable<Language>
+    public class Language : IEquatable<Language>
     {
-        public readonly static Language Unknown = new Language();
-        public readonly static Language CSharp = new Language("CSharp", CoreStrings.CSharpLanguageName, "csharp.ruleset", SonarQubeLanguage.CSharp);
-        public readonly static Language VBNET = new Language("VB", CoreStrings.VBNetLanguageName, "vb.ruleset", SonarQubeLanguage.VbNet);
-        public readonly static Language Cpp = new Language("C++", CoreStrings.CppLanguageName, "_cpp_settings.json", SonarQubeLanguage.Cpp);
-        public readonly static Language C = new Language("C", "C", "_c_settings.json", SonarQubeLanguage.C);
+        private const string VersionNumberPattern = "(\\d+\\.\\d+\\.\\d+\\.\\d+)\\";
+        private static readonly PluginInfo SqvsRoslynPlugin = new("sqvsroslyn", $"sonarqube-ide-visualstudio-roslyn-plugin-{VersionNumberPattern}.jar");
+        private static readonly PluginInfo CSharpEnterprisePlugin = new("csharpenterprise", $"sonar-csharp-enterprise-plugin-{VersionNumberPattern}.jar", isEnabledForAnalysis: false);
+        private static readonly PluginInfo CSharpOssPlugin = new("csharp", $"sonar-csharp-plugin-{VersionNumberPattern}.jar", isEnabledForAnalysis: false);
+        private static readonly PluginInfo VbNetEnterprisePlugin = new("vbnetenterprise", $"sonar-vbnet-enterprise-plugin-{VersionNumberPattern}.jar", isEnabledForAnalysis: false);
+        private static readonly PluginInfo VbNetOssPlugin = new("vbnet", $"sonar-vbnet-plugin-{VersionNumberPattern}.jar", isEnabledForAnalysis: false);
+        private static readonly PluginInfo SecretsPlugin = new("text", $"sonar-text-plugin-{VersionNumberPattern}.jar");
+        private static readonly PluginInfo CFamilyPlugin = new("cpp", $"sonar-cfamily-plugin-{VersionNumberPattern}.jar");
+        private static readonly PluginInfo JavascriptPlugin = new("javascript", $"sonar-javascript-plugin-{VersionNumberPattern}.jar");
+        private static readonly PluginInfo HtmlPlugin = new("web", $"sonar-html-plugin-{VersionNumberPattern}.jar");
+        private static readonly PluginInfo IacPlugin = new("iac", null);
+        private static readonly PluginInfo TsqlPlugin = new("tsql", null);
 
-        /// <summary>
-        /// Returns the language for the specified language key, or null if it does not match a known language
-        /// </summary>
-        public static Language GetLanguageFromLanguageKey(string languageKey) =>
-            KnownLanguages.FirstOrDefault(l => languageKey.Equals(l.ServerLanguage.Key, System.StringComparison.OrdinalIgnoreCase));
+        public static readonly Language Unknown = new();
+        public static readonly RoslynLanguage CSharp = new("CSharp", CoreStrings.CSharpLanguageName, "cs", SqvsRoslynPlugin, "csharpsquid",
+            settingsFileName: "sonarlint_csharp.globalconfig", roslynDllIdentifier: ".CSharp.", "roslyn.sonaranalyzer.security.cs", additionalPlugins: [CSharpEnterprisePlugin, CSharpOssPlugin]);
+        public static readonly RoslynLanguage VBNET = new("VB", CoreStrings.VBNetLanguageName, "vbnet", SqvsRoslynPlugin, "vbnet", settingsFileName: "sonarlint_vb.globalconfig", roslynDllIdentifier: ".VisualBasic.",
+            additionalPlugins: [VbNetEnterprisePlugin, VbNetOssPlugin]);
+        public static readonly Language Cpp = new("C++", CoreStrings.CppLanguageName, "cpp", CFamilyPlugin, "cpp");
+        public static readonly Language C = new("C", "C", "c", CFamilyPlugin, "c");
+        public static readonly Language Js = new("Js", "JavaScript", "js", JavascriptPlugin, "javascript", "jssecurity");
+        public static readonly Language Ts = new("Ts", "TypeScript", "ts", JavascriptPlugin, "typescript", "tssecurity");
+        public static readonly Language Css = new("Css", "CSS", "css", JavascriptPlugin, "css");
+        public static readonly Language Html = new("Html", "HTML", "web", HtmlPlugin, "Web"); //See https://github.com/SonarSource/sonarlint-visualstudio/issues/4586.
+        public static readonly Language Secrets = new("Secrets", "Secrets", "secrets", SecretsPlugin, "secrets");
+        public static readonly Language Text = new("Text", "Text", "text", SecretsPlugin, "text");
+        public static readonly Language TSql = new("TSql", "T-SQL", "tsql", TsqlPlugin, "tsql");
+        public static readonly Language Shell = new("Shell", "Shell", "shell", IacPlugin, "shell");
+        public static readonly Language AzurePipelines = new("AzurePipelines", "Azure Pipelines", "azurepipelines", IacPlugin, "azurepipelines");
 
         /// <summary>
         /// A stable identifier for this language.
@@ -65,7 +78,9 @@ namespace SonarLint.VisualStudio.Core
         /// <remarks>The server-side language key is the stable id used server-side to identify a language. Ideally this would have been used as the
         /// Id here originally. However, it wasn't and we can't easily change the Id values now since they are serialized in the
         /// solution-level binding file.</remarks>
-        public SonarQubeLanguage ServerLanguage { get; }
+        public string ServerLanguageKey { get; }
+
+        public PluginInfo PluginInfo { get; }
 
         /// <summary>
         /// The language display name.
@@ -73,49 +88,37 @@ namespace SonarLint.VisualStudio.Core
         public string Name { get; }
 
         /// <summary>
-        /// Suffix and extension added to the language-specific rules configuration file for the language
+        /// Additional plugins that should be installed for a language
         /// </summary>
-        /// <remarks>e.g. for ruleset-based languages this will be a language identifier + ".ruleset"</remarks>
-        public string FileSuffixAndExtension { get; }
+        public PluginInfo[] AdditionalPlugins { get; }
 
         /// <summary>
-        /// Returns whether or not this language is a supported project language.
+        /// The repository key (a.k.a repoKey) of the rules for this language.
         /// </summary>
-        public bool IsSupported => SupportedLanguages.Contains(this);
+        public string RepoKey { get; }
 
         /// <summary>
-        /// All languages which are supported for project binding.
+        /// Nullable, the repository key for the security rules (i.e. hotspots) for this language
         /// </summary>
-        public static IEnumerable<Language> SupportedLanguages
-        {
-            get
-            {
-                return new[] { CSharp, VBNET, Cpp, C };
-            }
-        }
-
-        /// <summary>
-        /// All known languages.
-        /// </summary>
-        public static IEnumerable<Language> KnownLanguages
-        {
-            get
-            {
-                return new[] { CSharp, VBNET, Cpp, C };
-            }
-        }
+        public string SecurityRepoKey { get; }
 
         /// <summary>
         /// Private constructor reserved for the <seealso cref="Unknown"/>.
         /// </summary>
         private Language()
         {
-            this.Id = string.Empty;
-            this.Name = CoreStrings.UnknownLanguageName;
-            this.FileSuffixAndExtension = string.Empty;
+            Id = string.Empty;
+            Name = CoreStrings.UnknownLanguageName;
         }
 
-        public Language(string id, string name, string fileSuffix, SonarQubeLanguage serverLanguage)
+        public Language(
+            string id,
+            string name,
+            string serverLanguageKey,
+            PluginInfo pluginInfo,
+            string repoKey,
+            string securityRepoKey = null,
+            PluginInfo[] additionalPlugins = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -127,15 +130,13 @@ namespace SonarLint.VisualStudio.Core
                 throw new ArgumentNullException(nameof(name));
             }
 
-            if (string.IsNullOrWhiteSpace(fileSuffix))
-            {
-                throw new ArgumentNullException(nameof(fileSuffix));
-            }
-
-            this.Id = id;
-            this.Name = name;
-            this.FileSuffixAndExtension = fileSuffix;
-            this.ServerLanguage = serverLanguage ?? throw new ArgumentNullException(nameof(serverLanguage));
+            Id = id;
+            Name = name;
+            AdditionalPlugins = additionalPlugins;
+            ServerLanguageKey = serverLanguageKey ?? throw new ArgumentNullException(nameof(serverLanguageKey));
+            PluginInfo = pluginInfo ?? throw new ArgumentNullException(nameof(pluginInfo));
+            RepoKey = repoKey ?? throw new ArgumentNullException(nameof(repoKey));
+            SecurityRepoKey = securityRepoKey;
         }
 
         #region IEquatable<Language> and Equals
@@ -148,19 +149,56 @@ namespace SonarLint.VisualStudio.Core
             }
 
             return other != null
-                && other.Id == this.Id;
+                   && other.Id == Id;
         }
 
         public override bool Equals(object obj)
         {
-            return this.Equals(obj as Language);
+            return Equals(obj as Language);
         }
 
         public override int GetHashCode()
         {
-            return this.Id.GetHashCode();
+            return Id.GetHashCode();
         }
 
         #endregion
+
+        public override string ToString() => Name;
+
+        public bool HasRepoKey(string repoKey) => RepoKey == repoKey || SecurityRepoKey == repoKey;
+    }
+
+    /// <summary>
+    /// Represents a Roslyn-based programming language with specific Roslyn analyzer configuration.
+    /// </summary>
+    public class RoslynLanguage : Language
+    {
+        /// <summary>
+        /// Suffix and extension added to the language-specific rules configuration file for the language
+        /// </summary>
+        /// <remarks>e.g. for ruleset-based languages this will be a language identifier + ".globalconfig"</remarks>
+        public string SettingsFileNameAndExtension { get; }
+
+        /// <summary>
+        /// A substring that is contained in the name of the analyzer files for specific roslyn language.
+        /// </summary>
+        public string RoslynDllIdentifier { get; }
+
+        public RoslynLanguage(
+            string id,
+            string name,
+            string serverLanguageKey,
+            PluginInfo pluginInfo,
+            string repoKey,
+            string settingsFileName,
+            string roslynDllIdentifier,
+            string securityRepoKey = null,
+            PluginInfo[] additionalPlugins = null)
+            : base(id, name, serverLanguageKey, pluginInfo, repoKey, securityRepoKey, additionalPlugins)
+        {
+            SettingsFileNameAndExtension = settingsFileName;
+            RoslynDllIdentifier = roslynDllIdentifier;
+        }
     }
 }

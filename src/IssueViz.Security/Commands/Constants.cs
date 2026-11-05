@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,15 +18,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
-
 namespace SonarLint.VisualStudio.IssueVisualization.Security.Commands
 {
     internal static class Constants
     {
         public static readonly Guid CommandSetGuid = new Guid("97856422-20A2-4DB5-A468-1BAA9B6EEC38");
 
-        public const int HotspotsToolWindowCommandId = 0x0100;
-        public const int TaintToolWindowCommandId = 0x0101;
+        public const int ReportViewToolWindowCommandId = 0x0102;
     }
 }

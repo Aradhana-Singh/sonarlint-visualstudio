@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,7 +25,7 @@ namespace SonarLint.VisualStudio.Integration.Vsix.ErrorList
     /// </summary>
     internal interface ISonarErrorListDataSource
     {
-        void RefreshErrorList(IIssuesSnapshotFactory factory);
+        void RefreshErrorList(IIssuesSnapshotFactory factory, IIssuesSnapshot oldSnapshot);
 
         void AddFactory(IIssuesSnapshotFactory factory);
 

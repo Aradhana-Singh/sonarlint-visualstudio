@@ -1,0 +1,95 @@
+﻿<Project>
+
+  <!-- ************************************************************** -->
+  <!-- Entry point - the Build target -->
+  <!-- ************************************************************** -->
+
+  <!-- Set Inputs and Outputs so the target only runs if the referenced jars have changed.
+       We use the "EmbeddedSonarAnalyzer.props" file as the sole input file, as it specifies
+       the jars to download. At the end of a build we will write a single timestamp output
+       file and treat that as the sole output file.
+
+       If the EmbeddedSonarAnalyzer.props file changes, it will have a newer timestamp than
+       the timestamp output file, and MSBuild will build the project.
+       If the project fails to build correctly the output file will not be updated, so the
+       next time we trigger a build MSBuild will attempt to build the project again.
+
+       Cleaning/rebuilding the project will delete the output file, so the project will then
+       be built again.
+    -->
+  <ItemGroup>
+    <InputFile Include="..\..\src\EmbeddedSonarAnalyzer.props" Visible="false" />
+    <OutputFile Include="$(SloopBinaryDownloadDir)\lastrun.txt" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="Build" Inputs="@(InputFile)" Outputs="@(OutputFile)">
+    <Message Importance="high" Text="Processing analyzer jar files..." />
+    <CallTarget Targets="PrepareDirectories" />
+    <CallTarget Targets="DownloadIndividualJars" />
+    <CallTarget Targets="DownloadRepoxJars" />
+    <CallTarget Targets="UnzipEnterpriseSonarCSharp" />
+    <CallTarget Targets="UnzipEnterpriseSonarVBNet" />
+    <CallTarget Targets="UnzipEsLintBridge" />
+    <CallTarget Targets="DownloadSloop" />
+    <CallTarget Targets="UnzipSloop" />
+    <CallTarget Targets="WriteOutputFile" />
+  </Target>
+
+  <!-- ************************************************************** -->
+  <!-- Jar processing targets -->
+  <!-- ************************************************************** -->
+  <Target Name="PrepareDirectories">
+    <Message Importance="high" Text="[ProcessJarFiles] Ensuring download directory exists ..." />
+    <MakeDir Directories="$(JarDownloadDir)" />
+    <Message Importance="high" Text="[ProcessJarFiles] Download directory: $(JarDownloadDir)" />
+  </Target>
+
+  <Target Name="DownloadIndividualJars">
+    <DownloadFile SourceUrl="%(PluginJars.URL)" DestinationFolder="$(JarDownloadDir)" SkipUnchangedFiles="true" Retries="3" />
+  </Target>
+
+  <Target Name="DownloadRepoxJars">
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(JavaScriptPluginDownloadPath) --url $(JavascriptPluginRemoteUrl)" />
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(HtmlPluginDownloadPath) --url $(HtmlPluginRemoteUrl)" />
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(SonarTextPluginDownloadPath) --url $(SonarTextPluginRemoteUrl)" />
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(EnterpriseSonarCSharpPluginDownloadPath) --url $(EnterpriseSonarCSharpPluginRemoteUrl)" />
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(EnterpriseSonarVBNetPluginDownloadPath) --url $(EnterpriseSonarVBNetPluginRemoteUrl)" />
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(SonarSqvsRoslynPluginDownloadPath) --url $(SonarSqvsRoslynPluginRemoteUrl)" />
+  </Target>
+
+  <Target Name ="DownloadSloop">
+    <Exec Command="curl -u$(ARTIFACTORY_USER):$(ARTIFACTORY_PASSWORD) --ssl-no-revoke -fsSL -C - --create-dirs --output $(SloopBinaryDownloadPath) --url $(SloopBinaryRemoteUrl)" />
+  </Target>
+
+  <Target Name="UnzipSloop">
+    <Unzip SourceFiles="$(SloopBinaryDownloadPath)" DestinationFolder="$(SloopExtractDir)" OverwriteReadOnlyFiles="true" />
+  </Target>
+
+  <Target Name="UnzipEnterpriseSonarCSharp">
+    <Unzip SourceFiles="$(EnterpriseSonarCSharpPluginDownloadPath)" DestinationFolder="$(DotnetPluginsExtractDir)\$(EnterpriseSonarCSharpPluginFileNameWithoutExtension)" OverwriteReadOnlyFiles="true" />
+    <Unzip SourceFiles="$(DotnetPluginsExtractDir)\$(EnterpriseSonarCSharpPluginFileNameWithoutExtension)\static\SonarAnalyzer-csharpenterprise-$(EmbeddedSonarAnalyzerVersion).zip" DestinationFolder="$(EnterpriseDotnetAnalyzersExtractDir)" OverwriteReadOnlyFiles="true" />
+  </Target>
+
+  <Target Name="UnzipEnterpriseSonarVBNet">
+    <Unzip SourceFiles="$(EnterpriseSonarVBNetPluginDownloadPath)" DestinationFolder="$(DotnetPluginsExtractDir)\$(EnterpriseSonarVBNetPluginFileNameWithoutExtension)" OverwriteReadOnlyFiles="true" />
+    <Unzip SourceFiles="$(DotnetPluginsExtractDir)\$(EnterpriseSonarVBNetPluginFileNameWithoutExtension)\static\SonarAnalyzer-vbnetenterprise-$(EmbeddedSonarAnalyzerVersion).zip" DestinationFolder="$(EnterpriseDotnetAnalyzersExtractDir)" OverwriteReadOnlyFiles="true" />
+  </Target>
+
+  <Target Name="UnzipEsLintBridge">
+    <Unzip SourceFiles="$(JarDownloadDir)\sonar-javascript-plugin-$(EmbeddedSonarJSAnalyzerVersion).jar" DestinationFolder="$(JavaScriptPluginExtractDir)" OverwriteReadOnlyFiles="true" />
+    <MakeDir Directories="$(EsLintBridgeExtractDir)" />
+    <Exec Command="tar -xzf $(JavaScriptPluginExtractDir)\sonarjs-$(EmbeddedEsLintBridgeVersion).tgz -C $(EsLintBridgeExtractDir)" />
+  </Target>
+
+  <Target Name="WriteOutputFile">
+    <!-- The timestamp on the output file is used by MSBuild to decide whether to build this project or not.
+         If the timestamp on the EmbeddedSonarAnalyzer.props file is later than that of the output file then
+         MSBuild will rebuild the project.
+
+         We use a copy of the EmbeddedSonarAnalyzer.props file as the output file so we easily see which
+         plugins were processed last.
+         -->
+    <Message Importance="high" Text="[ProcessJarFiles] Completed successfully. Writing timestamp file: @(OutputFile)" />
+    <Copy SourceFiles="@(InputFile)" DestinationFiles="@(OutputFile)" />
+  </Target>
+</Project>

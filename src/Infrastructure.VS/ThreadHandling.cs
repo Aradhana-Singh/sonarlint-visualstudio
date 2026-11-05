@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,26 +19,79 @@
  */
 
 using System;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.Core.ETW;
 using static Microsoft.VisualStudio.Threading.AwaitExtensions;
 using Task = System.Threading.Tasks.Task;
 
 namespace SonarLint.VisualStudio.Infrastructure.VS
 {
     [ExcludeFromCodeCoverage] // Simple wrapper around hard-to-test VS types
+    [Export(typeof(IThreadHandling))]
+    [PartCreationPolicy(CreationPolicy.Shared)]
     public class ThreadHandling : IThreadHandling
     {
+#pragma warning disable S4277
+        public static readonly IThreadHandling Instance = new ThreadHandling();
+#pragma warning restore S4277
+
         public bool CheckAccess() => ThreadHelper.CheckAccess();
 
         public void ThrowIfOnUIThread() => ThreadHelper.ThrowIfOnUIThread();
 
         public void ThrowIfNotOnUIThread() => ThreadHelper.ThrowIfNotOnUIThread();
 
-        public async Task RunOnUIThread(Action op) => await VS.RunOnUIThread.RunAsync(op);
+        public async Task RunOnUIThreadAsync(Action op) => await VS.RunOnUIThread.RunAsync(op);
+
+        public void RunOnUIThread(Action op)
+        {
+            if (ThreadHelper.CheckAccess())
+            {
+                op();
+                return;
+            }
+            ThreadHelper.JoinableTaskFactory.Run(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                op();
+            });
+
+            Debug.Assert(!ThreadHelper.CheckAccess(), "Not expecting to be returning on the UI thread");
+        }
+
+        public async Task<T> RunOnBackgroundThread<T>(Func<Task<T>> asyncMethod)
+        {
+            CodeMarkers.Instance.Threading_RunOnBackgroundThread_Start();
+
+            var startedOnUIThread = ThreadHelper.CheckAccess();
+
+            return await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    if (startedOnUIThread)
+                    {
+                        CodeMarkers.Instance.Threading_RunOnBackgroundThread_SwitchingToBackground();
+                        await SwitchToBackgroundThread();
+                    }
+
+                    CodeMarkers.Instance.Threading_RunOnBackgroundThread_ExecutingCall();
+                    var result = await asyncMethod();
+
+                    if (startedOnUIThread)
+                    {
+                        CodeMarkers.Instance.Threading_RunOnBackgroundThread_SwitchingToUI();
+                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    }
+
+                    CodeMarkers.Instance.Threading_RunOnBackgroundThread_Stop();
+                    return result;
+                });
+        }
 
         public T Run<T>(Func<Task<T>> asyncMethod) => ThreadHelper.JoinableTaskFactory.Run(asyncMethod);
 
@@ -47,6 +100,8 @@ namespace SonarLint.VisualStudio.Infrastructure.VS
         public async Task RunAsync(Func<Task> asyncMethod) => await ThreadHelper.JoinableTaskFactory.RunAsync(asyncMethod);
 
         public IAwaitableWrapper SwitchToBackgroundThread() => new TaskSchedulerAwaitableWrapper(new AwaitExtensions.TaskSchedulerAwaitable(TaskScheduler.Default));
+
+        public async Task SwitchToMainThreadAsync() => await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         #region Wrappers for VS TaskSchedule awaiter/awaitable structs
 
@@ -79,16 +134,12 @@ namespace SonarLint.VisualStudio.Infrastructure.VS
 
             public void GetResult() => wrapped.GetResult();
 
-#if VS2022
-            // The awaiters in earlier versions of VS do not implement ICriticalNotifyCompletion
             public void UnsafeOnCompleted(Action continuation)
             {
                 wrapped.UnsafeOnCompleted(continuation);
             }
-#endif
-
         }
 
-#endregion
+        #endregion
     }
 }

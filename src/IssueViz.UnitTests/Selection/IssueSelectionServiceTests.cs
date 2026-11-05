@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using System;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 using SonarLint.VisualStudio.IssueVisualization.Selection;
 
@@ -34,13 +34,9 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<IssueSelectionService, IIssueSelectionService>(null,
-                new[]
-                {
-                    MefTestHelpers.CreateExport<IAnalysisIssueSelectionService>(Mock.Of<IAnalysisIssueSelectionService>())
-                });
+            MefTestHelpers.CheckTypeCanBeImported<IssueSelectionService, IIssueSelectionService>();
         }
-      
+
         [TestMethod]
         [DataRow(true)]
         [DataRow(false)]
@@ -75,7 +71,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
             var oldSelection = isSetToNull ? null : Mock.Of<IAnalysisIssueVisualization>();
 
             var testSubject = CreateTestSubject();
-            
+
             testSubject.SelectedIssue = oldSelection;
 
             var callCount = 0;
@@ -100,7 +96,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Selection
 
             var callCount = 0;
             testSubject.SelectedIssueChanged += (sender, args) => { callCount++; };
-            
+
             testSubject.SelectedIssue = newSelection;
 
             callCount.Should().Be(1);

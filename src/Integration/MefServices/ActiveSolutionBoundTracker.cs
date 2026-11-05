@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,17 +18,17 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
+using SonarLint.VisualStudio.ConnectedMode.Binding;
+using SonarLint.VisualStudio.ConnectedMode.Helpers;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Binding;
-using SonarLint.VisualStudio.Integration.NewConnectedMode;
-using SonarLint.VisualStudio.Integration.State;
-using SonarQube.Client;
+using SonarLint.VisualStudio.Core.ConfigurationScope;
+using SonarLint.VisualStudio.Core.Initialization;
+using ErrorHandler = Microsoft.VisualStudio.ErrorHandler;
 
 namespace SonarLint.VisualStudio.Integration
 {
@@ -41,149 +41,138 @@ namespace SonarLint.VisualStudio.Integration
     /// UIContext.
     /// </remarks>
     [Export(typeof(IActiveSolutionBoundTracker))]
+    [Export(typeof(IActiveSolutionChangedHandler))]
     [PartCreationPolicy(CreationPolicy.Shared)]
-    internal sealed class ActiveSolutionBoundTracker : IActiveSolutionBoundTracker, IDisposable, IPartImportsSatisfiedNotification
+    internal sealed class ActiveSolutionBoundTracker : IActiveSolutionBoundTracker, IActiveSolutionChangedHandler, IDisposable
     {
-        private readonly IHost extensionHost;
+        private readonly IServiceProvider serviceProvider;
         private readonly IActiveSolutionTracker solutionTracker;
-        private readonly IErrorListInfoBarController errorListInfoBarController;
-        private readonly IConfigurationProviderService configurationProvider;
-        private readonly IVsMonitorSelection vsMonitorSelection;
+        private readonly IConfigurationProvider configurationProvider;
+        private readonly IConfigScopeUpdater configScopeUpdater;
         private readonly ILogger logger;
-        private readonly uint boundSolutionContextCookie;
+        private IVsMonitorSelection vsMonitorSelection;
+        private uint boundSolutionContextCookie;
+        private bool disposed;
 
+        public event EventHandler<ActiveSolutionBindingEventArgs> PreSolutionBindingChanged;
         public event EventHandler<ActiveSolutionBindingEventArgs> SolutionBindingChanged;
-        public event EventHandler SolutionBindingUpdated;
-
         public BindingConfiguration CurrentConfiguration { get; private set; }
 
         [ImportingConstructor]
-        public ActiveSolutionBoundTracker(IHost host, IActiveSolutionTracker activeSolutionTracker, ILogger logger)
+        public ActiveSolutionBoundTracker(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            IActiveSolutionTracker activeSolutionTracker,
+            IConfigScopeUpdater configScopeUpdater,
+            ILogger logger,
+            IConfigurationProvider configurationProvider,
+            IInitializationProcessorFactory initializationProcessorFactory)
         {
-            extensionHost = host ?? throw new ArgumentNullException(nameof(host));
-            solutionTracker = activeSolutionTracker ?? throw new ArgumentNullException(nameof(activeSolutionTracker));
-            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this.serviceProvider = serviceProvider;
+            solutionTracker = activeSolutionTracker;
+            this.logger = logger;
+            this.configurationProvider = configurationProvider;
+            this.configScopeUpdater = configScopeUpdater;
+            InitializationProcessor = initializationProcessorFactory.Create<ActiveSolutionBoundTracker>(
+                [solutionTracker],
+                InitializeInternalAsync);
 
-            vsMonitorSelection = host.GetService<SVsShellMonitorSelection, IVsMonitorSelection>();
-            vsMonitorSelection.GetCmdUIContextCookie(ref BoundSolutionUIContext.Guid, out boundSolutionContextCookie);
-
-            configurationProvider = extensionHost.GetService<IConfigurationProviderService>();
-            configurationProvider.AssertLocalServiceIsNotNull();
-
-            errorListInfoBarController = extensionHost.GetService<IErrorListInfoBarController>();
-            errorListInfoBarController.AssertLocalServiceIsNotNull();
-
-            // The user changed the binding through the Team Explorer
-            extensionHost.VisualStateManager.BindingStateChanged += OnBindingStateChanged;
-
-            // The solution changed inside the IDE
-            solutionTracker.ActiveSolutionChanged += OnActiveSolutionChanged;
-
-            CurrentConfiguration = configurationProvider.GetConfiguration();
-
-            SetBoundSolutionUIContext();
+            CurrentConfiguration = BindingConfiguration.Standalone;
+            InitializationProcessor.InitializeAsync().Forget();
         }
 
-        private async void OnActiveSolutionChanged(object sender, ActiveSolutionChangedEventArgs args)
+        public IInitializationProcessor InitializationProcessor { get; }
+
+        private async Task InitializeInternalAsync(IThreadHandling threadHandling)
+        {
+            await threadHandling.RunOnUIThreadAsync(() =>
+            {
+                vsMonitorSelection = serviceProvider.GetService<SVsShellMonitorSelection, IVsMonitorSelection>();
+                var uiContextGuid = BoundSolutionUIContext.Guid;
+                vsMonitorSelection.GetCmdUIContextCookie(ref uiContextGuid, out boundSolutionContextCookie);
+            });
+
+            HandleActiveSolutionChange();
+
+            if (disposed)
+            {
+                // not subscribing to events if already disposed
+                return;
+            }
+            solutionTracker.ActiveSolutionChanged += OnActiveSolutionChanged;
+        }
+
+        public void HandleBindingChange()
+        {
+            if (disposed || !InitializationProcessor.IsFinalized)
+            {
+                return;
+            }
+
+            var newBindingConfiguration = configurationProvider.GetConfiguration();
+            RaiseAnalyzersChangedIfBindingChanged(newBindingConfiguration);
+        }
+
+        private void OnActiveSolutionChanged(object sender, ActiveSolutionChangedEventArgs args)
         {
             // An exception here will crash VS
             try
             {
-                await UpdateConnectionAsync();
-
-                this.RaiseAnalyzersChangedIfBindingChanged();
-                this.errorListInfoBarController.Refresh();
+                HandleActiveSolutionChange();
             }
-            catch (Exception ex) when (!Microsoft.VisualStudio.ErrorHandler.IsCriticalException(ex))
+            catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
                 logger.WriteLine($"Error handling solution change: {ex.Message}");
             }
         }
 
-        private async Task UpdateConnectionAsync()
-        {
-            ISonarQubeService sonarQubeService = this.extensionHost.SonarQubeService;
-
-            if (sonarQubeService.IsConnected)
-            {
-                if (this.extensionHost.ActiveSection?.DisconnectCommand.CanExecute(null) == true)
-                {
-                    this.extensionHost.ActiveSection.DisconnectCommand.Execute(null);
-                }
-                else
-                {
-                    sonarQubeService.Disconnect();
-                }
-            }
-
-            Debug.Assert(!sonarQubeService.IsConnected,
-                "SonarQube service should always be disconnected at this point");
-
-            var boundProject = this.configurationProvider.GetConfiguration().Project;
-
-            if (boundProject != null)
-            {
-                var connectionInformation = boundProject.CreateConnectionInformation();
-                await Core.WebServiceHelper.SafeServiceCallAsync(() => sonarQubeService.ConnectAsync(connectionInformation,
-                    CancellationToken.None), this.logger);
-            }
-        }
-
-        private void OnBindingStateChanged(object sender, BindingStateEventArgs e)
-        {
-            this.RaiseAnalyzersChangedIfBindingChanged(e.IsBindingCleared);
-        }
-
-        private void RaiseAnalyzersChangedIfBindingChanged(bool? isBindingCleared = null)
+        private void HandleActiveSolutionChange()
         {
             var newBindingConfiguration = configurationProvider.GetConfiguration();
+
+            RaiseAnalyzersChangedIfBindingChanged(newBindingConfiguration);
+        }
+
+        private void RaiseAnalyzersChangedIfBindingChanged(BindingConfiguration newBindingConfiguration)
+        {
+            if (InitializationProcessor.IsFinalized) // todo https://sonarsource.atlassian.net/browse/SLVS-2095 raise events during initialization
+            {
+                configScopeUpdater.UpdateConfigScopeForCurrentSolution(newBindingConfiguration.Project);
+            }
 
             if (!CurrentConfiguration.Equals(newBindingConfiguration))
             {
                 CurrentConfiguration = newBindingConfiguration;
-                SolutionBindingChanged?.Invoke(this, new ActiveSolutionBindingEventArgs(newBindingConfiguration));
-            }
-            else if (isBindingCleared == false)
-            {
-                SolutionBindingUpdated?.Invoke(this, EventArgs.Empty);
-            }
+                SetBoundSolutionUIContext();
 
-            SetBoundSolutionUIContext();
+                if (InitializationProcessor.IsFinalized)
+                {
+                    // not raising events during initialization to keep the same behavior as with the original ctor initialization
+                    // todo https://sonarsource.atlassian.net/browse/SLVS-2095 raise events during initialization
+                    var args = new ActiveSolutionBindingEventArgs(newBindingConfiguration);
+                    PreSolutionBindingChanged?.Invoke(this, args);
+                    SolutionBindingChanged?.Invoke(this, args);
+                }
+            }
         }
 
         private void SetBoundSolutionUIContext()
         {
-            var isContextActive = !CurrentConfiguration.Equals(BindingConfiguration.Standalone);
+            var isContextActive = CurrentConfiguration.Mode.IsInAConnectedMode();
             vsMonitorSelection.SetCmdUIContext(boundSolutionContextCookie, isContextActive ? 1 : 0);
-        }
-
-        #region IPartImportsSatisfiedNotification
-
-        public async void OnImportsSatisfied()
-        {
-            await UpdateConnectionAsync();
-        }
-
-        #endregion
-
-        #region IDisposable
-
-        private void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                this.errorListInfoBarController.Reset();
-                this.solutionTracker.ActiveSolutionChanged -= this.OnActiveSolutionChanged;
-                this.extensionHost.VisualStateManager.BindingStateChanged -= this.OnBindingStateChanged;
-            }
         }
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
-        }
+            if (disposed)
+            {
+                return;
+            }
 
-        #endregion
+            if (InitializationProcessor.IsFinalized)
+            {
+                solutionTracker.ActiveSolutionChanged -= OnActiveSolutionChanged;
+            }
+            disposed = true;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -42,13 +42,13 @@ namespace SonarLint.VisualStudio.Integration.Vsix.ErrorList
     /// <remarks>
     /// See the README.md in this folder for more information
     /// </remarks>
-    internal class IssuesSnapshotFactory : TableEntriesSnapshotFactoryBase, IIssuesSnapshotFactory
+    internal partial class IssuesSnapshotFactory : TableEntriesSnapshotFactoryBase, IIssuesSnapshotFactory
     {
         public IIssuesSnapshot CurrentSnapshot { get; private set; }
 
-        public IssuesSnapshotFactory(IIssuesSnapshot snapshot)
+        public IssuesSnapshotFactory(string filePath)
         {
-            this.CurrentSnapshot = snapshot;
+            this.CurrentSnapshot = new EmptyIssuesSnapshot(filePath);
         }
 
         public void UpdateSnapshot(IIssuesSnapshot snapshot)

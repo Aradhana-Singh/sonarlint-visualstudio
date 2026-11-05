@@ -136,6 +136,54 @@
     <value>Error querying status of Visualization Tool Window command: {0}</value>
   </data>
   <data name="IssueVisualizationToolWindowCaption" xml:space="preserve">
-    <value>SonarLint Issue Visualization</value>
+    <value>Sonar Issue Visualization</value>
+  </data>
+  <data name="ERR_QuickFixes_Exception" xml:space="preserve">
+    <value>[Quick fixes] Error processing quick fixes: {0}</value>
+  </data>
+  <data name="DiffViewWindow_DefaultCaption" xml:space="preserve">
+    <value>Code fix suggestion</value>
+  </data>
+  <data name="DiffViewWindow_Title" xml:space="preserve">
+    <value>Review code fix suggestions for file {0}</value>
+  </data>
+  <data name="DiffViewWindow_Description" xml:space="preserve">
+    <value>Select the desired code fix suggestions and click "Apply" to apply them to the file.</value>
+  </data>
+  <data name="DiffViewWindow_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="DiffViewWindow_Discard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="FocusLineFailed" xml:space="preserve">
+    <value>Focus to line {0} failed due to {1}.</value>
+  </data>
+  <data name="HideIssueVisualizationCommandText" xml:space="preserve">
+    <value>SonarQube: Hide Issue Visualization ({0})</value>
+  </data>
+  <data name="ShowIssueVisualizationCommandText" xml:space="preserve">
+    <value>SonarQube: Show Issue Visualization ({0})</value>
+  </data>
+  <data name="ProductNameCommandPrefix" xml:space="preserve">
+    <value>SonarQube: </value>
+  </data>
+  <data name="QuickFixSuggestedAction_CouldNotApply" xml:space="preserve">
+    <value>Could not apply Quick Fix for {0}. Please reanalyze the file and try again.</value>
+  </data>
+  <data name="QuickFixSuggestedAction_CouldNotApplyMessageBoxCaption" xml:space="preserve">
+    <value>"SonarQube QuickFix"</value>
+  </data>
+  <data name="QuickFixSuggestedAction_LogContext" xml:space="preserve">
+    <value>Quick Fix</value>
+  </data>
+  <data name="FocusOnNewCodeNotAvailableDescription" xml:space="preserve">
+    <value>Focus on New Code is unavailable</value>
+  </data>
+  <data name="FocusOnNewCodeServiceLogContext" xml:space="preserve">
+    <value>Focus on New Code</value>
+  </data>
+  <data name="FocusOnNewCodeDefinitionUnavailableLogTemplate" xml:space="preserve">
+    <value>Focus on New Code definition not available: {0}</value>
   </data>
 </root>

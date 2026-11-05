@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -27,6 +27,11 @@ namespace SonarLint.VisualStudio.Core
     /// </summary>
     public readonly struct SonarLintImageMoniker
     {
+        /// <summary>
+        /// Based on the information inside sonarlint-visualstudio\src\IssueViz\Monikers.imagemanifest
+        /// </summary>
+        public static readonly SonarLintImageMoniker OfficialSonarLintMoniker = new SonarLintImageMoniker(new Guid("19682eb3-4922-49e2-8f9b-e3edb43f656c"), 0);
+
         public SonarLintImageMoniker(Guid guid, int id)
         {
             Guid = guid;

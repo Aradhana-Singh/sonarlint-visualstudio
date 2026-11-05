@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@
 using System;
 using System.Collections.Generic;
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell.Interop;
 using SonarLint.VisualStudio.Infrastructure.VS;
 
@@ -30,60 +29,12 @@ namespace SonarLint.VisualStudio.Integration
     /// <summary>
     /// Wrapper service to abstract the VS related API handling
     /// </summary>
-    public interface IProjectSystemHelper : ILocalService, IVsHierarchyLocator
+    public interface IProjectSystemHelper : IVsHierarchyLocator
     {
-        /// <summary>
-        /// Returns the current active solution
-        /// </summary>
-        Solution2 GetCurrentActiveSolution();
-
-        /// <summary>
-        /// Return the 'Solution Items' folder which internally treated as project
-        /// </summary>
-        Project GetSolutionItemsProject(bool createOnNull);
-
-        /// <summary>
-        /// Returns the solution folder matching the given name.
-        /// </summary>
-        Project GetSolutionFolderProject(string solutionFolderName, bool createOnNull);
-
-        /// <summary>
-        /// Checks whether a file is in the project
-        /// </summary>
-        bool IsFileInProject(Project project, string file);
-
-        /// <summary>
-        /// Adds a file to project
-        /// </summary>
-        void AddFileToProject(Project project, string file);
-
-        /// <summary>
-        /// Adds a file with specific item type to the project
-        /// </summary>
-        void AddFileToProject(Project project, string file, string itemType);
-
-        /// <summary>
-        /// Removes a file from the given project.
-        /// </summary>
-        void RemoveFileFromProject(Project project, string fileName);
-
-        /// <summary>
-        /// Retrieves a file from the given project. Returns null if item does not exist.
-        /// </summary>
-        ProjectItem FindFileInProject(Project project, string fileName);
-
         /// <summary>
         /// Returns all what VS considers as a projects in a solution
         /// </summary>
         IEnumerable<Project> GetSolutionProjects();
-
-        /// <summary>
-        /// Returns only the filtered project based on a common filter.
-        /// This should only be called after we connected to a SonarQube server,
-        /// since some of the filtering is SonarQube server instance specific.
-        /// <seealso cref="IProjectSystemFilter"/> which is used internally.
-        /// </summary>
-        IEnumerable<Project> GetFilteredSolutionProjects();
 
         /// <summary>
         /// Returns the <seealso cref="IVsHierarchy"/> for a <see cref="Project"/>
@@ -133,19 +84,5 @@ namespace SonarLint.VisualStudio.Integration
         /// </summary>
         /// <returns>Project kinds GUIDs for the project</returns>
         IEnumerable<Guid> GetAggregateProjectKinds(IVsHierarchy hierarchy);
-
-        /// <summary>
-        /// Returns a flag indicating whether there is fully-opened solution or not.
-        /// </summary>
-        bool IsSolutionFullyOpened();
-
-        /// <summary>
-        /// Returns true if the project is implemented by the legacy C#/VB project system, otherwise false
-        /// </summary>
-        /// <returns>There are occasions when we need to code around differences between the legacy and new
-        /// project systems. The new project system is the one from https://github.com/dotnet/project-system
-        /// that handles MSBuild SDK-style projects; the legacy project system is the closed-source one that
-        /// preceeded it that only handles old-style MSBuild projects.</returns>
-        bool IsLegacyProjectSystem(Project dteProject);
     }
 }

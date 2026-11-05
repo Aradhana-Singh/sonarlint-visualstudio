@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,8 +23,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Moq;
-using SonarLint.VisualStudio.Integration;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.Core;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor;
 using SonarLint.VisualStudio.IssueVisualization.Editor.LocationTagging;
 using static SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.Common.TaggerTestHelper;
@@ -41,15 +41,11 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.LocationTag
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            var storeExport = MefTestHelpers.CreateExport<IIssueLocationStoreAggregator>(ValidLocationStore);
-            var calculatorExport = MefTestHelpers.CreateExport<IIssueSpanCalculator>(ValidSpanCalculator);
-            var taggableBufferIndicatorExport = MefTestHelpers.CreateExport<ITaggableBufferIndicator>(Mock.Of<ITaggableBufferIndicator>());
-            var loggerExport = MefTestHelpers.CreateExport<ILogger>(ValidLogger);
-
-            MefTestHelpers.CheckTypeCanBeImported<LocationTaggerProvider, ITaggerProvider>(null, new[]
-            {
-                storeExport, calculatorExport, taggableBufferIndicatorExport, loggerExport
-            });
+            MefTestHelpers.CheckTypeCanBeImported<LocationTaggerProvider, ITaggerProvider>(
+                MefTestHelpers.CreateExport<IIssueLocationStoreAggregator>(),
+                MefTestHelpers.CreateExport<IIssueSpanCalculator>(),
+                MefTestHelpers.CreateExport<ITaggableBufferIndicator>(),
+                MefTestHelpers.CreateExport<ILogger>());
         }
 
         internal override ITaggerProvider CreateTestSubject(ITaggableBufferIndicator taggableBufferIndicator) =>

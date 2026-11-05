@@ -117,13 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="CFamily_NoCustomRulesSettings" xml:space="preserve">
-    <value>No custom rules settings - using defaults</value>
-  </data>
-  <data name="CFamily_RulesUnavailableInSonarLint" xml:space="preserve">
-    <value>Note: the following CFamily rules are not available in SonarLint: {0}</value>
-    <comment>Output window messge</comment>
-  </data>
   <data name="CppLanguageName" xml:space="preserve">
     <value>C++</value>
     <comment>C++ language name</comment>
@@ -135,12 +128,6 @@
   <data name="CSharpLanguageName" xml:space="preserve">
     <value>C#</value>
     <comment>C# language name</comment>
-  </data>
-  <data name="EffectiveRules_CacheHit" xml:space="preserve">
-    <value>Using cached rule settings</value>
-  </data>
-  <data name="EffectiveRules_CacheMiss" xml:space="preserve">
-    <value>Calculating effective rule settings...</value>
   </data>
   <data name="Settings_ErrorLoadingSettingsFile" xml:space="preserve">
     <value>Error loading settings from "{0}".
@@ -160,13 +147,13 @@
     <value>Saved settings to "{0}".</value>
   </data>
   <data name="SonarQubeRequestFailed" xml:space="preserve">
-    <value>SonarQube request failed: {0} {1}</value>
+    <value>SonarQube (Server, Cloud) request failed: {0} {1}</value>
     <comment>Information message when the request failed.
  {0} exception message
  {1} inner exception message (if applicable)</comment>
   </data>
   <data name="SonarQubeRequestTimeoutOrCancelled" xml:space="preserve">
-    <value>SonarQube request timed out or was canceled</value>
+    <value>SonarQube (Server, Cloud) request timed out or was canceled</value>
     <comment>Information message when the request timed out or canceled.</comment>
   </data>
   <data name="UnknownLanguageName" xml:space="preserve">
@@ -179,5 +166,43 @@
   </data>
   <data name="CredentialStore_Win32Error" xml:space="preserve">
     <value>Failed to {0} credentials, Win32ErrorCode: {1}. See https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes for more information.</value>
+  </data>
+  <data name="UnableToLoadConnectedModeSettings" xml:space="preserve">
+    <value>[RuleSettings] Unable to load/locate connected mode settings. Falling back on standalone mode settings.</value>
+    <comment>Output window message if in connected mode but couldn't find or load the connected mode settings file</comment>
+  </data>
+  <data name="UsingConnectedModeSettings" xml:space="preserve">
+    <value>[RuleSettings] Using connected mode settings. User-specified settings in settings.json will be ignored.</value>
+    <comment>Output window message</comment>
+  </data>
+  <data name="Notifications_FailedToDisplay" xml:space="preserve">
+    <value>[Notifications] Failed to display notification "{0}": {1}</value>
+  </data>
+  <data name="Notifications_FailedToExecuteAction" xml:space="preserve">
+    <value>[Notifications] Failed to execute notification action: {0}</value>
+  </data>
+  <data name="Notifications_FailedToRemove" xml:space="preserve">
+    <value>[Notifications] Failed to remove existing notification: {0}</value>
+  </data>
+  <data name="Notifications_DontShowAgainAction" xml:space="preserve">
+    <value>Don't show this again</value>
+  </data>
+  <data name="NoGitFolder" xml:space="preserve">
+    <value>Solution/folder is not in a git repository</value>
+  </data>
+  <data name="FindingType_Issue" xml:space="preserve">
+    <value>issue</value>
+  </data>
+  <data name="FindingType_Hotspot" xml:space="preserve">
+    <value>hotspot</value>
+  </data>
+  <data name="SonarQubeCloudProductName" xml:space="preserve">
+    <value>SonarQube Cloud</value>
+  </data>
+  <data name="SonarQubeServerProductName" xml:space="preserve">
+    <value>SonarQube Server</value>
+  </data>
+  <data name="CommaSeparatedStringArrayConverter_UnexpectedType" xml:space="preserve">
+    <value>Unexpected type {0} (expected {1}) for {2}</value>
   </data>
 </root>

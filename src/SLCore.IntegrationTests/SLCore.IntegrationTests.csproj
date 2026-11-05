@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\SonarLint.Test.props" />
+
+  <PropertyGroup>
+    <RootNamespace>SonarLint.VisualStudio.SLCore.IntegrationTests</RootNamespace>
+    <AssemblyName>SonarLint.VisualStudio.SLCore.IntegrationTests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Education\Education.csproj" />
+    <ProjectReference Include="..\Integration.Vsix\Integration.Vsix.csproj" />
+    <ProjectReference Include="..\SLCore\SLCore.csproj" />
+    <ProjectReference Include="..\SLCore.Listeners\SLCore.Listeners.csproj" />
+    <ProjectReference Include="..\TestInfrastructure\TestInfrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Framework references">
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Presentation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\EmbeddedSonarAnalyzer.props">
+      <Link>EmbeddedSonarAnalyzer.props</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Resources\CssIssues.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\RuleParam.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Secrets.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\tsconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\JavaScriptIssues.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\TypeScriptWithBom.ts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\TypeScriptIssues.ts">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\VueIssues.vue">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\CFamilyIssues.cpp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None> 
+    <None Update="Resources\HtmlIssues.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="..\TestInfrastructure\TestParallelization.cs"/>
+    <Compile Include="..\TestInfrastructure\TestParallelizationIntegrationTests.cs">
+      <Link>TestParallelizationIntegrationTests.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+</Project>

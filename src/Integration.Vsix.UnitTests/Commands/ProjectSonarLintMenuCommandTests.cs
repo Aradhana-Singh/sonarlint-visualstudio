@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,60 +19,28 @@
  */
 
 using System;
-using System.Windows.Threading;
 using FluentAssertions;
-using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using SonarLint.VisualStudio.Integration.Vsix;
+using SonarLint.VisualStudio.TestInfrastructure;
 
 namespace SonarLint.VisualStudio.Integration.UnitTests.Commands
 {
     [TestClass]
     public class ProjectSonarLintMenuCommandTests
     {
-        #region Test boilerplate
-
-        private ConfigurableVsProjectSystemHelper projectSystem;
-        private IServiceProvider serviceProvider;
-        private ProjectPropertyManager propertyManager;
-        private Mock<IProjectToLanguageMapper> projectToLanguageMapper;
-
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            var provider = new ConfigurableServiceProvider();
-            this.projectSystem = new ConfigurableVsProjectSystemHelper(this.serviceProvider);
-            provider.RegisterService(typeof(IProjectSystemHelper), this.projectSystem);
-
-            var host = new ConfigurableHost(provider, Dispatcher.CurrentDispatcher);
-            propertyManager = new ProjectPropertyManager(host);
-            var mefExports = MefTestHelpers.CreateExport<IProjectPropertyManager>(propertyManager);
-            var mefModel = ConfigurableComponentModel.CreateWithExports(mefExports);
-            provider.RegisterService(typeof(SComponentModel), mefModel);
-
-            this.serviceProvider = provider;
-            projectToLanguageMapper = new Mock<IProjectToLanguageMapper>();
-        }
-
-        #endregion Test boilerplate
-
         #region Tests
 
         [TestMethod]
         public void ProjectSonarLintMenuCommand_Ctor_InvalidArgs_Throws()
         {
             // Arrange
-            Action act = () => new ProjectSonarLintMenuCommand(null, null);
+            Action act = () => new ProjectSonarLintMenuCommand(null);
 
             // Act & Assert
             act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("propertyManager");
-
-            act = () => new ProjectSonarLintMenuCommand(propertyManager, null);
-
-            // Act & Assert
-            act.Should().ThrowExactly<ArgumentNullException>().And.ParamName.Should().Be("projectToLanguageMapper");
         }
 
         [TestMethod]
@@ -95,16 +63,19 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Commands
         public void ProjectSonarLintMenuCommand_QueryStatus_HasUnsupportedProject_IsDisabledIsHidden()
         {
             // Arrange
+            var p1 = new ProjectMock("cs.proj");
+
+            var projectSystem = new ConfigurableVsProjectSystemHelper(new ConfigurableServiceProvider())
+            {
+                SelectedProjects = new[] { p1, null }
+            };
+
+            var propertyManager = new Mock<IProjectPropertyManager>();
+            propertyManager.Setup(x => x.GetSelectedProjects()).Returns(projectSystem.GetSelectedProjects());
+
             OleMenuCommand command = CommandHelper.CreateRandomOleMenuCommand();
 
-            var testSubject = CreateTestSubject();
-
-            var p1 = new ProjectMock("cs.proj");
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(p1)).Returns(true);
-            var p2 = new ProjectMock("cpp.proj");
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(p2)).Returns(false);
-
-            this.projectSystem.SelectedProjects = new[] { p1, p2 };
+            var testSubject = CreateTestSubject(propertyManager.Object);
 
             // Act
             testSubject.QueryStatus(command, null);
@@ -118,17 +89,20 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Commands
         public void ProjectSonarLintMenuCommand_QueryStatus_AllSupportedProjects_IsEnabledIsVisible()
         {
             // Arrange
+            var p1 = new ProjectMock("cs1.proj");
+            var p2 = new ProjectMock("cs2.proj");
+
+            var projectSystem = new ConfigurableVsProjectSystemHelper(new ConfigurableServiceProvider())
+            {
+                SelectedProjects = new[] { p1, p2 }
+            };
+
+            var propertyManager = new Mock<IProjectPropertyManager>();
+            propertyManager.Setup(x => x.GetSelectedProjects()).Returns(projectSystem.GetSelectedProjects());
+
             OleMenuCommand command = CommandHelper.CreateRandomOleMenuCommand();
 
-            var testSubject = CreateTestSubject();
-
-            var p1 = new ProjectMock("cs1.proj");
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(p1)).Returns(true);
-
-            var p2 = new ProjectMock("cs2.proj");
-            projectToLanguageMapper.Setup(x => x.HasSupportedLanguage(p2)).Returns(true);
-
-            this.projectSystem.SelectedProjects = new[] { p1, p2 };
+            var testSubject = CreateTestSubject(propertyManager.Object);
 
             // Act
             testSubject.QueryStatus(command, null);
@@ -140,9 +114,11 @@ namespace SonarLint.VisualStudio.Integration.UnitTests.Commands
 
         #endregion Tests
 
-        private ProjectSonarLintMenuCommand CreateTestSubject()
+        private ProjectSonarLintMenuCommand CreateTestSubject(IProjectPropertyManager propertyManager = null)
         {
-            return new ProjectSonarLintMenuCommand(propertyManager, projectToLanguageMapper.Object);
+            propertyManager ??= Mock.Of<IProjectPropertyManager>();
+
+            return new ProjectSonarLintMenuCommand(propertyManager);
         }
     }
 }

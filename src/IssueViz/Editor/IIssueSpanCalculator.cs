@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,11 +18,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text;
 using SonarLint.VisualStudio.Core.Analysis;
-using SonarQube.Client;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Editor
 {
@@ -34,6 +32,17 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
         /// Returns null if no textRange is passed
         /// </summary>
         SnapshotSpan? CalculateSpan(ITextRange range, ITextSnapshot currentSnapshot);
+
+        /// <summary>
+        /// Returns the text span that is in the range of the provided lines
+        /// Returns null if the provided lines can not be found the snapshot
+        /// </summary>
+        SnapshotSpan? CalculateSpan(ITextSnapshot snapshot, int startLine, int endLine);
+
+        /// <summary>
+        /// Returns true only if the provided <param name="text"/> has the same hash as the text contained in the <paramref name="snapshotSpan"/>
+        /// </summary>
+        bool IsSameHash(SnapshotSpan snapshotSpan, string text);
     }
 
     [Export(typeof(IIssueSpanCalculator))]
@@ -48,7 +57,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
             : this(new ChecksumCalculator())
         {
         }
-        
+
         internal IssueSpanCalculator(IChecksumCalculator checksumCalculator)
         {
             this.checksumCalculator = checksumCalculator;
@@ -70,15 +79,7 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
 
             // SonarLint issues line numbers are 1-based, spans lines are 0-based
             var startLine = currentSnapshot.GetLineFromLineNumber(range.StartLine - 1);
-
-            if (IsLineHashDifferent(range, startLine))
-            {
-                // Out of sync: the line reported in the diagnostic has been edited, so we can no longer calculate the span
-                return EmptySpan;
-            }
-
             var maxLength = currentSnapshot.Length;
-
             var startPos = startLine.Start.Position + range.StartLineOffset;
 
             int endPos;
@@ -97,21 +98,50 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
 
             var start = new SnapshotPoint(currentSnapshot, startPos);
             var end = new SnapshotPoint(currentSnapshot, endPos);
+            var snapshotSpan = new SnapshotSpan(start, end);
 
-            return new SnapshotSpan(start, end);
-        }
-
-        private bool IsLineHashDifferent(ITextRange range, ITextSnapshotLine snapshotLine)
-        {
-            if (string.IsNullOrEmpty(range.LineHash))
+            // HACK: range.LineHash might be a line-hash or hash of a part of a line, depending on where the data came from.
+            // To make the navigability check work we need to handle both cases.
+            // See bug #3708.
+            if (RangeHasHash(range) &&
+                IsHashDifferent(range.LineHash, snapshotSpan.GetText()) &&
+                IsHashDifferent(range.LineHash, startLine.GetText()))
             {
-                return false;
+                // Out of sync: the range reported in the diagnostic has been edited, so we can no longer calculate the span
+                return EmptySpan;
             }
 
-            var textInSnapshot = snapshotLine.GetText();
-            var snapshotLineHash = checksumCalculator.Calculate(textInSnapshot);
+            return snapshotSpan;
+        }
 
-            return snapshotLineHash != range.LineHash;
+        public SnapshotSpan? CalculateSpan(ITextSnapshot snapshot, int startLine, int endLine)
+        {
+            if (startLine < 1 || endLine < 1 || startLine > snapshot.LineCount || endLine > snapshot.LineCount || startLine > endLine)
+            {
+                return null;
+            }
+            var startPosition = snapshot.GetLineFromLineNumber(startLine - 1).Start.Position;
+            var endPosition = snapshot.GetLineFromLineNumber(endLine - 1).End.Position;
+            var span = Span.FromBounds(startPosition, endPosition);
+            return new SnapshotSpan(snapshot, span);
+        }
+
+        public bool IsSameHash(SnapshotSpan snapshotSpan, string text)
+        {
+            var snapsShotHash = checksumCalculator.Calculate(snapshotSpan.GetText());
+            var textHash = checksumCalculator.Calculate(text);
+
+            return snapsShotHash == textHash;
+        }
+
+        private static bool RangeHasHash(ITextRange range)
+            => !string.IsNullOrEmpty(range.LineHash);
+
+        private bool IsHashDifferent(string issueHash, string documentText)
+        {
+            var documentTextHash = checksumCalculator.Calculate(documentText);
+
+            return documentTextHash != issueHash;
         }
     }
 }

@@ -37,19 +37,30 @@
   </ItemGroup>
 
   <ItemGroup Label="Project references">
-    <ProjectReference Include="..\..\sonarqube-webclient\SonarQube.Client\SonarQube.Client.csproj" />
+    <ProjectReference Include="..\SLCore\SLCore.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Infrastructure.VS\Infrastructure.VS.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Commands\Resources\CommandIcons.png" />
+    <None Remove="Commands\Resources\sonarlint.png" />
+    <None Remove="Commands\Resources\sonarqube_for_ide_logo_16px.png" />
     <None Remove="IssueVisualizationControl\IssueVisualizationControl.xaml" />
+    <Page Include="FixSuggestion\DiffView\DiffViewWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
 
     <Page Include="IssueVisualizationControl\IssueVisualizationControl.xaml">
       <Generator>XamlIntelliSenseFileGenerator</Generator>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Page>
+
+    <Compile Update="FixSuggestion\FixSuggestionResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FixSuggestionResources.resx</DependentUpon>
+    </Compile>
 
     <Compile Update="Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -57,8 +68,13 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
 
-    <EmbeddedResource Update="Resources.resx">
+    <EmbeddedResource Update="FixSuggestion\FixSuggestionResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>FixSuggestionResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+
+    <EmbeddedResource Update="Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
 
@@ -67,6 +83,28 @@
       <SubType>Designer</SubType>
     </VSCTCompile>
 
+    <Content Include="Monikers.imagemanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+
+    <EmbeddedResource Update="OpenInIde\OpenInIdeResources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>OpenInIdeResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+
+    <Compile Update="OpenInIde\OpenInIdeResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>OpenInIdeResources.resx</DependentUpon>
+    </Compile>
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Commands\Resources\sonarqube_for_ide_logo_16px.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />

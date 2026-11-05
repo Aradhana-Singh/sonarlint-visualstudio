@@ -1,0 +1,232 @@
+﻿/*
+ * SonarLint for Visual Studio
+ * Copyright (C) SonarSource Sàrl
+ * mailto:info AT sonarsource DOT com
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+using System.Collections.ObjectModel;
+using System.Globalization;
+using SonarLint.VisualStudio.IssueVisualization.Security.ReportView;
+using SonarLint.VisualStudio.IssueVisualization.Security.ReportView.Filters;
+
+namespace SonarLint.VisualStudio.IssueVisualization.Security.UnitTests.ReportView.Filters;
+
+[TestClass]
+public class IssueTypeFilterToTextConverterTest
+{
+    private IssueTypeFilterToTextConverter testSubject;
+    private IReportViewModel reportViewModel;
+    private IIssueTypeFilterViewModel issueTypeFilterViewModel;
+
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        reportViewModel = Substitute.For<IReportViewModel>();
+        issueTypeFilterViewModel = Substitute.For<IIssueTypeFilterViewModel>();
+        testSubject = new IssueTypeFilterToTextConverter();
+    }
+
+    [TestMethod]
+    public void Convert_WhenLessParametersThanExpected_ReturnsNull()
+    {
+        var result = testSubject.Convert([reportViewModel], null, null, CultureInfo.InvariantCulture);
+
+        result.Should().BeNull();
+    }
+
+    [TestMethod]
+    public void Convert_WhenMoreParametersThanExpected_ReturnsLocalization()
+    {
+        reportViewModel.FilteredGroupViewModels.Returns([]);
+        reportViewModel.AllGroupViewModels.Returns([]);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel, default, default], null, null, CultureInfo.InvariantCulture);
+
+        result.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void Convert_WhenIssueTypeFilterViewModelNotProvided_ReturnsNull()
+    {
+        var result = testSubject.Convert([null, reportViewModel], null, null, CultureInfo.InvariantCulture);
+
+        result.Should().BeNull();
+    }
+
+    [TestMethod]
+    public void Convert_WhenReportViewModelNotProvided_ReturnsNull()
+    {
+        var result = testSubject.Convert([issueTypeFilterViewModel, null], null, null, CultureInfo.InvariantCulture);
+
+        result.Should().BeNull();
+    }
+
+    [TestMethod]
+    [DataRow("No Dependency Risks", 0, 0, 1)]
+    [DataRow("1 Dependency Risk", 1, 2, 6)]
+    [DataRow("8 Dependency Risks", 8, 2, 0)]
+    public void Convert_DependencyRisk_ReturnsExpectedLocalization(
+        string expectedLocalization,
+        int risksCount,
+        int hotspotsCount,
+        int taintsCount)
+    {
+        MockGroupViewModel(risksCount, hotspotsCount, taintsCount);
+        MockIssueTypeFilter(IssueType.DependencyRisk);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel], null, null, null);
+
+        result.Should().Be(expectedLocalization);
+    }
+
+    [TestMethod]
+    [DataRow("No Security Hotspots", 20, 0, 1)]
+    [DataRow("1 Security Hotspot", 0, 1, 6)]
+    [DataRow("14 Security Hotspots", 28, 14, 0)]
+    public void Convert_SecurityHotspot_ReturnsExpectedLocalization(
+        string expectedLocalization,
+        int risksCount,
+        int hotspotsCount,
+        int taintsCount)
+    {
+        MockGroupViewModel(risksCount, hotspotsCount, taintsCount);
+        MockIssueTypeFilter(IssueType.SecurityHotspot);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel], null, null, null);
+
+        result.Should().Be(expectedLocalization);
+    }
+
+    [TestMethod]
+    [DataRow("No Taint Vulnerabilities", 20, 1, 0)]
+    [DataRow("1 Taint Vulnerability", 9, 0, 1)]
+    [DataRow("13 Taint Vulnerabilities", 0, 1, 13)]
+    public void Convert_TaintVulnerability_ReturnsExpectedLocalization(
+        string expectedLocalization,
+        int risksCount,
+        int hotspotsCount,
+        int taintsCount)
+    {
+        MockGroupViewModel(risksCount, hotspotsCount, taintsCount);
+        MockIssueTypeFilter(IssueType.TaintVulnerability);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel], null, null, null);
+
+        result.Should().Be(expectedLocalization);
+    }
+
+    [TestMethod]
+    public void Convert_AccountsForFilteredLocationAndIssueBasedPreFiltering()
+    {
+        // in total, there is 7 issues. 2 are not included due to pre-filtering (currently only severity). Only 2 issues are in filtered issues of filtered files, so expected is 2 of 5 and not 3 of 7
+        var group1 = MockGroupViewModelWithSameType(3, 2, 1);
+        var group2 = MockGroupViewModelWithSameType(1, 1, 1);
+        var group3 = MockGroupViewModelWithSameType(3, 2, 1); // this is included in total count, but not in filtered count
+        reportViewModel.FilteredGroupViewModels.Returns([group1, group2]);
+        reportViewModel.AllGroupViewModels.Returns([group1, group2, group3]);
+        MockIssueTypeFilter(IssueType.TaintVulnerability);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel], null, null, null);
+
+        result.Should().Be("2 of 5 Taint Vulnerabilities");
+    }
+
+    [TestMethod]
+    public void Convert_IssuesWithNonUniqueIds_CountsUniqueIssuesOnly()
+    {
+        var duplicateId = Guid.NewGuid();
+        var issue1 = Substitute.For<IIssueViewModel>();
+        issue1.IssueType.Returns(IssueType.TaintVulnerability);
+        issue1.Id.Returns(duplicateId);
+        var issue2 = Substitute.For<IIssueViewModel>();
+        issue2.IssueType.Returns(IssueType.TaintVulnerability);
+        issue2.Id.Returns(duplicateId); // Same ID as issue1
+        var issue3 = Substitute.For<IIssueViewModel>();
+        issue3.IssueType.Returns(IssueType.TaintVulnerability);
+        issue3.Id.Returns(Guid.NewGuid());
+
+        var groupVm = Substitute.For<IGroupViewModel>();
+        var filteredIssues = new ObservableCollection<IIssueViewModel>(new[] { issue1, issue2, issue3 });
+        groupVm.PreFilteredIssues.Returns(filteredIssues.ToList());
+        groupVm.FilteredIssues.Returns(filteredIssues);
+        reportViewModel.FilteredGroupViewModels.Returns([groupVm]);
+        reportViewModel.AllGroupViewModels.Returns([groupVm]);
+        MockIssueTypeFilter(IssueType.TaintVulnerability);
+
+        var result = testSubject.Convert([issueTypeFilterViewModel, reportViewModel], null, null, null);
+        result.Should().Be("2 Taint Vulnerabilities");
+    }
+
+    [TestMethod]
+    public void ConvertBack_ThrowsNotImplementedException()
+    {
+        Action act = () => testSubject.ConvertBack("value", null, null, null);
+        act.Should().Throw<NotImplementedException>();
+    }
+
+    private void MockIssueTypeFilter(IssueType type) => issueTypeFilterViewModel.IssueType.Returns(type);
+
+    private void MockGroupViewModel(int risksCount, int hotspotCount, int taintCount)
+    {
+        var risks = new ObservableCollection<IIssueViewModel>();
+        var hotspots = new ObservableCollection<IIssueViewModel>();
+        var taints = new ObservableCollection<IIssueViewModel>();
+
+        for (var i = 0; i < risksCount; i++)
+        {
+            risks.Add(CreateMockedIssueViewModel(IssueType.DependencyRisk));
+        }
+        for (var i = 0; i < hotspotCount; i++)
+        {
+            hotspots.Add(CreateMockedIssueViewModel(IssueType.SecurityHotspot));
+        }
+        for (var i = 0; i < taintCount; i++)
+        {
+            taints.Add(CreateMockedIssueViewModel(IssueType.TaintVulnerability));
+        }
+
+        var groupVm = Substitute.For<IGroupViewModel>();
+        var filteredIssues = new ObservableCollection<IIssueViewModel>(risks.Union(hotspots).Union(taints));
+        groupVm.PreFilteredIssues.Returns(filteredIssues.ToList());
+        groupVm.FilteredIssues.Returns(filteredIssues);
+        reportViewModel.FilteredGroupViewModels.Returns([groupVm]);
+        reportViewModel.AllGroupViewModels.Returns([groupVm]);
+    }
+
+    private IGroupViewModel MockGroupViewModelWithSameType(
+        int allFindings,
+        int preFilteredFindings,
+        int filteredFindings)
+    {
+        var groupVm = Substitute.For<IGroupViewModel>();
+        var issueViewModels = Enumerable.Range(0, allFindings).Select(_ => CreateMockedIssueViewModel(IssueType.TaintVulnerability)).ToList();
+        groupVm.AllIssues.Returns(issueViewModels);
+        var preFilteredViewModels = Enumerable.Range(0, preFilteredFindings).Select(_ => CreateMockedIssueViewModel(IssueType.TaintVulnerability)).ToList();
+        groupVm.PreFilteredIssues.Returns(preFilteredViewModels);
+        var filteredViewModels = new ObservableCollection<IIssueViewModel>(Enumerable.Range(0, filteredFindings).Select(_ => CreateMockedIssueViewModel(IssueType.TaintVulnerability)));
+        groupVm.FilteredIssues.Returns(filteredViewModels);
+        return groupVm;
+    }
+
+    private static IIssueViewModel CreateMockedIssueViewModel(IssueType issueType)
+    {
+        var issueViewModel = Substitute.For<IIssueViewModel>();
+        issueViewModel.IssueType.Returns(issueType);
+        issueViewModel.Id.Returns(Guid.NewGuid());
+        return issueViewModel;
+    }
+}

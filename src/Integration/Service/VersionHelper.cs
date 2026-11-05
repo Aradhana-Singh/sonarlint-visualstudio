@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,7 +25,7 @@ using SonarLint.VisualStudio.Integration.Resources;
 
 namespace SonarLint.VisualStudio.Integration.Service
 {
-    internal static class VersionHelper
+    public static class VersionHelper
     {
         private const char PrereleaseSeparator = '-';
 
@@ -33,7 +33,7 @@ namespace SonarLint.VisualStudio.Integration.Service
 
         private static string GetSonarLintVersion()
         {
-            return FileVersionInfo.GetVersionInfo(typeof(TelemetryTimer).Assembly.Location).FileVersion;
+            return FileVersionInfo.GetVersionInfo(typeof(VersionHelper).Assembly.Location).FileVersion;
         }
 
         /// <summary>

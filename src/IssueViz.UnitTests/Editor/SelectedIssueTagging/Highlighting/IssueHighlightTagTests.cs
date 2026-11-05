@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ using System.Windows.Media;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text.Classification;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor.SelectedIssueTagging.Highlight;
 
 namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.SelectedIssueTagging.Highlighting
@@ -43,8 +43,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.SelectedIss
         [TestMethod]
         public void FormatDefinition_MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<LightIssueHighlightFormatDefinition, EditorFormatDefinition>(null, null);
-            MefTestHelpers.CheckTypeCanBeImported<DarkIssueHighlightFormatDefinition, EditorFormatDefinition>(null, null);
+            MefTestHelpers.CheckTypeCanBeImported<LightIssueHighlightFormatDefinition, EditorFormatDefinition>();
+            MefTestHelpers.CheckTypeCanBeImported<DarkIssueHighlightFormatDefinition, EditorFormatDefinition>();
         }
     }
 }

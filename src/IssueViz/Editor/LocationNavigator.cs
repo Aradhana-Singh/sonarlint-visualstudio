@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,14 +23,21 @@ using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using SonarLint.VisualStudio.Core;
-using SonarLint.VisualStudio.Integration;
 using SonarLint.VisualStudio.IssueVisualization.Models;
 
 namespace SonarLint.VisualStudio.IssueVisualization.Editor
 {
+    public enum NavigationResult
+    {
+        Failed,
+        OpenedFile,
+        OpenedLocation
+    }
+
     public interface ILocationNavigator
     {
-        bool TryNavigate(IAnalysisIssueLocationVisualization locationVisualization);
+        NavigationResult TryNavigateFile(string filePath);
+        NavigationResult TryNavigatePartial(IAnalysisIssueLocationVisualization locationVisualization);
     }
 
     [Export(typeof(ILocationNavigator))]
@@ -49,32 +56,68 @@ namespace SonarLint.VisualStudio.IssueVisualization.Editor
             this.logger = logger;
         }
 
-        public bool TryNavigate(IAnalysisIssueLocationVisualization locationVisualization)
+        public NavigationResult TryNavigateFile(string filePath)
+        {
+            if (filePath == null)
+            {
+                throw new ArgumentNullException(nameof(filePath));
+            }
+
+            return TryOpenFile(filePath, out _) ? NavigationResult.OpenedFile : NavigationResult.Failed;
+        }
+
+        public NavigationResult TryNavigatePartial(IAnalysisIssueLocationVisualization locationVisualization)
         {
             if (locationVisualization == null)
             {
                 throw new ArgumentNullException(nameof(locationVisualization));
             }
 
+            if (TryOpenFile(locationVisualization.CurrentFilePath, out var textView))
+            {
+                return TryNavigateIssueLocation(locationVisualization, textView)
+                    ? NavigationResult.OpenedLocation
+                    : NavigationResult.OpenedFile;
+            }
+
+            locationVisualization.InvalidateSpan();
+            return NavigationResult.Failed;
+        }
+
+        private bool TryNavigateIssueLocation(IAnalysisIssueLocationVisualization locationVisualization, ITextView textView)
+        {
             try
             {
-                var textView = documentNavigator.Open(locationVisualization.CurrentFilePath);
                 var locationSpan = GetOrCalculateLocationSpan(locationVisualization, textView);
-
                 if (!locationSpan.IsEmpty)
                 {
                     documentNavigator.Navigate(textView, locationSpan);
-
                     return true;
                 }
             }
             catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
-                logger.WriteLine(Resources.ERR_OpenDocumentException, locationVisualization.CurrentFilePath, ex.Message);
+                logger.WriteLine(Resources.ERR_NavigationException, ex.Message);
                 locationVisualization.InvalidateSpan();
             }
 
             return false;
+        }
+
+        private bool TryOpenFile(string filePath, out ITextView textView)
+        {
+            textView = default;
+
+            try
+            {
+                textView = documentNavigator.Open(filePath);
+                return true;
+            }
+            catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
+            {
+                logger.WriteLine(Resources.ERR_OpenDocumentException, filePath, ex.Message);
+                return false;
+            }
         }
 
         private SnapshotSpan GetOrCalculateLocationSpan(IAnalysisIssueLocationVisualization locationVisualization, ITextView textView)

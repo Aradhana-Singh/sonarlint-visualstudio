@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,8 +24,9 @@ using System.Windows.Documents;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
-using SonarLint.VisualStudio.Integration.UnitTests;
+using SonarLint.VisualStudio.TestInfrastructure;
 using SonarLint.VisualStudio.IssueVisualization.Editor.ErrorTagging;
 using SonarLint.VisualStudio.IssueVisualization.IssueVisualizationControl.ViewModels.Commands;
 using IVsThemeColorProvider = SonarLint.VisualStudio.Infrastructure.VS.IVsThemeColorProvider;
@@ -38,12 +39,10 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.ErrorTaggin
         [TestMethod]
         public void MefCtor_CheckIsExported()
         {
-            MefTestHelpers.CheckTypeCanBeImported<ErrorTagTooltipProvider, IErrorTagTooltipProvider>(null,
-                new[]
-                {
-                    MefTestHelpers.CreateExport<INavigateToRuleDescriptionCommand>(Mock.Of<INavigateToRuleDescriptionCommand>()),
-                    MefTestHelpers.CreateExport<IVsThemeColorProvider>(Mock.Of<IVsThemeColorProvider>())
-                });
+            MefTestHelpers.CheckTypeCanBeImported<ErrorTagTooltipProvider, IErrorTagTooltipProvider>(
+                MefTestHelpers.CreateExport<INavigateToRuleDescriptionCommand>(),
+                MefTestHelpers.CreateExport<IVsThemeColorProvider>(),
+                MefTestHelpers.CreateExport<ILogger>());
         }
 
         [TestMethod]
@@ -54,8 +53,8 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.ErrorTaggin
             issue.Setup(x => x.PrimaryLocation.Message).Returns("some message");
 
             var navigateCommand = Mock.Of<INavigateToRuleDescriptionCommand>();
-            
-            var testSubject = new ErrorTagTooltipProvider(Mock.Of<IVsThemeColorProvider>(), navigateCommand);
+
+            var testSubject = new ErrorTagTooltipProvider(Mock.Of<IVsThemeColorProvider>(), navigateCommand, new TestLogger(logToConsole: true));
             var result = testSubject.Create(issue.Object);
 
             result.Should().NotBeNull();
@@ -70,8 +69,14 @@ namespace SonarLint.VisualStudio.IssueVisualization.UnitTests.Editor.ErrorTaggin
             (inlines[2] as Run).Text.Should().Be("some message");
 
             var hyperlink = (Hyperlink)inlines[0];
-            hyperlink.Command.Should().Be(navigateCommand);
-            hyperlink.CommandParameter.Should().Be("some rule");
+
+            // Click-handling
+            // Can't easily test that the NavigateUri event is wired up correctly
+            // - relying on manual test
+            hyperlink.Command.Should().BeNull();
+            hyperlink.NavigateUri.Should().NotBeNull();
+
+            hyperlink.TextDecorations.Should().BeNull(); // no decorations by default i.e. not underlined
         }
     }
 }

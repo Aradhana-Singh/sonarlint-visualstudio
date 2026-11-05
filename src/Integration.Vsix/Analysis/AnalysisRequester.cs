@@ -1,6 +1,6 @@
 ﻿/*
  * SonarLint for Visual Studio
- * Copyright (C) 2016-2022 SonarSource SA
+ * Copyright (C) SonarSource Sàrl
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-using System;
 using System.ComponentModel.Composition;
 using SonarLint.VisualStudio.Core;
 using SonarLint.VisualStudio.Core.Analysis;
@@ -27,33 +26,21 @@ namespace SonarLint.VisualStudio.Integration.Vsix.Analysis
 {
     [Export(typeof(IAnalysisRequester))]
     [PartCreationPolicy(CreationPolicy.Shared)]
-    public class AnalysisRequester : IAnalysisRequester
+    [method: ImportingConstructor]
+    public class AnalysisRequester(ILogger logger) : IAnalysisRequester
     {
-        private readonly ILogger logger;
+        public event EventHandler<EventArgs> AnalysisRequested;
 
-        [ImportingConstructor]
-        public AnalysisRequester(ILogger logger)
-        {
-            this.logger = logger;
-        }
-
-        #region IAnalysisRequester implementation
-
-        public event EventHandler<AnalysisRequestEventArgs> AnalysisRequested;
-
-        public void RequestAnalysis(IAnalyzerOptions analyzerOptions, params string[] filePaths)
+        public void QueueAnalyzeOpenFiles()
         {
             try
             {
-                var args = new AnalysisRequestEventArgs(analyzerOptions, filePaths);
-                AnalysisRequested?.Invoke(this, args);
+                AnalysisRequested?.Invoke(this, EventArgs.Empty);
             }
-            catch(Exception ex) when (!ErrorHandler.IsCriticalException(ex))
+            catch (Exception ex) when (!ErrorHandler.IsCriticalException(ex))
             {
-                logger.WriteLine(Analysis.AnalysisStrings.Requester_Error, ex);
+                logger.WriteLine(AnalysisStrings.Requester_Error, ex);
             }
         }
-
-        #endregion IAnalysisRequester implementation
     }
 }
